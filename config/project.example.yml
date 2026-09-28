@@ -15,6 +15,40 @@ services:
   telegraf_mdt_port: 57000
   telegraf_metrics_port: 9273
 
+collection_sources:
+  default_fallback: cli
+  preferences:
+    device_identity: cli
+    config_snapshot: cli
+    hardware_inventory: cli
+    hardware_environment: cli
+    cpu_memory: snmp
+    uptime: snmp
+    interface_state: cli
+    interface_traffic: telemetry
+    interface_errors_discards: snmp
+    bgp: telemetry
+    ospf: cli
+    vxlan: cli
+    route_summary: cli
+    mac_arp_lldp: cli
+
+snmp:
+  enabled: false
+  version: "2c"
+  port: 161
+  community_env: AIOPS_SNMP_COMMUNITY
+  timeout_seconds: 3
+  retries: 1
+
+telemetry:
+  enabled: false
+  protocol: arista_gnmi
+  listen_port: 57000
+  metrics_port: 9273
+  gnmi_port: 6030
+  gnmi_addresses: []
+
 grafana:
   admin_user: admin
   admin_password: admin
@@ -53,8 +87,9 @@ inventory:
     platform: arista_eos
     port: 22
     use_ssh: true
-    use_snmp: false
+    use_snmp: true
     snmp_community_env: AIOPS_SNMP_COMMUNITY
+    use_telemetry: false
   devices:
     - name: Site1-Spine
       role: spine

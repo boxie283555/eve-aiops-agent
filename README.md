@@ -121,7 +121,7 @@ See [DATA_SOURCES.md](DATA_SOURCES.md) for the full mapping.
 
 - CLI over SSH: active primary source for `aiops_*` metrics, including interface state/traffic/errors, BGP, OSPF, VXLAN, hardware, CPU, memory, route summary, MAC/ARP/LLDP, and config snapshots.
 - SNMP: fields are reserved in inventory, but no SNMP polling is active yet.
-- Telemetry: optional Telegraf Cisco MDT/gRPC receiver on TCP `57000`; Prometheus scrapes Telegraf on `9273`.
+- Telemetry: optional Telegraf gNMI for Arista EOS and Cisco MDT/gRPC receiver. Prometheus scrapes Telegraf on `9273`.
 
 ## Reachability
 
