@@ -1,4 +1,4 @@
-# EVE AIOps Agent
+# Network AIOps Agent
 
 This project deploys a lightweight monitoring agent for EVE and network lab environments.
 
@@ -27,8 +27,8 @@ vi config/project.yml
 
 `config/project.yml` contains:
 
-- Monitor host address and EVE URL.
-- Device management route and jump host gateway.
+- Monitor host address and optional lab URL.
+- Optional device management route and gateway.
 - Service ports.
 - Grafana admin password.
 - Device SSH credentials.
@@ -52,7 +52,7 @@ vi config/project.yml
 ./scripts/install_remote.sh
 ```
 
-The install script reads `config/project.yml`, installs the route, provisions Grafana, and starts the Docker services.
+The install script reads `config/project.yml`, optionally installs a route, provisions Grafana, and starts the Docker services.
 
 ## Default URLs
 
@@ -70,14 +70,14 @@ Replace `<monitor-host>` with the `project.monitor_host` value from `config/proj
 
 ```yaml
 project:
-  name: eve-aiops-agent
+  name: network-aiops-agent
   monitor_host: 192.168.20.169
-  eve_url: http://192.168.20.185/legacy/
+  lab_url: ""
 
 route:
-  enabled: true
-  destination: 172.16.1.0/24
-  gateway: 192.168.20.129
+  enabled: false
+  destination: ""
+  gateway: ""
 
 credentials:
   device:
@@ -115,6 +115,32 @@ collector:
 - Grafana dashboards refresh every 30 seconds.
 - Daily snapshots are compared with the previous day.
 
+## Collection Sources
+
+See [DATA_SOURCES.md](DATA_SOURCES.md) for the full mapping.
+
+- CLI over SSH: active primary source for `aiops_*` metrics, including interface state/traffic/errors, BGP, OSPF, VXLAN, hardware, CPU, memory, route summary, MAC/ARP/LLDP, and config snapshots.
+- SNMP: fields are reserved in inventory, but no SNMP polling is active yet.
+- Telemetry: optional Telegraf Cisco MDT/gRPC receiver on TCP `57000`; Prometheus scrapes Telegraf on `9273`.
+
+## Reachability
+
+If the monitoring host can directly ping and SSH to devices, keep route injection disabled:
+
+```yaml
+route:
+  enabled: false
+```
+
+If devices are reachable through a gateway or jump host, enable the route:
+
+```yaml
+route:
+  enabled: true
+  destination: 172.16.1.0/24
+  gateway: 192.168.20.129
+```
+
 ## Git Safety
 
 Before publishing changes:
@@ -131,4 +157,3 @@ Confirm these are not tracked:
 - Real device passwords
 - SMTP passwords
 - Runtime data directories
-

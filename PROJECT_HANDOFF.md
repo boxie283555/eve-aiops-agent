@@ -1,6 +1,6 @@
-# EVE AIOps Agent 项目交付说明
+# Network AIOps Agent 项目交付说明
 
-这个项目可以作为通用 AIOps Agent 模板复用到其它 EVE/网络实验环境。新项目只需要复制并修改一个文件：`config/project.yml`。采集代码、Prometheus、Grafana Dashboard、MRTG 页面和 Tools UI 都不需要改。
+这个项目可以作为通用 AIOps Agent 模板复用到真实网络设备或 EVE/实验环境。新项目只需要复制并修改一个文件：`config/project.yml`。采集代码、Prometheus、Grafana Dashboard、MRTG 页面和 Tools UI 都不需要改。
 
 ## 组件
 
@@ -33,14 +33,14 @@ vi config/project.yml
 
 ```yaml
 project:
-  name: eve-aiops-agent
+  name: network-aiops-agent
   monitor_host: 192.168.20.169
-  eve_url: http://192.168.20.185/legacy/
+  lab_url: ""
 
 route:
-  enabled: true
-  destination: 172.16.1.0/24
-  gateway: 192.168.20.129
+  enabled: false
+  destination: ""
+  gateway: ""
 
 credentials:
   device:
@@ -67,8 +67,10 @@ inventory:
 字段说明：
 
 - `project.monitor_host`: 监控主机 IP，用于访问 Agent、Prometheus 和 Grafana。
-- `route.destination`: 设备管理网段。
-- `route.gateway`: 到设备管理网段的下一跳或 jump host。
+- `project.lab_url`: 可选字段。真实设备项目可以留空。
+- `route.enabled`: 监控主机能直接 ping/SSH 到设备时设为 `false`。
+- `route.destination`: 需要通过网关访问设备时填写设备管理网段。
+- `route.gateway`: 需要通过网关访问设备时填写下一跳或 jump host。
 - `credentials.device`: 设备 SSH 登录信息。
 - `credentials.smtp`: 邮件告警配置。
 - `collector`: 采集周期、命令超时、每日快照和对比时间。
@@ -92,7 +94,7 @@ vi config/project.yml
 
 `install_remote.sh` 会做这些事：
 
-- 读取 `route.destination` 和 `route.gateway` 并写入系统路由。
+- 当 `route.enabled: true` 时，读取 `route.destination` 和 `route.gateway` 并写入系统路由。
 - 安装 Docker 和 Grafana。
 - 同步 Grafana datasource 和 dashboard。
 - 使用 `grafana.admin_password` 设置 Grafana admin 密码。
@@ -116,6 +118,32 @@ vi config/project.yml
 - `.env`
 
 环境变量优先级最高，可以覆盖 `config/project.yml` 里的账号和 SMTP 配置。
+
+## 采集来源
+
+完整映射见 [DATA_SOURCES.md](DATA_SOURCES.md)。
+
+- CLI/SSH：当前主要采集方式。接口状态和流量、接口错误和丢弃、BGP、OSPF、VXLAN、硬件、电源、模块、软件版本、CPU、内存、路由汇总、MAC/ARP/LLDP、配置快照都来自 CLI show 命令。
+- SNMP：当前没有启用实际 SNMP poller。`use_snmp` 和 `snmp_community_env` 只是预留字段。
+- Telemetry：由 Telegraf 独立接收 Cisco MDT/gRPC。设备需要 dial-out 到监控主机 TCP `57000`，Prometheus 从 Telegraf 的 `9273` 抓取。
+
+## 连通性模式
+
+真实设备项目中，如果监控主机可以直接 ping/SSH 到设备，保持：
+
+```yaml
+route:
+  enabled: false
+```
+
+如果设备需要通过 gateway 或 jump host 才能访问，再配置：
+
+```yaml
+route:
+  enabled: true
+  destination: 172.16.1.0/24
+  gateway: 192.168.20.129
+```
 
 ## GitHub 发布建议
 
@@ -145,4 +173,3 @@ git ls-files
 - SMTP 密码
 - 运行时数据目录
 - Prometheus/Grafana 本地数据目录
-

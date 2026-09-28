@@ -1,12 +1,12 @@
 project:
-  name: eve-aiops-agent
+  name: network-aiops-agent
   monitor_host: 192.168.20.169
-  eve_url: http://192.168.20.185/legacy/
+  lab_url: ""
 
 route:
-  enabled: true
-  destination: 172.16.1.0/24
-  gateway: 192.168.20.129
+  enabled: false
+  destination: ""
+  gateway: ""
 
 services:
   agent_port: 8080
