@@ -1,98 +1,134 @@
 # EVE AIOps Agent
 
-This project deploys a lightweight monitoring agent for the EVE VXLAN lab.
+This project deploys a lightweight monitoring agent for EVE and network lab environments.
 
 It provides:
 
 - Device configuration snapshots.
-- Interface state and traffic metrics.
-- BGP, OSPF, NVE underlay/overlay state checks.
+- Interface state, traffic, errors, and discards.
+- BGP, OSPF, VXLAN, underlay, and overlay state checks.
+- Device hardware, software version, uptime, CPU, and memory metrics.
 - Prometheus metrics for Grafana dashboards.
-- A simple MRTG-style interface page at `/mrtg`.
+- A simple MRTG-style line-chart page at `/mrtg`.
+- MAC/IP lookup and end-to-end path tools at `/tools`.
 - Daily comparison against the previous snapshot.
 - Optional SMTP email notification for important changes.
-- Optional Cisco MDT telemetry ingestion through Telegraf.
+- Optional telemetry ingestion through Telegraf.
 
-## Target Hosts
+## Single Project Config
 
-- EVE: `http://192.168.20.185/legacy/`
-- Monitoring host: `192.168.20.169`
-- Lab management network: `172.16.1.0/24`
-- Management gateway / jump host: `192.168.20.129` (`172.16.1.254` on the lab side)
+For a new project, copy and edit only one file:
 
-The monitoring host reaches the device management subnet through
-`192.168.20.129`.
+```bash
+cp config/project.example.yml config/project.yml
+chmod 600 config/project.yml
+vi config/project.yml
+```
 
-## Quick Start On 192.168.20.169
+`config/project.yml` contains:
+
+- Monitor host address and EVE URL.
+- Device management route and jump host gateway.
+- Service ports.
+- Grafana admin password.
+- Device SSH credentials.
+- SMTP settings.
+- Collector schedule.
+- Device inventory.
+
+`config/project.yml` is ignored by Git so real passwords are not committed.
+
+The older `.env`, `config/aiops.yml`, and `inventory/devices.yml` files are still supported for backward compatibility. Environment variables override values from `config/project.yml`.
+
+## Quick Start
+
+On the monitoring host:
 
 ```bash
 cd /opt/eve-aiops-agent
-cp .env.example .env
-chmod 600 .env
-vi .env
-sudo ip route replace 172.16.1.0/24 via 192.168.20.129
-docker compose up -d --build agent prometheus telegraf
+cp config/project.example.yml config/project.yml
+chmod 600 config/project.yml
+vi config/project.yml
+./scripts/install_remote.sh
 ```
 
-URLs:
+The install script reads `config/project.yml`, installs the route, provisions Grafana, and starts the Docker services.
 
-- Agent: `http://192.168.20.169:8080`
-- MRTG-style interface view: `http://192.168.20.169:8080/mrtg`
-- Prometheus: `http://192.168.20.169:9090`
-- Grafana: `http://192.168.20.169:3000` runs as a native systemd service.
-- Telegraf Cisco MDT Prometheus endpoint: `http://192.168.20.169:9273/metrics`
+## Default URLs
 
-Default Grafana credentials for the native install are `admin` / `admin`.
+Replace `<monitor-host>` with the `project.monitor_host` value from `config/project.yml`.
 
-## Credentials
+- Agent: `http://<monitor-host>:8080`
+- Metrics: `http://<monitor-host>:8080/metrics`
+- Tools UI: `http://<monitor-host>:8080/tools`
+- MRTG line view: `http://<monitor-host>:8080/mrtg`
+- Prometheus: `http://<monitor-host>:9090`
+- Grafana: `http://<monitor-host>:3000`
+- Telegraf metrics endpoint: `http://<monitor-host>:9273/metrics`
 
-Do not place device or SMTP credentials in git. Use `.env`:
+## Example Project Config
+
+```yaml
+project:
+  name: eve-aiops-agent
+  monitor_host: 192.168.20.169
+  eve_url: http://192.168.20.185/legacy/
+
+route:
+  enabled: true
+  destination: 172.16.1.0/24
+  gateway: 192.168.20.129
+
+credentials:
+  device:
+    username: admin
+    password: change-me
+    secret: ""
+
+inventory:
+  defaults:
+    platform: arista_eos
+    port: 22
+    use_ssh: true
+  devices:
+    - name: Site1-Spine
+      role: spine
+      site: site1
+      host: 172.16.1.101
+```
+
+## Collection Timing
+
+Default values in `config/project.example.yml`:
+
+```yaml
+collector:
+  interval_seconds: 60
+  command_timeout_seconds: 30
+  snapshot_time: "02:00"
+  compare_time: "02:20"
+  max_parallel_devices: 4
+```
+
+- Agent collects every 60 seconds.
+- Prometheus scrapes every 30 seconds.
+- Grafana dashboards refresh every 30 seconds.
+- Daily snapshots are compared with the previous day.
+
+## Git Safety
+
+Before publishing changes:
 
 ```bash
-AIOPS_DEVICE_USERNAME=admin
-AIOPS_DEVICE_PASSWORD=change-me
-SMTP_HOST=
-SMTP_PORT=25
-SMTP_FROM=aiops-agent@example.local
-SMTP_TO=
+git status --short
+git ls-files
 ```
 
-## Live Collection Requirements
+Confirm these are not tracked:
 
-The agent needs this route on `192.168.20.169`:
+- `config/project.yml`
+- `.env`
+- Real device passwords
+- SMTP passwords
+- Runtime data directories
 
-```bash
-sudo ip route replace 172.16.1.0/24 via 192.168.20.129
-```
-
-Once routing is fixed, verify:
-
-```bash
-ping 172.16.1.101
-nc -vz 172.16.1.101 22
-```
-
-## Telemetry
-
-Telegraf listens on TCP `57000` for Cisco MDT dial-out telemetry and exposes
-converted metrics on `9273` for Prometheus. NX-OS devices still need telemetry
-dial-out configuration before those panels populate.
-
-## Verified Lab Inventory
-
-The currently reachable devices are:
-
-| Device | IP | Platform |
-|---|---:|---|
-| Site1-Spine | `172.16.1.101` | Arista EOS |
-| Site1-CLF | `172.16.1.102` | Arista EOS |
-| Site1-BLF | `172.16.1.103` | Arista EOS |
-| Site2-Spine | `172.16.1.105` | Arista EOS |
-| Site2-CLF | `172.16.1.106` | Arista EOS |
-| Site2-BLF | `172.16.1.107` | Arista EOS |
-
-Each device has an explicit management VRF route:
-
-```text
-ip route vrf MGMT 192.168.20.0/24 172.16.1.254
-```

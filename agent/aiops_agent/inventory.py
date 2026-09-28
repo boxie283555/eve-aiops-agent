@@ -6,6 +6,8 @@ from typing import Any
 
 import yaml
 
+from .settings import load_project_config
+
 
 @dataclass(frozen=True)
 class Device:
@@ -21,8 +23,15 @@ class Device:
 
 
 def load_inventory(path: str = "/app/inventory/devices.yml") -> list[Device]:
-    with open(Path(path), "r", encoding="utf-8") as handle:
-        raw: dict[str, Any] = yaml.safe_load(handle) or {}
+    project_config = load_project_config()
+    if project_config.get("inventory"):
+        raw = project_config["inventory"]
+    else:
+        inventory_path = Path(path)
+        if not inventory_path.exists():
+            inventory_path = Path("inventory/devices.yml")
+        with open(inventory_path, "r", encoding="utf-8") as handle:
+            raw: dict[str, Any] = yaml.safe_load(handle) or {}
 
     defaults = raw.get("defaults", {})
     devices: list[Device] = []
@@ -42,4 +51,3 @@ def load_inventory(path: str = "/app/inventory/devices.yml") -> list[Device]:
             )
         )
     return devices
-

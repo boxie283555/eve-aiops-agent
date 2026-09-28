@@ -1,0 +1,82 @@
+project:
+  name: eve-aiops-agent
+  monitor_host: 192.168.20.169
+  eve_url: http://192.168.20.185/legacy/
+
+route:
+  enabled: true
+  destination: 172.16.1.0/24
+  gateway: 192.168.20.129
+
+services:
+  agent_port: 8080
+  prometheus_port: 9090
+  grafana_port: 3000
+  telegraf_mdt_port: 57000
+  telegraf_metrics_port: 9273
+
+grafana:
+  admin_user: admin
+  admin_password: admin
+
+credentials:
+  device:
+    username: admin
+    password: change-me
+    secret: ""
+  smtp:
+    host: ""
+    port: 25
+    username: ""
+    password: ""
+    use_tls: false
+    from: aiops-agent@example.local
+    to: []
+
+collector:
+  interval_seconds: 60
+  command_timeout_seconds: 30
+  snapshot_time: "02:00"
+  compare_time: "02:20"
+  max_parallel_devices: 4
+
+alerting:
+  send_email: true
+  severity_threshold: major
+
+paths:
+  snapshots: /app/data/snapshots
+  reports: /app/data/reports
+
+inventory:
+  defaults:
+    platform: arista_eos
+    port: 22
+    use_ssh: true
+    use_snmp: false
+    snmp_community_env: AIOPS_SNMP_COMMUNITY
+  devices:
+    - name: Site1-Spine
+      role: spine
+      site: site1
+      host: 172.16.1.101
+    - name: Site1-CLF
+      role: clf
+      site: site1
+      host: 172.16.1.102
+    - name: Site1-BLF
+      role: blf
+      site: site1
+      host: 172.16.1.103
+    - name: Site2-Spine
+      role: spine
+      site: site2
+      host: 172.16.1.105
+    - name: Site2-CLF
+      role: clf
+      site: site2
+      host: 172.16.1.106
+    - name: Site2-BLF
+      role: blf
+      site: site2
+      host: 172.16.1.107

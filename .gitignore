@@ -1,6 +1,7 @@
 .env
 .env.*
 !.env.example
+config/project.yml
 
 __pycache__/
 *.py[cod]
@@ -23,4 +24,3 @@ reports/
 prometheus-data/
 grafana-data/
 agent-data/
-
