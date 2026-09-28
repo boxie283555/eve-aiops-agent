@@ -37,6 +37,7 @@ class NeighborState:
     context: str
     up: bool
     raw_state: str
+    peer_hostname: str = "unknown"
 
 
 @dataclass(frozen=True)
@@ -161,6 +162,18 @@ def parse_ip_interface_brief(output: str) -> list[InterfaceState]:
             )
         )
     return states
+
+
+def parse_ip_interface_addresses(output: str) -> dict[str, str]:
+    addresses: dict[str, str] = {}
+    for line in output.splitlines():
+        fields = re.split(r"\s+", line.strip())
+        if len(fields) < 2 or fields[0].lower() in {"interface", "ip"}:
+            continue
+        if not re.match(r"^\d{1,3}(\.\d{1,3}){3}(?:/\d+)?$", fields[1]):
+            continue
+        addresses[fields[0]] = fields[1].split("/", maxsplit=1)[0]
+    return addresses
 
 
 def parse_show_interface(output: str) -> dict[str, InterfaceCounters]:

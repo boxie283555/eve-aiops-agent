@@ -162,7 +162,7 @@ OSPF_NEIGHBOR_UP = Gauge(
 NVE_PEER_UP = Gauge(
     "aiops_nve_peer_up",
     "NVE overlay peer state.",
-    ["device", "peer", "state"],
+    ["device", "peer", "peer_hostname", "state"],
 )
 
 DEVICE_HARDWARE_INFO = Gauge(

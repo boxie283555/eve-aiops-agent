@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, Callable
 
 from netmiko import ConnectHandler, NetmikoAuthenticationException, NetmikoTimeoutException
@@ -23,6 +23,7 @@ from .parser import (
     parse_device_hardware,
     parse_device_resources,
     parse_ip_arp,
+    parse_ip_interface_addresses,
     parse_modules,
     parse_power_supplies,
     parse_ip_interface_brief,
@@ -125,9 +126,36 @@ class Collector:
             for future in as_completed(future_map):
                 result = future.result()
                 results[result.device.name] = result
-                self._publish_metrics(result)
+        results = self._enrich_nve_peer_hostnames(results)
+        for result in results.values():
+            self._publish_metrics(result)
         self.latest_results = results
         return results
+
+    def _enrich_nve_peer_hostnames(self, results: dict[str, DeviceResult]) -> dict[str, DeviceResult]:
+        vtep_hostnames = self._vtep_hostname_map(results)
+        enriched: dict[str, DeviceResult] = {}
+        for name, result in results.items():
+            if not result.nve:
+                enriched[name] = result
+                continue
+            enriched[name] = replace(
+                result,
+                nve=[
+                    replace(peer, peer_hostname=vtep_hostnames.get(peer.neighbor, "unknown"))
+                    for peer in result.nve
+                ],
+            )
+        return enriched
+
+    def _vtep_hostname_map(self, results: dict[str, DeviceResult]) -> dict[str, str]:
+        mapping: dict[str, str] = {}
+        for result in results.values():
+            if not result.ok:
+                continue
+            for ip in parse_ip_interface_addresses(result.outputs.get("ip_interface_brief", "")).values():
+                mapping[ip] = result.device.name
+        return mapping
 
     def collect_device(self, device: Device) -> DeviceResult:
         started = time.monotonic()
@@ -419,6 +447,7 @@ class Collector:
             metrics.NVE_PEER_UP.labels(
                 result.device.name,
                 peer.neighbor,
+                peer.peer_hostname,
                 peer.raw_state,
             ).set(1 if peer.up else 0)
 

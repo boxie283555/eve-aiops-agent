@@ -1932,7 +1932,7 @@
           "expr": "aiops_nve_peer_up{device=~\"$device\"}",
           "format": "table",
           "instant": true,
-          "legendFormat": "{{device}} {{peer}}",
+          "legendFormat": "{{device}} {{peer}} {{peer_hostname}}",
           "refId": "A"
         }
       ],
@@ -1948,16 +1948,18 @@
               "instance": true
             },
             "indexByName": {
-              "Value": 3,
               "device": 0,
               "peer": 1,
-              "state": 2
+              "peer_hostname": 2,
+              "state": 3,
+              "Value": 4
             },
             "renameByName": {
               "Value": "Up",
               "device": "Device",
-              "peer": "Peer",
-              "state": "State"
+              "peer": "Peer IP",
+              "state": "State",
+              "peer_hostname": "Peer Hostname"
             }
           }
         }
@@ -2413,6 +2415,6 @@
   "timezone": "browser",
   "title": "AI Networking OPS",
   "uid": "eve-aiops-overview",
-  "version": 11,
+  "version": 12,
   "weekStart": ""
 }
