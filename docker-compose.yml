@@ -1,0 +1,42 @@
+services:
+  agent:
+    build:
+      context: ./agent
+    container_name: eve-aiops-agent
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./config:/app/config:ro
+      - ./inventory:/app/inventory:ro
+      - agent-data:/app/data
+    ports:
+      - "8080:8080"
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: eve-aiops-prometheus
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=30d"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+
+  telegraf:
+    image: telegraf:1.32
+    container_name: eve-aiops-telegraf
+    restart: unless-stopped
+    volumes:
+      - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+    ports:
+      - "57000:57000"
+      - "9273:9273"
+
+volumes:
+  agent-data:
+  prometheus-data:

@@ -1,0 +1,16 @@
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+
+scrape_configs:
+  - job_name: eve-aiops-agent
+    static_configs:
+      - targets:
+          - agent:8080
+
+  - job_name: cisco-mdt-telegraf
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - telegraf:9273
+

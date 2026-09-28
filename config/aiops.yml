@@ -1,0 +1,15 @@
+collector:
+  interval_seconds: 60
+  command_timeout_seconds: 30
+  snapshot_time: "02:00"
+  compare_time: "02:20"
+  max_parallel_devices: 4
+
+alerting:
+  send_email: true
+  severity_threshold: major
+
+paths:
+  snapshots: /app/data/snapshots
+  reports: /app/data/reports
+

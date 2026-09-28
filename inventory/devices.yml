@@ -1,0 +1,32 @@
+defaults:
+  platform: arista_eos
+  port: 22
+  use_ssh: true
+  use_snmp: false
+  snmp_community_env: AIOPS_SNMP_COMMUNITY
+
+devices:
+  - name: Site1-Spine
+    role: spine
+    site: site1
+    host: 172.16.1.101
+  - name: Site1-CLF
+    role: clf
+    site: site1
+    host: 172.16.1.102
+  - name: Site1-BLF
+    role: blf
+    site: site1
+    host: 172.16.1.103
+  - name: Site2-Spine
+    role: spine
+    site: site2
+    host: 172.16.1.105
+  - name: Site2-CLF
+    role: clf
+    site: site2
+    host: 172.16.1.106
+  - name: Site2-BLF
+    role: blf
+    site: site2
+    host: 172.16.1.107
