@@ -1,13 +1,12 @@
 apiVersion: 1
 
 providers:
-  - name: EVE AIOps
+  - name: AI Networking OPS
     orgId: 1
-    folder: EVE AIOps
+    folder: AI Networking OPS
     type: file
     disableDeletion: false
     updateIntervalSeconds: 30
     allowUiUpdates: true
     options:
       path: /var/lib/grafana/dashboards
-
