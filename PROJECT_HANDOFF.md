@@ -124,7 +124,7 @@ vi config/project.yml
 完整映射见 [DATA_SOURCES.md](DATA_SOURCES.md)。
 
 - CLI/SSH：当前主要采集方式。接口状态和流量、接口错误和丢弃、BGP、OSPF、VXLAN、硬件、电源、模块、软件版本、CPU、内存、路由汇总、MAC/ARP/LLDP、配置快照都来自 CLI show 命令。
-- SNMP：当前没有启用实际 SNMP poller。`use_snmp` 和 `snmp_community_env` 只是预留字段。
+- SNMP：CPU、内存、uptime、接口 input/output errors/discards 已切到 SNMP 优先采集。需要在 `.env` 中设置 `AIOPS_SNMP_ENABLED=true` 和 `AIOPS_SNMP_COMMUNITY`。
 - Telemetry：由 Telegraf 独立采集。Arista EOS 推荐使用 gNMI，Telegraf 主动连接设备 TCP `6030`；Cisco MDT dial-out 仍保留 TCP `57000`。Prometheus 从 Telegraf 的 `9273` 抓取。
 
 Arista gNMI 设备侧运行配置：
@@ -144,6 +144,29 @@ Telegraf gNMI 在 `.env` 中开启：
 TELEGRAF_ENABLE_GNMI=true
 TELEGRAF_GNMI_ADDRESSES=172.16.1.101:6030,172.16.1.102:6030
 ```
+
+SNMP 在 `.env` 中开启：
+
+```bash
+AIOPS_SNMP_ENABLED=true
+AIOPS_SNMP_COMMUNITY=aiops-ro
+```
+
+EVE Arista 设备侧运行配置：
+
+```text
+snmp-server community aiops-ro ro
+```
+
+当前 SNMP 采集使用标准 MIB：
+
+- `sysUpTime.0`
+- `hrProcessorLoad`
+- `hrStorageTable`
+- `ifInErrors`
+- `ifInDiscards`
+- `ifOutErrors`
+- `ifOutDiscards`
 
 ## 连通性模式
 

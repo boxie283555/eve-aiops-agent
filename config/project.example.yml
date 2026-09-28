@@ -34,7 +34,7 @@ collection_sources:
     mac_arp_lldp: cli
 
 snmp:
-  enabled: false
+  enabled: true
   version: "2c"
   port: 161
   community_env: AIOPS_SNMP_COMMUNITY

@@ -38,6 +38,11 @@ class Settings:
     smtp_to: list[str]
     send_email: bool
     severity_threshold: str
+    snmp_enabled: bool
+    snmp_community: str | None
+    snmp_port: int
+    snmp_timeout_seconds: float
+    snmp_retries: int
 
 
 def _env_bool(name: str, default: bool = False) -> bool:
@@ -96,6 +101,7 @@ def load_settings(path: str = "/app/config/aiops.yml") -> Settings:
     credentials = raw.get("credentials", {})
     device_credentials = credentials.get("device", {})
     smtp_credentials = credentials.get("smtp", {})
+    snmp = raw.get("snmp", {})
 
     return Settings(
         collector_interval_seconds=int(collector.get("interval_seconds", 60)),
@@ -117,4 +123,9 @@ def load_settings(path: str = "/app/config/aiops.yml") -> Settings:
         smtp_to=_smtp_recipients(smtp_credentials.get("to", [])),
         send_email=bool(alerting.get("send_email", True)),
         severity_threshold=str(alerting.get("severity_threshold", "major")),
+        snmp_enabled=_env_bool("AIOPS_SNMP_ENABLED", bool(snmp.get("enabled", False))),
+        snmp_community=_first_env_or_config("AIOPS_SNMP_COMMUNITY", snmp.get("community")),
+        snmp_port=int(os.getenv("AIOPS_SNMP_PORT") or snmp.get("port", 161)),
+        snmp_timeout_seconds=float(os.getenv("AIOPS_SNMP_TIMEOUT_SECONDS") or snmp.get("timeout_seconds", 3)),
+        snmp_retries=int(os.getenv("AIOPS_SNMP_RETRIES") or snmp.get("retries", 1)),
     )

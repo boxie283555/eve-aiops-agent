@@ -34,6 +34,7 @@ from .parser import (
     parse_show_interface,
 )
 from .settings import Settings
+from .snmp import SnmpSample, collect_snmp_sample, merge_interface_counters, merge_resources
 
 
 TEXTFSM_COMMAND_KEYS = {"version", "inventory", "power", "module", "bgp_summary"}
@@ -157,6 +158,15 @@ class Collector:
 
             interfaces = parse_ip_interface_brief(outputs.get("ip_interface_brief", ""))
             interface_counters = parse_show_interface(outputs.get("interface", ""))
+            snmp_sample = self._collect_snmp_sample(device)
+            if snmp_sample.interfaces:
+                interface_counters = {
+                    name: merge_interface_counters(interface_counters.get(name), snmp_counters)
+                    for name, snmp_counters in (snmp_sample.interfaces or {}).items()
+                } | {
+                    name: merge_interface_counters(counters, (snmp_sample.interfaces or {}).get(name))
+                    for name, counters in interface_counters.items()
+                }
             interface_payload: list[dict[str, object]] = []
             for iface in interfaces:
                 counters = interface_counters.get(iface.name)
@@ -200,7 +210,10 @@ class Collector:
                     structured_outputs.get("version"),
                     structured_outputs.get("inventory"),
                 ),
-                resources=parse_device_resources(outputs.get("version", ""), outputs.get("processes", "")),
+                resources=merge_resources(
+                    parse_device_resources(outputs.get("version", ""), outputs.get("processes", "")),
+                    snmp_sample.resources,
+                ),
                 hardware_components=[
                     *parse_power_supplies(outputs.get("power", ""), structured_outputs.get("power")),
                     *parse_modules(
@@ -238,6 +251,20 @@ class Collector:
         if isinstance(result, str):
             return None
         return result
+
+    def _collect_snmp_sample(self, device: Device):
+        if not self.settings.snmp_enabled or not device.use_snmp or not self.settings.snmp_community:
+            return SnmpSample()
+        try:
+            return collect_snmp_sample(
+                device.host,
+                self.settings.snmp_community,
+                port=self.settings.snmp_port,
+                timeout=self.settings.snmp_timeout_seconds,
+                retries=self.settings.snmp_retries,
+            )
+        except Exception:
+            return SnmpSample()
 
     def _publish_metrics(self, result: DeviceResult) -> None:
         labels = {

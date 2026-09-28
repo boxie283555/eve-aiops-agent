@@ -2,7 +2,7 @@ defaults:
   platform: arista_eos
   port: 22
   use_ssh: true
-  use_snmp: false
+  use_snmp: true
   snmp_community_env: AIOPS_SNMP_COMMUNITY
 
 devices:

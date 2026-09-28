@@ -13,7 +13,7 @@ Recommended architecture:
 Current implementation status:
 
 - CLI over SSH: active primary source for the `aiops_*` metrics.
-- SNMP: preferred in the configuration policy for CPU, memory, uptime, and interface counters, but the SNMP poller still needs to be implemented.
+- SNMP: active source for CPU, memory, uptime, and interface errors/discards when `AIOPS_SNMP_ENABLED=true` and `AIOPS_SNMP_COMMUNITY` is set.
 - Telemetry: Telegraf receiver is available for Cisco MDT/gRPC and Prometheus scrapes it separately. Mapping telemetry into the main `aiops_*` dashboard still depends on the device telemetry subscription and metric names.
 
 The single project config records the desired source policy:
@@ -103,17 +103,16 @@ Cisco NX-OS commands:
 
 ## SNMP
 
-SNMP is the recommended source for data that is cheap and standardized enough to poll periodically:
+SNMP is the active preferred source for data that is cheap and standardized enough to poll periodically:
 
 - CPU utilization.
 - Memory utilization.
 - Device uptime.
-- Interface traffic counters when telemetry is not available.
 - Interface errors and discards.
 
 ```yaml
 snmp:
-  enabled: false
+  enabled: true
   version: "2c"
   port: 161
   community_env: AIOPS_SNMP_COMMUNITY
@@ -124,7 +123,19 @@ inventory:
     snmp_community_env: AIOPS_SNMP_COMMUNITY
 ```
 
-Implementation note: the current Python collector has the config fields but does not yet poll SNMP. The next implementation step is to add an SNMP collector that exports the same metric names used by the dashboard, for example `aiops_device_cpu_utilization_percent`, `aiops_device_memory_utilization_percent`, and interface counter metrics.
+The Python collector polls these standard MIBs:
+
+| Data | MIB / OID |
+|---|---|
+| Uptime | `SNMPv2-MIB::sysUpTime.0` |
+| CPU | `HOST-RESOURCES-MIB::hrProcessorLoad` |
+| Memory | `HOST-RESOURCES-MIB::hrStorageTable`, RAM entries |
+| Interface input errors | `IF-MIB::ifInErrors` |
+| Interface input discards | `IF-MIB::ifInDiscards` |
+| Interface output errors | `IF-MIB::ifOutErrors` |
+| Interface output discards | `IF-MIB::ifOutDiscards` |
+
+The metrics keep the existing `aiops_*` names, so the Grafana panels do not need to change. If SNMP is unavailable for a device, the collector falls back to the existing CLI parser.
 
 ## Telemetry
 
