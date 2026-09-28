@@ -47,7 +47,7 @@ If the preferred source is unavailable, keep CLI as the fallback so the dashboar
 | Memory | SNMP | CLI | Use SNMP when memory OIDs are validated; current fallback is CLI parsing. |
 | Uptime | SNMP | CLI | SNMP `sysUpTime` or HOST-RESOURCES-MIB is preferred. |
 | Interface admin/oper state | CLI or SNMP | CLI | CLI names are cleaner for dashboard labels; SNMP if ifName mapping is implemented. |
-| Interface traffic | Telemetry | SNMP or CLI | Telemetry is best for high-frequency traffic; CLI is lowest preference. |
+| Interface traffic | Telemetry | SNMP or CLI | MRTG reads Arista gNMI counters from Telegraf every 10 seconds and falls back to Agent rates. |
 | Interface errors/discards | SNMP | CLI | SNMP IF-MIB counters are efficient; current fallback is `show interfaces`. |
 | BGP state/routes | Telemetry | CLI | Use telemetry where supported; current fallback parses `show bgp summary`. |
 | OSPF state | CLI | Telemetry later | Keep CLI until telemetry model is defined. |

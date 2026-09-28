@@ -42,7 +42,7 @@ if [ "${TELEGRAF_ENABLE_GNMI:-false}" = "true" ]; then
     name = "arista_interface_counters"
     path = "/interfaces/interface/state/counters"
     subscription_mode = "sample"
-    sample_interval = "30s"
+    sample_interval = "10s"
 
   [[inputs.gnmi.subscription]]
     name = "arista_bgp_neighbors"

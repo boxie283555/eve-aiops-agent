@@ -1,6 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import os
+import re
+import time
+import urllib.request
 from dataclasses import asdict
 from datetime import datetime
 
@@ -19,6 +23,8 @@ settings = load_settings()
 devices = load_inventory()
 collector = Collector(settings, devices)
 scheduler = AsyncIOScheduler(timezone="Asia/Shanghai")
+MRTG_TELEMETRY_METRICS_URL = os.getenv("AIOPS_TELEGRAF_METRICS_URL", "http://telegraf:9273/metrics")
+MRTG_TELEMETRY_CACHE: dict[tuple[str, str, str], tuple[float, float]] = {}
 
 app = FastAPI(title="EVE AIOps Agent", version="0.1.0")
 
@@ -1001,7 +1007,7 @@ def mrtg_view() -> str:
   <script>
     const HISTORY_KEY = "eve-aiops-mrtg-history-v2";
     const MAX_POINTS = 120;
-    const REFRESH_MS = 30000;
+    const REFRESH_MS = 10000;
     const state = {
       samples: loadHistory(),
       latest: [],
@@ -1089,6 +1095,7 @@ def mrtg_view() -> str:
             <div class="meta">
               <span>RX ${formatBps(item.rx_bps)}</span>
               <span>TX ${formatBps(item.tx_bps)}</span>
+              <span>${escapeHtml(item.traffic_source || "unknown")}</span>
               <span class="state ${item.oper_up ? "up" : "down"}">${item.oper_up ? "up" : "down"}</span>
             </div>
           </div>
@@ -1197,19 +1204,87 @@ def mrtg_view() -> str:
 @app.get("/mrtg/data")
 def mrtg_data() -> dict[str, object]:
     interfaces = []
+    telemetry_rates = _mrtg_telemetry_rates()
     for result in sorted(collector.latest_results.values(), key=lambda item: item.device.name):
         for iface in result.interfaces:
+            telemetry = telemetry_rates.get((result.device.name, str(iface["name"])))
             interfaces.append(
                 {
                     "device": result.device.name,
                     "interface": iface["name"],
                     "admin_up": bool(iface["admin_up"]),
                     "oper_up": bool(iface["oper_up"]),
-                    "rx_bps": float(iface["rx_bps"] or 0),
-                    "tx_bps": float(iface["tx_bps"] or 0),
+                    "rx_bps": float(telemetry.get("rx_bps") if telemetry else iface["rx_bps"] or 0),
+                    "tx_bps": float(telemetry.get("tx_bps") if telemetry else iface["tx_bps"] or 0),
+                    "traffic_source": "telemetry" if telemetry else "agent",
                 }
             )
     return {
         "timestamp": datetime.now().isoformat(timespec="seconds"),
         "interfaces": interfaces,
     }
+
+
+def _mrtg_telemetry_rates() -> dict[tuple[str, str], dict[str, float]]:
+    host_to_device = {device.host: device.name for device in devices}
+    counters: dict[tuple[str, str, str], float] = {}
+    now = time.time()
+    try:
+        with urllib.request.urlopen(MRTG_TELEMETRY_METRICS_URL, timeout=3) as response:
+            payload = response.read().decode("utf-8", errors="ignore")
+    except Exception:
+        return {}
+
+    for line in payload.splitlines():
+        metric = _parse_telegraf_interface_octet_metric(line)
+        if not metric:
+            continue
+        source, interface, direction, value = metric
+        device = host_to_device.get(source)
+        if not device and ":" in source:
+            device = host_to_device.get(source.rsplit(":", 1)[0])
+        if not device:
+            continue
+        counters[(device, interface, direction)] = value
+
+    rates: dict[tuple[str, str], dict[str, float]] = {}
+    for key, value in counters.items():
+        previous = MRTG_TELEMETRY_CACHE.get(key)
+        MRTG_TELEMETRY_CACHE[key] = (value, now)
+        if not previous:
+            continue
+        previous_value, previous_time = previous
+        elapsed = now - previous_time
+        if elapsed <= 0 or value < previous_value:
+            continue
+        device, interface, direction = key
+        field = "rx_bps" if direction == "in" else "tx_bps"
+        rates.setdefault((device, interface), {})[field] = ((value - previous_value) * 8) / elapsed
+    return {
+        key: value
+        for key, value in rates.items()
+        if "rx_bps" in value or "tx_bps" in value
+    }
+
+
+def _parse_telegraf_interface_octet_metric(line: str) -> tuple[str, str, str, float] | None:
+    match = re.match(r"^arista_interface_counters_(in|out)_octets\{([^}]*)\}\s+([0-9.eE+-]+)$", line)
+    if not match:
+        return None
+    labels = _parse_prometheus_labels(match.group(2))
+    source = labels.get("source", "")
+    interface = labels.get("name", "")
+    if not source or not interface:
+        return None
+    try:
+        value = float(match.group(3))
+    except ValueError:
+        return None
+    return source, interface, match.group(1), value
+
+
+def _parse_prometheus_labels(raw: str) -> dict[str, str]:
+    labels: dict[str, str] = {}
+    for key, value in re.findall(r'([a-zA-Z_][a-zA-Z0-9_]*)="((?:\\.|[^"])*)"', raw):
+        labels[key] = value.replace('\\"', '"').replace("\\\\", "\\")
+    return labels

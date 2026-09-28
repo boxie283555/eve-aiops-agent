@@ -10,7 +10,7 @@ It provides:
 - Device hardware, software version, uptime, CPU, and memory metrics.
 - ASIC/TCAM resource view with telemetry-first dashboard queries and CLI fallback metrics.
 - Prometheus metrics for Grafana dashboards.
-- A simple MRTG-style line-chart page at `/mrtg`.
+- A simple MRTG-style line-chart page at `/mrtg`, using telemetry-first interface traffic with 10-second refresh.
 - MAC/IP lookup and end-to-end path tools at `/tools`.
 - Daily comparison against the previous snapshot.
 - Optional SMTP email notification for important changes.
@@ -123,6 +123,7 @@ See [DATA_SOURCES.md](DATA_SOURCES.md) for the full mapping.
 - CLI over SSH: active primary source for `aiops_*` metrics, including interface state/traffic/errors, BGP, OSPF, VXLAN, hardware, CPU, memory, route summary, MAC/ARP/LLDP, and config snapshots.
 - SNMP: active preferred source for CPU, memory, uptime, and interface errors/discards.
 - Telemetry: optional Telegraf gNMI for Arista EOS and Cisco MDT/gRPC receiver. Prometheus scrapes Telegraf on `9273`. ASIC/TCAM telemetry can be enabled with validated platform paths through `TELEGRAF_GNMI_TCAM_PATHS`.
+- MRTG traffic view: reads Arista gNMI interface octet counters from Telegraf first, then falls back to Agent interface rates if telemetry is unavailable.
 
 ## Reachability
 
