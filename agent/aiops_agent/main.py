@@ -366,9 +366,9 @@ def tools_view() -> str:
     }
 
     function stepHtml(step, index) {
-      const title = String(step.type || "step").replaceAll("_", " ");
+      const title = step.label || String(step.type || "step").replaceAll("_", " ");
       const details = Object.entries(step)
-        .filter(([key]) => key !== "type")
+        .filter(([key]) => !["type", "label"].includes(key))
         .map(([key, value]) => '<span class="pill">' + escapeHtml(key) + ': ' + escapeHtml(String(value ?? "")) + '</span>')
         .join("");
       return '<div class="step"><div class="step-title">' + (index + 1) + '. ' + escapeHtml(title) + '</div><div class="step-meta summary">' + details + '</div></div>';
@@ -422,7 +422,7 @@ def path_lookup(
     destination = _resolve_endpoint(dst, device_filter=dst_device, vrf_filter=dst_vrf)
     source_location = _best_local_location(source)
     destination_location = _best_local_location(destination)
-    path = _build_path_steps(source_location, destination_location)
+    path = _build_path_steps(source, destination, source_location, destination_location)
     return {
         "source": source,
         "destination": destination,
@@ -572,75 +572,151 @@ def _best_arp_location(endpoint: dict[str, object]) -> dict[str, object]:
     arp_matches = endpoint.get("arp_matches", [])
     if not isinstance(arp_matches, list):
         return {}
-    candidates = [
+    learned_candidates = [
         match
         for match in arp_matches
         if "not learned" not in str(match.get("interface", "")).lower()
         and not str(match.get("interface", "")).lower().startswith("management")
     ]
+    fallback_candidates = [
+        match
+        for match in arp_matches
+        if not str(match.get("interface", "")).lower().startswith("management")
+    ]
+    candidates = learned_candidates or fallback_candidates
     if not candidates:
         return {}
     match = sorted(candidates, key=lambda item: (item.get("vrf") != "TENANT", item["site"], item["device"]))[0]
+    interface = str(match.get("interface", ""))
+    learned = "not learned" not in interface.lower()
     return {
         "device": match.get("device"),
         "role": match.get("role"),
         "site": match.get("site"),
-        "vlan": str(match.get("interface", "")).split(",", maxsplit=1)[0],
+        "vlan": interface.split(",", maxsplit=1)[0],
         "port": match.get("interface"),
-        "location_type": "arp",
-        "evidence": "arp",
+        "location_type": "arp" if learned else "l3_gateway",
+        "evidence": "arp" if learned else "arp_gateway_only",
+        "ip": match.get("ip"),
+        "mac": match.get("mac"),
+        "vrf": match.get("vrf"),
     }
 
 
-def _build_path_steps(source: dict[str, object], destination: dict[str, object]) -> list[dict[str, object]]:
-    if not source or not destination:
-        return [{"type": "unknown", "detail": "source or destination location not found in current MAC table"}]
+def _build_path_steps(
+    source_endpoint: dict[str, object],
+    destination_endpoint: dict[str, object],
+    source: dict[str, object],
+    destination: dict[str, object],
+) -> list[dict[str, object]]:
+    steps: list[dict[str, object]] = []
+    hop = 1
 
-    steps: list[dict[str, object]] = [
-        {
-            "type": "source_attachment",
-            "device": source.get("device"),
-            "role": source.get("role"),
-            "site": source.get("site"),
-            "interface": source.get("port"),
-            "vlan": source.get("vlan"),
-        }
-    ]
+    source_resolution = _ip_resolution_step(source_endpoint, "source", hop)
+    if source_resolution:
+        steps.append(source_resolution)
+        hop += 1
+
+    if not source or not destination:
+        if source:
+            steps.append(_attachment_step("source", source, hop))
+            hop += 1
+        steps.append(
+            {
+                "type": "unknown",
+                "label": f"Hop {hop}: location incomplete",
+                "detail": "source or destination location was not found in current ARP/MAC/LLDP data",
+                "source_found": bool(source),
+                "destination_found": bool(destination),
+            }
+        )
+        hop += 1
+        if destination:
+            steps.append(_attachment_step("destination", destination, hop))
+            hop += 1
+        destination_resolution = _ip_resolution_step(destination_endpoint, "destination", hop)
+        if destination_resolution:
+            steps.append(destination_resolution)
+        return steps
+
+    steps.append(_attachment_step("source", source, hop))
+    hop += 1
 
     if source.get("device") == destination.get("device"):
         steps.append(
             {
                 "type": "same_device_switching",
+                "label": f"Hop {hop}: switch locally on {source.get('device')}",
                 "device": source.get("device"),
                 "detail": "source and destination MACs are local on the same device",
             }
         )
+        hop += 1
     else:
         lldp_path = _shortest_lldp_path(str(source.get("device", "")), str(destination.get("device", "")))
         if lldp_path:
-            for hop in lldp_path:
-                steps.append({"type": "underlay_hop", **hop})
+            for edge in lldp_path:
+                steps.append(
+                    {
+                        "type": "underlay_hop",
+                        "label": f"Hop {len(steps) + 1}: {edge.get('from')} -> {edge.get('to')}",
+                        **edge,
+                    }
+                )
         else:
             steps.append(
                 {
                     "type": "overlay_or_unknown",
+                    "label": f"Hop {hop}: overlay or unknown transit",
                     "from": source.get("device"),
                     "to": destination.get("device"),
                     "detail": "no complete LLDP path found; traffic is inferred through EVPN/VXLAN overlay",
                 }
             )
+            hop += 1
 
-    steps.append(
-        {
-            "type": "destination_attachment",
-            "device": destination.get("device"),
-            "role": destination.get("role"),
-            "site": destination.get("site"),
-            "interface": destination.get("port"),
-            "vlan": destination.get("vlan"),
-        }
-    )
+    steps.append(_attachment_step("destination", destination, len(steps) + 1))
+    destination_resolution = _ip_resolution_step(destination_endpoint, "destination", len(steps) + 1)
+    if destination_resolution:
+        steps.append(destination_resolution)
     return steps
+
+
+def _ip_resolution_step(endpoint: dict[str, object], side: str, hop: int) -> dict[str, object]:
+    ip = endpoint.get("ip")
+    if not ip:
+        return {}
+    arp_matches = endpoint.get("arp_matches", [])
+    arp_match = arp_matches[0] if isinstance(arp_matches, list) and arp_matches else {}
+    return {
+        "type": f"{side}_ip_resolution",
+        "label": f"Hop {hop}: {side} IP to MAC resolution",
+        "device": arp_match.get("device"),
+        "site": arp_match.get("site"),
+        "role": arp_match.get("role"),
+        "vrf": arp_match.get("vrf") or endpoint.get("vrf_filter"),
+        "ip": ip,
+        "mac": endpoint.get("mac"),
+        "interface": arp_match.get("interface"),
+        "evidence": "arp",
+    }
+
+
+def _attachment_step(side: str, location: dict[str, object], hop: int) -> dict[str, object]:
+    device = location.get("device")
+    interface = location.get("port")
+    label_side = "source" if side == "source" else "destination"
+    return {
+        "type": f"{side}_attachment",
+        "label": f"Hop {hop}: {label_side} attachment on {device}",
+        "device": device,
+        "role": location.get("role"),
+        "site": location.get("site"),
+        "interface": interface,
+        "vlan": location.get("vlan"),
+        "location_type": location.get("location_type"),
+        "evidence": location.get("evidence"),
+    }
 
 
 def _shortest_lldp_path(start: str, end: str) -> list[dict[str, object]]:
