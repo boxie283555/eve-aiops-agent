@@ -126,6 +126,17 @@ class RouteSummaryEntry:
     routes: float
 
 
+@dataclass(frozen=True)
+class TcamResource:
+    resource: str
+    region: str
+    used_entries: float | None = None
+    free_entries: float | None = None
+    total_entries: float | None = None
+    utilization_percent: float | None = None
+    source: str = "cli"
+
+
 def parse_ip_interface_brief(output: str) -> list[InterfaceState]:
     states: list[InterfaceState] = []
     for line in output.splitlines():
@@ -497,6 +508,139 @@ def parse_device_resources(version_output: str, processes_output: str = "") -> D
         memory_total_bytes=memory_total_bytes,
         memory_free_bytes=memory_free_bytes,
     )
+
+
+def parse_tcam_resources(outputs: dict[str, str]) -> list[TcamResource]:
+    resources: list[TcamResource] = []
+    seen: set[tuple[str, str, str]] = set()
+    for source, output in outputs.items():
+        if not output or output.startswith("COMMAND_FAILED"):
+            continue
+        for line in output.splitlines():
+            resource = _parse_tcam_resource_line(line, source)
+            if not resource:
+                continue
+            key = (resource.source, resource.region, resource.resource)
+            if key in seen:
+                continue
+            seen.add(key)
+            resources.append(resource)
+    return resources
+
+
+def _parse_tcam_resource_line(line: str, source: str) -> TcamResource | None:
+    raw = line.strip()
+    if not raw or set(raw) <= {"-", "=", " "}:
+        return None
+    lowered = raw.lower()
+    if any(marker in lowered for marker in ("command failed", "invalid input", "unavailable command")):
+        return None
+    if not re.search(r"\d", raw):
+        return None
+    if lowered.startswith(("resource ", "feature ", "type ", "table ", "bank ", "slice ", "asic ")):
+        return None
+
+    keyed = _parse_keyed_tcam_line(raw)
+    if keyed:
+        resource, used, free, total, percent = keyed
+        return _build_tcam_resource(source, resource, "default", used, free, total, percent)
+
+    ratio = re.match(
+        r"^(?P<resource>[A-Za-z][A-Za-z0-9/_.:() -]*?)\s+(?P<used>[0-9,]+)\s*/\s*(?P<total>[0-9,]+)(?:\s+\(?\s*(?P<percent>[0-9.]+)\s*%?\)?)?$",
+        raw,
+    )
+    if ratio:
+        return _build_tcam_resource(
+            source,
+            ratio.group("resource"),
+            "default",
+            _parse_number(ratio.group("used")),
+            None,
+            _parse_number(ratio.group("total")),
+            _parse_number(ratio.group("percent")),
+        )
+
+    fields = [field.strip() for field in re.split(r"\s{2,}|\t+", raw) if field.strip()]
+    if len(fields) < 3:
+        return None
+    numbers = [_parse_number(field.rstrip("%")) for field in fields[1:]]
+    if sum(value is not None for value in numbers) < 2:
+        return None
+    resource = fields[0]
+    if len(resource) > 80:
+        return None
+
+    used = free = total = percent = None
+    numeric_values = [value for value in numbers if value is not None]
+    if len(numeric_values) >= 3:
+        used, free, total = numeric_values[:3]
+    elif len(numeric_values) == 2:
+        used, total = numeric_values
+    if "%" in raw:
+        percent = numeric_values[-1]
+        if len(numeric_values) >= 3:
+            used, total = numeric_values[0], numeric_values[1]
+            free = None
+    return _build_tcam_resource(source, resource, "default", used, free, total, percent)
+
+
+def _parse_keyed_tcam_line(line: str) -> tuple[str, float | None, float | None, float | None, float | None] | None:
+    used = _keyed_number(line, r"used|in\s+use|allocated")
+    free = _keyed_number(line, r"free|available")
+    total = _keyed_number(line, r"total|size|limit")
+    percent = _keyed_number(line, r"util(?:ization)?|used\s*%|percent")
+    if used is None or (free is None and total is None and percent is None):
+        return None
+    resource = re.split(r"\b(?:used|in\s+use|allocated|free|available|total|size|limit|util(?:ization)?|percent)\b\s*[:=]", line, maxsplit=1, flags=re.IGNORECASE)[0]
+    resource = resource.strip(" :-")
+    if not resource:
+        return None
+    return resource, used, free, total, percent
+
+
+def _keyed_number(line: str, key_pattern: str) -> float | None:
+    match = re.search(rf"(?:{key_pattern})\s*[:=]\s*([0-9,]+(?:\.[0-9]+)?%?)", line, re.IGNORECASE)
+    if not match:
+        return None
+    return _parse_number(match.group(1).rstrip("%"))
+
+
+def _build_tcam_resource(
+    source: str,
+    resource: str,
+    region: str,
+    used: float | None,
+    free: float | None,
+    total: float | None,
+    percent: float | None,
+) -> TcamResource | None:
+    resource = re.sub(r"\s+", " ", resource.strip(" :-"))
+    if not resource or resource.lower() in {"used", "free", "total", "utilization"}:
+        return None
+    if total is None and used is not None and free is not None:
+        total = used + free
+    if free is None and total is not None and used is not None:
+        free = max(total - used, 0)
+    if percent is None and total and used is not None and total > 0:
+        percent = used / total * 100
+    return TcamResource(
+        resource=resource,
+        region=region,
+        used_entries=used,
+        free_entries=free,
+        total_entries=total,
+        utilization_percent=percent,
+        source=source,
+    )
+
+
+def _parse_number(value: str | None) -> float | None:
+    if value is None or value == "":
+        return None
+    try:
+        return float(value.replace(",", ""))
+    except ValueError:
+        return None
 
 
 def _parse_cpu_percent(output: str) -> float | None:

@@ -22,6 +22,7 @@ collection_sources:
     config_snapshot: cli
     hardware_inventory: cli
     hardware_environment: cli
+    asic_tcam: telemetry
     cpu_memory: snmp
     uptime: snmp
     interface_state: cli

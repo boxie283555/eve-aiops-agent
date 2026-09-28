@@ -177,6 +177,30 @@ HARDWARE_COMPONENT_STATUS = Gauge(
     ["device", "component_type", "name", "model", "serial", "status"],
 )
 
+ASIC_TCAM_RESOURCE_UTILIZATION_PERCENT = Gauge(
+    "aiops_asic_tcam_resource_utilization_percent",
+    "ASIC or TCAM resource utilization percentage from CLI fallback collection.",
+    ["device", "resource", "region", "collection_source"],
+)
+
+ASIC_TCAM_RESOURCE_USED_ENTRIES = Gauge(
+    "aiops_asic_tcam_resource_used_entries",
+    "ASIC or TCAM resource used entries from CLI fallback collection.",
+    ["device", "resource", "region", "collection_source"],
+)
+
+ASIC_TCAM_RESOURCE_FREE_ENTRIES = Gauge(
+    "aiops_asic_tcam_resource_free_entries",
+    "ASIC or TCAM resource free entries from CLI fallback collection.",
+    ["device", "resource", "region", "collection_source"],
+)
+
+ASIC_TCAM_RESOURCE_TOTAL_ENTRIES = Gauge(
+    "aiops_asic_tcam_resource_total_entries",
+    "ASIC or TCAM resource total entries from CLI fallback collection.",
+    ["device", "resource", "region", "collection_source"],
+)
+
 DEVICE_UPTIME_SECONDS = Gauge(
     "aiops_device_uptime_seconds",
     "Device uptime in seconds.",

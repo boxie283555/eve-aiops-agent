@@ -407,13 +407,13 @@
                         "color": "red",
                         "text": "critical"
                       },
-                      "0.5": {
-                        "color": "yellow",
-                        "text": "warning"
-                      },
                       "1": {
                         "color": "green",
                         "text": "ok"
+                      },
+                      "0.5": {
+                        "color": "yellow",
+                        "text": "warning"
                       }
                     }
                   }
@@ -505,6 +505,239 @@
         "x": 0,
         "y": 22
       },
+      "id": 106,
+      "panels": [],
+      "title": "ASIC/TCAM Resource",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 4,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 23
+      },
+      "id": 25,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "(label_replace(aiops_telemetry_asic_tcam_resource_utilization_percent{device=~\"$device\"}, \"collection_source\", \"telemetry\", \"__name__\", \".*\")) or on(device, resource, region) (label_replace(aiops_asic_tcam_resource_utilization_percent{device=~\"$device\"}, \"collection_source\", \"cli\", \"__name__\", \".*\"))",
+          "legendFormat": "{{device}} {{resource}} {{region}} {{collection_source}}",
+          "refId": "A"
+        }
+      ],
+      "title": "TCAM Utilization",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 70
+                    },
+                    {
+                      "color": "red",
+                      "value": 90
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Device"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "auto"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Resource"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "auto"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 23
+      },
+      "id": 26,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "pluginVersion": "11.3.0",
+      "targets": [
+        {
+          "expr": "label_replace(((label_replace(aiops_telemetry_asic_tcam_resource_used_entries{device=~\"$device\"}, \"collection_source\", \"telemetry\", \"__name__\", \".*\")) or on(device, resource, region) (label_replace(aiops_asic_tcam_resource_used_entries{device=~\"$device\"}, \"collection_source\", \"cli\", \"__name__\", \".*\"))), \"metric\", \"used\", \"__name__\", \".*\") or label_replace(((label_replace(aiops_telemetry_asic_tcam_resource_free_entries{device=~\"$device\"}, \"collection_source\", \"telemetry\", \"__name__\", \".*\")) or on(device, resource, region) (label_replace(aiops_asic_tcam_resource_free_entries{device=~\"$device\"}, \"collection_source\", \"cli\", \"__name__\", \".*\"))), \"metric\", \"free\", \"__name__\", \".*\") or label_replace(((label_replace(aiops_telemetry_asic_tcam_resource_total_entries{device=~\"$device\"}, \"collection_source\", \"telemetry\", \"__name__\", \".*\")) or on(device, resource, region) (label_replace(aiops_asic_tcam_resource_total_entries{device=~\"$device\"}, \"collection_source\", \"cli\", \"__name__\", \".*\"))), \"metric\", \"total\", \"__name__\", \".*\") or label_replace(((label_replace(aiops_telemetry_asic_tcam_resource_utilization_percent{device=~\"$device\"}, \"collection_source\", \"telemetry\", \"__name__\", \".*\")) or on(device, resource, region) (label_replace(aiops_asic_tcam_resource_utilization_percent{device=~\"$device\"}, \"collection_source\", \"cli\", \"__name__\", \".*\"))), \"metric\", \"utilization_percent\", \"__name__\", \".*\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "{{device}} {{resource}} {{metric}}",
+          "refId": "A"
+        }
+      ],
+      "title": "TCAM Resource Details",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "job": true,
+              "instance": true
+            },
+            "renameByName": {
+              "Value": "Value",
+              "collection_source": "Source",
+              "device": "Device",
+              "metric": "Metric",
+              "region": "Region",
+              "resource": "Resource"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 31
+      },
       "id": 100,
       "panels": [],
       "title": "Device Health",
@@ -542,7 +775,7 @@
         "h": 5,
         "w": 8,
         "x": 0,
-        "y": 23
+        "y": 32
       },
       "id": 1,
       "options": {
@@ -608,7 +841,7 @@
         "h": 5,
         "w": 8,
         "x": 8,
-        "y": 23
+        "y": 32
       },
       "id": 2,
       "options": {
@@ -674,7 +907,7 @@
         "h": 5,
         "w": 8,
         "x": 16,
-        "y": 23
+        "y": 32
       },
       "id": 3,
       "options": {
@@ -710,7 +943,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 28
+        "y": 37
       },
       "id": 101,
       "panels": [],
@@ -761,7 +994,7 @@
         "h": 10,
         "w": 16,
         "x": 0,
-        "y": 29
+        "y": 38
       },
       "id": 7,
       "options": {
@@ -874,7 +1107,7 @@
         "h": 10,
         "w": 8,
         "x": 16,
-        "y": 29
+        "y": 38
       },
       "id": 8,
       "options": {
@@ -999,7 +1232,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 39
+        "y": 48
       },
       "id": 24,
       "options": {
@@ -1200,7 +1433,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 48
+        "y": 57
       },
       "id": 102,
       "panels": [],
@@ -1239,7 +1472,7 @@
         "h": 5,
         "w": 8,
         "x": 0,
-        "y": 49
+        "y": 58
       },
       "id": 5,
       "options": {
@@ -1349,7 +1582,7 @@
         "h": 8,
         "w": 16,
         "x": 8,
-        "y": 49
+        "y": 58
       },
       "id": 11,
       "options": {
@@ -1424,7 +1657,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 57
+        "y": 66
       },
       "id": 22,
       "options": {
@@ -1496,7 +1729,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 65
+        "y": 74
       },
       "id": 23,
       "options": {
@@ -1529,7 +1762,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 73
+        "y": 82
       },
       "id": 105,
       "panels": [],
@@ -1568,7 +1801,7 @@
         "h": 5,
         "w": 8,
         "x": 0,
-        "y": 74
+        "y": 83
       },
       "id": 6,
       "options": {
@@ -1678,7 +1911,7 @@
         "h": 8,
         "w": 16,
         "x": 8,
-        "y": 74
+        "y": 83
       },
       "id": 12,
       "options": {
@@ -1737,7 +1970,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 82
+        "y": 91
       },
       "id": 103,
       "panels": [],
@@ -1776,7 +2009,7 @@
         "h": 5,
         "w": 6,
         "x": 0,
-        "y": 83
+        "y": 92
       },
       "id": 4,
       "options": {
@@ -1886,7 +2119,7 @@
         "h": 8,
         "w": 18,
         "x": 6,
-        "y": 83
+        "y": 92
       },
       "id": 13,
       "options": {
@@ -1963,7 +2196,7 @@
         "h": 9,
         "w": 16,
         "x": 0,
-        "y": 91
+        "y": 100
       },
       "id": 14,
       "options": {
@@ -2072,7 +2305,7 @@
         "h": 9,
         "w": 8,
         "x": 16,
-        "y": 91
+        "y": 100
       },
       "id": 15,
       "options": {
@@ -2180,6 +2413,6 @@
   "timezone": "browser",
   "title": "AI Networking OPS",
   "uid": "eve-aiops-overview",
-  "version": 10,
+  "version": 11,
   "weekStart": ""
 }

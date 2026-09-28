@@ -8,7 +8,7 @@ Recommended architecture:
 
 - CLI over SSH: configuration snapshots and state that is easiest or safest to read from show commands.
 - SNMP: standard platform health and counters where available, especially CPU, memory, uptime, and interface counters.
-- Telemetry: high-frequency streaming data, especially interface traffic and protocol state such as BGP when the platform supports it.
+- Telemetry: high-frequency streaming data, especially interface traffic, ASIC/TCAM resources, and protocol state such as BGP when the platform supports it.
 
 Current implementation status:
 
@@ -26,6 +26,7 @@ collection_sources:
     uptime: snmp
     interface_traffic: telemetry
     interface_errors_discards: snmp
+    asic_tcam: telemetry
     bgp: telemetry
     config_snapshot: cli
 ```
@@ -41,6 +42,7 @@ If the preferred source is unavailable, keep CLI as the fallback so the dashboar
 | Running config snapshot | CLI | None | Must stay CLI/API; SNMP/telemetry are not suitable. |
 | Software version / model / serial | CLI | SNMP ENTITY-MIB later | CLI/TextFSM is reliable for current lab. |
 | Power / module / hardware state | CLI | SNMP ENTITY-SENSOR-MIB later | Keep CLI until platform SNMP OIDs are validated. |
+| ASIC / TCAM resource utilization | Telemetry | CLI | Use telemetry on real hardware after validating the gNMI path. CLI fallback exports `aiops_asic_tcam_*`. |
 | CPU | SNMP | CLI | Use SNMP when device MIB support is available; current fallback is `show processes top once`. |
 | Memory | SNMP | CLI | Use SNMP when memory OIDs are validated; current fallback is CLI parsing. |
 | Uptime | SNMP | CLI | SNMP `sysUpTime` or HOST-RESOURCES-MIB is preferred. |
@@ -66,6 +68,7 @@ Arista EOS commands:
 | Inventory / serial / model | `show inventory` |
 | Power status | `show environment power` |
 | Module status | `show module` |
+| ASIC / TCAM fallback | `show hardware capacity`, `show platform tcam utilization`, `show platform fap resource utilization` |
 | CPU and memory fallback | `show processes top once` |
 | Interface state | `show ip interface brief` |
 | Interface traffic/errors/discards fallback | `show interfaces` |
@@ -195,9 +198,23 @@ Recommended telemetry use:
 - Interface traffic rates.
 - Interface counter streams where available.
 - BGP neighbor state and route counters where available.
+- ASIC/TCAM resource utilization where the real hardware platform exposes a validated gNMI path.
 - High-frequency state changes that should not wait for CLI polling.
 
-CLI remains the fallback for BGP until telemetry subscriptions and field names are normalized into dashboard queries.
+CLI remains the fallback for BGP and ASIC/TCAM until telemetry subscriptions and field names are normalized into dashboard queries.
+
+For ASIC/TCAM telemetry, set comma-separated paths after validating them on the target platform:
+
+```bash
+TELEGRAF_GNMI_TCAM_PATHS=/validated/tcam/path/one,/validated/tcam/path/two
+```
+
+The dashboard looks first for normalized telemetry metrics named `aiops_telemetry_asic_tcam_resource_*`. If those metrics are absent, it automatically falls back to the CLI metrics:
+
+- `aiops_asic_tcam_resource_utilization_percent`
+- `aiops_asic_tcam_resource_used_entries`
+- `aiops_asic_tcam_resource_free_entries`
+- `aiops_asic_tcam_resource_total_entries`
 
 ## Reachability Model
 

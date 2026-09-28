@@ -50,6 +50,26 @@ if [ "${TELEGRAF_ENABLE_GNMI:-false}" = "true" ]; then
     subscription_mode = "sample"
     sample_interval = "30s"
 EOF
+
+  gnmi_tcam_paths="${TELEGRAF_GNMI_TCAM_PATHS:-}"
+  if [ -n "$gnmi_tcam_paths" ]; then
+    old_ifs="$IFS"
+    IFS=","
+    index=0
+    for gnmi_path in $gnmi_tcam_paths; do
+      index=$((index + 1))
+      escaped_path="$(toml_escape "$gnmi_path")"
+      cat >>/tmp/telegraf.conf <<EOF
+
+  [[inputs.gnmi.subscription]]
+    name = "arista_asic_tcam_resource_${index}"
+    path = "$escaped_path"
+    subscription_mode = "sample"
+    sample_interval = "60s"
+EOF
+    done
+    IFS="$old_ifs"
+  fi
 fi
 
 exec telegraf --config /tmp/telegraf.conf

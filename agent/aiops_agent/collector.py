@@ -18,6 +18,7 @@ from .parser import (
     LldpNeighbor,
     MacTableEntry,
     RouteSummaryEntry,
+    TcamResource,
     parse_bgp_summary,
     parse_device_hardware,
     parse_device_resources,
@@ -32,6 +33,7 @@ from .parser import (
     parse_ospf_neighbors,
     parse_route_summary,
     parse_show_interface,
+    parse_tcam_resources,
 )
 from .settings import Settings
 from .snmp import SnmpSample, collect_snmp_sample, merge_interface_counters, merge_resources
@@ -46,6 +48,9 @@ COMMANDS_BY_PLATFORM = {
         "inventory": "show inventory",
         "power": "show environment power",
         "module": "show module",
+        "tcam_capacity": "show hardware capacity",
+        "tcam_platform": "show platform tcam utilization",
+        "tcam_resource": "show platform fap resource utilization",
         "processes": "show processes top once",
         "ip_interface_brief": "show ip interface brief",
         "interface": "show interfaces",
@@ -65,6 +70,9 @@ COMMANDS_BY_PLATFORM = {
         "inventory": "show inventory",
         "power": "show environment power",
         "module": "show module",
+        "tcam_capacity": "show hardware capacity",
+        "tcam_platform": "show platform tcam utilization",
+        "tcam_resource": "show platform hardware capacity",
         "processes": "show processes top once",
         "ip_interface_brief": "show ip interface brief",
         "interface": "show interface",
@@ -99,6 +107,7 @@ class DeviceResult:
     route_summary: list[RouteSummaryEntry] = field(default_factory=list)
     hardware: DeviceHardwareInfo = field(default_factory=DeviceHardwareInfo)
     hardware_components: list[HardwareComponent] = field(default_factory=list)
+    tcam_resources: list[TcamResource] = field(default_factory=list)
     resources: DeviceResourceUsage = field(default_factory=DeviceResourceUsage)
 
 
@@ -223,6 +232,13 @@ class Collector:
                         structured_outputs.get("inventory"),
                     ),
                 ],
+                tcam_resources=parse_tcam_resources(
+                    {
+                        key: value
+                        for key, value in outputs.items()
+                        if key.startswith("tcam_")
+                    }
+                ),
             )
         except (NetmikoAuthenticationException, NetmikoTimeoutException, OSError) as exc:
             return DeviceResult(
@@ -305,6 +321,22 @@ class Collector:
                 component.serial,
                 component.status,
             ).set(status_value)
+
+        for resource in result.tcam_resources:
+            tcam_labels = (
+                result.device.name,
+                resource.resource,
+                resource.region,
+                resource.source,
+            )
+            if resource.utilization_percent is not None:
+                metrics.ASIC_TCAM_RESOURCE_UTILIZATION_PERCENT.labels(*tcam_labels).set(resource.utilization_percent)
+            if resource.used_entries is not None:
+                metrics.ASIC_TCAM_RESOURCE_USED_ENTRIES.labels(*tcam_labels).set(resource.used_entries)
+            if resource.free_entries is not None:
+                metrics.ASIC_TCAM_RESOURCE_FREE_ENTRIES.labels(*tcam_labels).set(resource.free_entries)
+            if resource.total_entries is not None:
+                metrics.ASIC_TCAM_RESOURCE_TOTAL_ENTRIES.labels(*tcam_labels).set(resource.total_entries)
 
         if result.resources.uptime_seconds is not None:
             metrics.DEVICE_UPTIME_SECONDS.labels(result.device.name, result.device.host).set(result.resources.uptime_seconds)

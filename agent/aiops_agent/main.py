@@ -104,6 +104,7 @@ def structured_state() -> dict[str, object]:
                 "duration_seconds": result.duration_seconds,
                 "hardware": asdict(result.hardware),
                 "hardware_components": [asdict(component) for component in result.hardware_components],
+                "tcam_resources": [asdict(resource) for resource in result.tcam_resources],
                 "resources": asdict(result.resources),
                 "interfaces": result.interfaces,
                 "mac_table": [asdict(entry) for entry in result.mac_table],
@@ -144,63 +145,258 @@ def tools_view() -> str:
 <!doctype html>
 <html>
 <head>
-  <title>EVE AIOps Tools</title>
+  <title>AI Networking OPS Tools</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { margin: 0; background: #f6f8fb; color: #17202a; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    :root { --bg: #f6f8fb; --panel: #fff; --line: #d7dee8; --text: #17202a; --muted: #64748b; --green: #137333; --yellow: #b7791f; --red: #b42318; --blue: #075985; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
     header { padding: 20px 24px; background: #fff; border-bottom: 1px solid #d7dee8; }
     h1 { margin: 0; font-size: 20px; letter-spacing: 0; }
-    main { padding: 20px 24px 28px; display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); }
-    section { background: #fff; border: 1px solid #d7dee8; border-radius: 8px; padding: 16px; }
+    main { padding: 20px 24px 28px; display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); align-items: start; }
+    section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; }
     h2 { margin: 0 0 12px; font-size: 16px; letter-spacing: 0; }
     label { display: block; color: #475569; font-size: 13px; margin-bottom: 6px; }
-    input, button { height: 36px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0 10px; font: inherit; }
-    input { width: 100%; margin-bottom: 10px; }
+    input, select, button { height: 36px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0 10px; font: inherit; background: #fff; }
+    input, select { width: 100%; }
     button { background: #0f172a; color: #fff; cursor: pointer; }
-    pre { min-height: 180px; overflow: auto; background: #0f172a; color: #e5e7eb; border-radius: 6px; padding: 12px; font-size: 12px; line-height: 1.5; }
+    .form-grid { display: grid; gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .wide { grid-column: 1 / -1; }
+    .actions { margin-top: 12px; display: flex; gap: 10px; align-items: center; }
+    .result { min-height: 180px; margin-top: 14px; display: grid; gap: 12px; }
+    .message { color: var(--muted); background: #f8fafc; border: 1px dashed var(--line); border-radius: 6px; padding: 14px; }
+    .summary { display: flex; flex-wrap: wrap; gap: 8px; }
+    .pill { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 999px; padding: 4px 9px; color: #334155; background: #f8fafc; font-size: 12px; }
+    .pill.good { color: var(--green); border-color: #b7e2c1; background: #f0fdf4; }
+    .pill.warn { color: var(--yellow); border-color: #f2d49b; background: #fffbeb; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { padding: 8px 9px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { background: #f8fafc; color: #475569; font-weight: 700; }
+    .table-wrap { overflow: auto; border: 1px solid var(--line); border-radius: 6px; }
+    h3 { margin: 2px 0 8px; font-size: 14px; }
+    .path { display: grid; gap: 8px; }
+    .step { border: 1px solid var(--line); border-radius: 6px; padding: 10px; background: #fff; }
+    .step-title { font-weight: 700; margin-bottom: 4px; }
+    .step-meta { color: var(--muted); font-size: 13px; }
+    @media (max-width: 680px) { main { grid-template-columns: 1fr; padding: 14px; } .form-grid { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
   <header>
-    <h1>EVE AIOps Tools</h1>
+    <h1>AI Networking OPS Tools</h1>
   </header>
   <main>
     <section>
       <h2>MAC / IP Lookup</h2>
-      <label for="macQuery">MAC or IP</label>
-      <input id="macQuery" placeholder="aabb.cc80.b000 or 10.110.0.11">
-      <button type="button" onclick="lookupMac()">Lookup</button>
-      <pre id="macResult">Waiting for query...</pre>
+      <div class="form-grid">
+        <div class="wide">
+          <label for="macQuery">MAC or IP</label>
+          <input id="macQuery" placeholder="aabb.cc80.b000 or 10.110.0.11">
+        </div>
+        <div>
+          <label for="macDevice">Device</label>
+          <select id="macDevice"></select>
+        </div>
+        <div>
+          <label for="macVrf">VRF for IP lookup</label>
+          <select id="macVrf"></select>
+        </div>
+      </div>
+      <div class="actions"><button type="button" onclick="lookupMac()">Lookup</button></div>
+      <div id="macResult" class="result"><div class="message">Waiting for query...</div></div>
     </section>
     <section>
       <h2>End-to-End Path</h2>
-      <label for="srcQuery">Source MAC or IP</label>
-      <input id="srcQuery" placeholder="10.110.0.11">
-      <label for="dstQuery">Destination MAC or IP</label>
-      <input id="dstQuery" placeholder="10.120.0.21">
-      <button type="button" onclick="lookupPath()">Trace Path</button>
-      <pre id="pathResult">Waiting for query...</pre>
+      <div class="form-grid">
+        <div class="wide">
+          <label for="srcQuery">Source MAC or IP</label>
+          <input id="srcQuery" placeholder="10.110.0.11">
+        </div>
+        <div>
+          <label for="srcDevice">Source Device</label>
+          <select id="srcDevice"></select>
+        </div>
+        <div>
+          <label for="srcVrf">Source VRF for IP</label>
+          <select id="srcVrf"></select>
+        </div>
+        <div class="wide">
+          <label for="dstQuery">Destination MAC or IP</label>
+          <input id="dstQuery" placeholder="10.120.0.21">
+        </div>
+        <div>
+          <label for="dstDevice">Destination Device</label>
+          <select id="dstDevice"></select>
+        </div>
+        <div>
+          <label for="dstVrf">Destination VRF for IP</label>
+          <select id="dstVrf"></select>
+        </div>
+      </div>
+      <div class="actions"><button type="button" onclick="lookupPath()">Trace Path</button></div>
+      <div id="pathResult" class="result"><div class="message">Waiting for query...</div></div>
     </section>
   </main>
   <script>
+    const deviceSelects = ["macDevice", "srcDevice", "dstDevice"];
+    const vrfSelects = ["macVrf", "srcVrf", "dstVrf"];
+
+    loadOptions();
+    bindVrfToggle("macQuery", "macVrf");
+    bindVrfToggle("srcQuery", "srcVrf");
+    bindVrfToggle("dstQuery", "dstVrf");
+
     async function lookupMac() {
       const query = document.getElementById("macQuery").value.trim();
-      await renderJson("/tools/mac?query=" + encodeURIComponent(query), "macResult");
+      const params = new URLSearchParams({
+        query,
+        device: document.getElementById("macDevice").value,
+        vrf: isIp(query) ? document.getElementById("macVrf").value : "all",
+      });
+      await renderLookup("/tools/mac?" + params.toString(), "macResult");
     }
+
     async function lookupPath() {
       const src = document.getElementById("srcQuery").value.trim();
       const dst = document.getElementById("dstQuery").value.trim();
-      await renderJson("/tools/path?src=" + encodeURIComponent(src) + "&dst=" + encodeURIComponent(dst), "pathResult");
+      const params = new URLSearchParams({
+        src,
+        dst,
+        src_device: document.getElementById("srcDevice").value,
+        src_vrf: isIp(src) ? document.getElementById("srcVrf").value : "all",
+        dst_device: document.getElementById("dstDevice").value,
+        dst_vrf: isIp(dst) ? document.getElementById("dstVrf").value : "all",
+      });
+      await renderPath("/tools/path?" + params.toString(), "pathResult");
     }
-    async function renderJson(url, target) {
+
+    function bindVrfToggle(queryId, vrfId) {
+      const input = document.getElementById(queryId);
+      input.addEventListener("input", () => updateVrfState(queryId, vrfId));
+      updateVrfState(queryId, vrfId);
+    }
+
+    function updateVrfState(queryId, vrfId) {
+      const value = document.getElementById(queryId).value.trim();
+      const select = document.getElementById(vrfId);
+      const enabled = !value || isIp(value);
+      select.disabled = !enabled;
+      if (!enabled) select.value = "all";
+      select.title = enabled ? "Used for IP lookup" : "VRF is not used for MAC lookup";
+    }
+
+    async function loadOptions() {
+      try {
+        const response = await fetch("/tools/options", { cache: "no-store" });
+        const payload = await response.json();
+        for (const id of deviceSelects) fillSelect(id, payload.devices || [], "All devices");
+        for (const id of vrfSelects) fillSelect(id, payload.vrfs || [], "All VRFs");
+      } catch (error) {
+        for (const id of deviceSelects) fillSelect(id, [], "All devices");
+        for (const id of vrfSelects) fillSelect(id, [], "All VRFs");
+      }
+    }
+
+    function fillSelect(id, values, allLabel) {
+      const select = document.getElementById(id);
+      select.innerHTML = "";
+      select.append(new Option(allLabel, "all"));
+      for (const value of values) select.append(new Option(value, value));
+    }
+
+    async function renderLookup(url, target) {
       const node = document.getElementById(target);
-      node.textContent = "Loading...";
+      node.innerHTML = '<div class="message">Loading...</div>';
       try {
         const response = await fetch(url, { cache: "no-store" });
-        node.textContent = JSON.stringify(await response.json(), null, 2);
+        const payload = await response.json();
+        node.innerHTML = lookupHtml(payload);
       } catch (error) {
-        node.textContent = "Request failed: " + error;
+        node.innerHTML = '<div class="message">Request failed: ' + escapeHtml(String(error)) + '</div>';
       }
+    }
+
+    async function renderPath(url, target) {
+      const node = document.getElementById(target);
+      node.innerHTML = '<div class="message">Loading...</div>';
+      try {
+        const response = await fetch(url, { cache: "no-store" });
+        const payload = await response.json();
+        node.innerHTML = pathHtml(payload);
+      } catch (error) {
+        node.innerHTML = '<div class="message">Request failed: ' + escapeHtml(String(error)) + '</div>';
+      }
+    }
+
+    function lookupHtml(payload) {
+      const summary = [
+        pill(payload.found ? "Found" : "Not found", payload.found ? "good" : "warn"),
+        pill("Query: " + (payload.query || "")),
+        pill("Device: " + (payload.device_filter || "all")),
+        pill("VRF: " + (payload.vrf_filter || "all")),
+        payload.resolved_ip ? pill("IP: " + payload.resolved_ip) : "",
+        payload.resolved_mac ? pill("MAC: " + payload.resolved_mac) : "",
+      ].join("");
+      return '<div class="summary">' + summary + '</div>'
+        + tableSection("ARP Matches", payload.arp_matches || [], ["device", "vrf", "ip", "mac", "interface", "site", "role"])
+        + tableSection("Local MAC Matches", payload.local_matches || [], ["device", "vlan", "mac", "port", "site", "role"])
+        + tableSection("Overlay MAC Matches", payload.overlay_matches || [], ["device", "vlan", "mac", "port", "site", "role"])
+        + tableSection("CLF Matches", payload.clf_matches || [], ["device", "vlan", "mac", "port", "site", "location_type"]);
+    }
+
+    function pathHtml(payload) {
+      const source = endpointSummary("Source", payload.source || {});
+      const destination = endpointSummary("Destination", payload.destination || {});
+      const steps = payload.path || [];
+      const path = steps.length
+        ? '<div class="path">' + steps.map((step, index) => stepHtml(step, index)).join("") + '</div>'
+        : '<div class="message">No path could be inferred from current MAC, ARP, and LLDP data.</div>';
+      const notes = ((payload.evidence || {}).notes || []).map(note => '<span class="pill">' + escapeHtml(note) + '</span>').join("");
+      return source + destination + '<h3>Path</h3>' + path + '<div class="summary">' + notes + '</div>';
+    }
+
+    function endpointSummary(title, endpoint) {
+      return '<h3>' + title + '</h3><div class="summary">'
+        + pill("Query: " + (endpoint.query || ""))
+        + (endpoint.ip ? pill("IP: " + endpoint.ip) : "")
+        + (endpoint.mac ? pill("MAC: " + endpoint.mac) : "")
+        + pill("ARP: " + ((endpoint.arp_matches || []).length))
+        + pill("MAC table: " + ((endpoint.mac_matches || []).length))
+        + '</div>';
+    }
+
+    function stepHtml(step, index) {
+      const title = String(step.type || "step").replaceAll("_", " ");
+      const details = Object.entries(step)
+        .filter(([key]) => key !== "type")
+        .map(([key, value]) => '<span class="pill">' + escapeHtml(key) + ': ' + escapeHtml(String(value ?? "")) + '</span>')
+        .join("");
+      return '<div class="step"><div class="step-title">' + (index + 1) + '. ' + escapeHtml(title) + '</div><div class="step-meta summary">' + details + '</div></div>';
+    }
+
+    function tableSection(title, rows, columns) {
+      if (!rows.length) return '<div><h3>' + escapeHtml(title) + '</h3><div class="message">No matches</div></div>';
+      const head = columns.map(col => '<th>' + escapeHtml(label(col)) + '</th>').join("");
+      const body = rows.map(row => '<tr>' + columns.map(col => '<td>' + escapeHtml(String(row[col] ?? "")) + '</td>').join("") + '</tr>').join("");
+      return '<div><h3>' + escapeHtml(title) + '</h3><div class="table-wrap"><table><thead><tr>' + head + '</tr></thead><tbody>' + body + '</tbody></table></div></div>';
+    }
+
+    function pill(text, cls) {
+      return '<span class="pill ' + (cls || "") + '">' + escapeHtml(text) + '</span>';
+    }
+
+    function label(value) {
+      return value.replaceAll("_", " ").replace(/\\b\\w/g, char => char.toUpperCase());
+    }
+
+    function escapeHtml(value) {
+      return value.replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
+    }
+
+    function isIp(value) {
+      const parts = value.split(".");
+      if (parts.length !== 4) return false;
+      return parts.every(part => /^\\d+$/.test(part) && Number(part) >= 0 && Number(part) <= 255);
     }
   </script>
 </body>
@@ -209,14 +405,21 @@ def tools_view() -> str:
 
 
 @app.get("/tools/mac")
-def mac_lookup(query: str) -> dict[str, object]:
-    return _lookup_mac(query)
+def mac_lookup(query: str, device: str = "all", vrf: str = "all") -> dict[str, object]:
+    return _lookup_mac(query, device_filter=device, vrf_filter=vrf)
 
 
 @app.get("/tools/path")
-def path_lookup(src: str, dst: str) -> dict[str, object]:
-    source = _resolve_endpoint(src)
-    destination = _resolve_endpoint(dst)
+def path_lookup(
+    src: str,
+    dst: str,
+    src_device: str = "all",
+    src_vrf: str = "all",
+    dst_device: str = "all",
+    dst_vrf: str = "all",
+) -> dict[str, object]:
+    source = _resolve_endpoint(src, device_filter=src_device, vrf_filter=src_vrf)
+    destination = _resolve_endpoint(dst, device_filter=dst_device, vrf_filter=dst_vrf)
     source_location = _best_local_location(source)
     destination_location = _best_local_location(destination)
     path = _build_path_steps(source_location, destination_location)
@@ -238,8 +441,24 @@ def path_lookup(src: str, dst: str) -> dict[str, object]:
     }
 
 
-def _lookup_mac(query: str) -> dict[str, object]:
-    resolved = _resolve_endpoint(query)
+@app.get("/tools/options")
+def tools_options() -> dict[str, object]:
+    vrfs = sorted(
+        {
+            entry.vrf
+            for result in collector.latest_results.values()
+            for entry in result.arp_table
+            if entry.vrf
+        }
+    )
+    return {
+        "devices": sorted(device.name for device in devices),
+        "vrfs": vrfs,
+    }
+
+
+def _lookup_mac(query: str, device_filter: str = "all", vrf_filter: str = "all") -> dict[str, object]:
+    resolved = _resolve_endpoint(query, device_filter=device_filter, vrf_filter=vrf_filter)
     matches = resolved.get("mac_matches", [])
     arp_matches = resolved.get("arp_matches", [])
     clf_matches = [match for match in matches if match.get("role") == "clf"]
@@ -248,6 +467,8 @@ def _lookup_mac(query: str) -> dict[str, object]:
         "normalized_query": resolved.get("mac") or query,
         "resolved_ip": resolved.get("ip"),
         "resolved_mac": resolved.get("mac"),
+        "device_filter": _normalize_filter(device_filter),
+        "vrf_filter": _normalize_filter(vrf_filter),
         "found": bool(matches or arp_matches),
         "clf_matches": clf_matches,
         "local_matches": [match for match in matches if match.get("location_type") == "local"],
@@ -257,16 +478,18 @@ def _lookup_mac(query: str) -> dict[str, object]:
     }
 
 
-def _resolve_endpoint(query: str) -> dict[str, object]:
+def _resolve_endpoint(query: str, device_filter: str = "all", vrf_filter: str = "all") -> dict[str, object]:
     query = query.strip()
+    normalized_device_filter = _normalize_filter(device_filter)
+    normalized_vrf_filter = _normalize_filter(vrf_filter)
     ip = query if _is_ip(query) else ""
     mac = ""
     arp_matches: list[dict[str, object]] = []
 
     if ip:
-        for result in collector.latest_results.values():
+        for result in _filtered_results(normalized_device_filter):
             for entry in result.arp_table:
-                if entry.ip == ip:
+                if entry.ip == ip and _matches_filter(entry.vrf, normalized_vrf_filter):
                     mac = entry.mac
                     arp_matches.append(
                         {
@@ -278,7 +501,7 @@ def _resolve_endpoint(query: str) -> dict[str, object]:
                     )
     else:
         mac = normalize_mac(query)
-        for result in collector.latest_results.values():
+        for result in _filtered_results(normalized_device_filter):
             for entry in result.arp_table:
                 if entry.mac == mac:
                     arp_matches.append(
@@ -292,7 +515,7 @@ def _resolve_endpoint(query: str) -> dict[str, object]:
 
     mac_matches: list[dict[str, object]] = []
     if mac:
-        for result in collector.latest_results.values():
+        for result in _filtered_results(normalized_device_filter):
             for entry in result.mac_table:
                 if entry.mac == mac:
                     mac_matches.append(
@@ -307,11 +530,28 @@ def _resolve_endpoint(query: str) -> dict[str, object]:
 
     return {
         "query": query,
+        "device_filter": normalized_device_filter,
+        "vrf_filter": normalized_vrf_filter,
         "ip": ip or None,
         "mac": mac or None,
         "arp_matches": sorted(arp_matches, key=lambda item: (item.get("vrf") != "TENANT", item["site"], item["device"], item["ip"])),
         "mac_matches": sorted(mac_matches, key=lambda item: (item["location_type"] != "local", item["site"], item["device"], item["vlan"])),
     }
+
+
+def _filtered_results(device_filter: str):
+    for result in collector.latest_results.values():
+        if _matches_filter(result.device.name, device_filter):
+            yield result
+
+
+def _normalize_filter(value: str | None) -> str:
+    value = (value or "all").strip()
+    return value if value else "all"
+
+
+def _matches_filter(value: object, selected: str) -> bool:
+    return selected == "all" or str(value) == selected
 
 
 def _best_local_location(endpoint: dict[str, object]) -> dict[str, object]:

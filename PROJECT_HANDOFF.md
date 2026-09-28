@@ -125,7 +125,7 @@ vi config/project.yml
 
 - CLI/SSH：当前主要采集方式。接口状态和流量、接口错误和丢弃、BGP、OSPF、VXLAN、硬件、电源、模块、软件版本、CPU、内存、路由汇总、MAC/ARP/LLDP、配置快照都来自 CLI show 命令。
 - SNMP：CPU、内存、uptime、接口 input/output errors/discards 已切到 SNMP 优先采集。需要在 `.env` 中设置 `AIOPS_SNMP_ENABLED=true` 和 `AIOPS_SNMP_COMMUNITY`。
-- Telemetry：由 Telegraf 独立采集。Arista EOS 推荐使用 gNMI，Telegraf 主动连接设备 TCP `6030`；Cisco MDT dial-out 仍保留 TCP `57000`。Prometheus 从 Telegraf 的 `9273` 抓取。
+- Telemetry：由 Telegraf 独立采集。Arista EOS 推荐使用 gNMI，Telegraf 主动连接设备 TCP `6030`；Cisco MDT dial-out 仍保留 TCP `57000`。Prometheus 从 Telegraf 的 `9273` 抓取。ASIC/TCAM Dashboard 查询优先看 telemetry 归一化指标，缺失时回落到 CLI fallback 的 `aiops_asic_tcam_*`。
 
 Arista gNMI 设备侧运行配置：
 
@@ -143,7 +143,10 @@ Telegraf gNMI 在 `.env` 中开启：
 ```bash
 TELEGRAF_ENABLE_GNMI=true
 TELEGRAF_GNMI_ADDRESSES=172.16.1.101:6030,172.16.1.102:6030
+TELEGRAF_GNMI_TCAM_PATHS=
 ```
+
+`TELEGRAF_GNMI_TCAM_PATHS` 需要在真实硬件上验证后填写逗号分隔的 gNMI path；vEOS/cEOS 通常没有真实 ASIC/TCAM 数据。
 
 SNMP 在 `.env` 中开启：
 
