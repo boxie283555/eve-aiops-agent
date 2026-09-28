@@ -25,6 +25,486 @@
         "x": 0,
         "y": 0
       },
+      "id": 104,
+      "panels": [],
+      "title": "Device Hardware",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 1
+      },
+      "id": 18,
+      "options": {
+        "displayLabels": [
+          "name",
+          "percent"
+        ],
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "pieType": "pie",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.3.0",
+      "targets": [
+        {
+          "expr": "count by (version) (aiops_device_hardware_info{device=~\"$device\"})",
+          "legendFormat": "{{version}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Software Version Share",
+      "type": "piechart"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 1
+      },
+      "id": 19,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value_and_name",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.3.0",
+      "targets": [
+        {
+          "expr": "aiops_device_uptime_seconds{device=~\"$device\"}",
+          "legendFormat": "{{device}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Device Uptime",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 4,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 1
+      },
+      "id": 20,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "aiops_device_cpu_utilization_percent{device=~\"$device\"}",
+          "legendFormat": "{{device}}",
+          "refId": "A"
+        }
+      ],
+      "title": "CPU Utilization",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 4,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "id": 21,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "aiops_device_memory_utilization_percent{device=~\"$device\"}",
+          "legendFormat": "{{device}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Memory Utilization",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "id": 16,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "pluginVersion": "11.3.0",
+      "targets": [
+        {
+          "expr": "aiops_device_hardware_info{device=~\"$device\"}",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "{{device}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Device Version and Inventory",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Value": true,
+              "__name__": true,
+              "job": true,
+              "instance": true
+            },
+            "renameByName": {
+              "architecture": "Architecture",
+              "device": "Device",
+              "host": "Host",
+              "hw_version": "HW Version",
+              "model": "Model",
+              "serial": "Serial",
+              "version": "EOS Version"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Health"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "color": "red",
+                        "text": "critical"
+                      },
+                      "0.5": {
+                        "color": "yellow",
+                        "text": "warning"
+                      },
+                      "1": {
+                        "color": "green",
+                        "text": "ok"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 0.5
+                    },
+                    {
+                      "color": "green",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 15
+      },
+      "id": 17,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "pluginVersion": "11.3.0",
+      "targets": [
+        {
+          "expr": "aiops_hardware_component_status{device=~\"$device\"}",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "{{device}} {{component_type}} {{name}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Power and Module Status",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "job": true,
+              "instance": true
+            },
+            "renameByName": {
+              "Value": "Health",
+              "component_type": "Type",
+              "device": "Device",
+              "model": "Model",
+              "name": "Name",
+              "serial": "Serial",
+              "status": "Status"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 22
+      },
       "id": 100,
       "panels": [],
       "title": "Device Health",
@@ -62,7 +542,7 @@
         "h": 5,
         "w": 8,
         "x": 0,
-        "y": 1
+        "y": 23
       },
       "id": 1,
       "options": {
@@ -128,7 +608,7 @@
         "h": 5,
         "w": 8,
         "x": 8,
-        "y": 1
+        "y": 23
       },
       "id": 2,
       "options": {
@@ -194,7 +674,7 @@
         "h": 5,
         "w": 8,
         "x": 16,
-        "y": 1
+        "y": 23
       },
       "id": 3,
       "options": {
@@ -230,7 +710,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 6
+        "y": 28
       },
       "id": 101,
       "panels": [],
@@ -281,7 +761,7 @@
         "h": 10,
         "w": 16,
         "x": 0,
-        "y": 7
+        "y": 29
       },
       "id": 7,
       "options": {
@@ -394,7 +874,7 @@
         "h": 10,
         "w": 8,
         "x": 16,
-        "y": 7
+        "y": 29
       },
       "id": 8,
       "options": {
@@ -519,7 +999,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 17
+        "y": 39
       },
       "id": 24,
       "options": {
@@ -720,7 +1200,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 26
+        "y": 48
       },
       "id": 102,
       "panels": [],
@@ -759,7 +1239,7 @@
         "h": 5,
         "w": 8,
         "x": 0,
-        "y": 27
+        "y": 49
       },
       "id": 5,
       "options": {
@@ -869,7 +1349,7 @@
         "h": 8,
         "w": 16,
         "x": 8,
-        "y": 27
+        "y": 49
       },
       "id": 11,
       "options": {
@@ -944,7 +1424,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 35
+        "y": 57
       },
       "id": 22,
       "options": {
@@ -1016,7 +1496,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 43
+        "y": 65
       },
       "id": 23,
       "options": {
@@ -1049,7 +1529,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 51
+        "y": 73
       },
       "id": 105,
       "panels": [],
@@ -1088,7 +1568,7 @@
         "h": 5,
         "w": 8,
         "x": 0,
-        "y": 52
+        "y": 74
       },
       "id": 6,
       "options": {
@@ -1198,7 +1678,7 @@
         "h": 8,
         "w": 16,
         "x": 8,
-        "y": 52
+        "y": 74
       },
       "id": 12,
       "options": {
@@ -1257,7 +1737,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 60
+        "y": 82
       },
       "id": 103,
       "panels": [],
@@ -1296,7 +1776,7 @@
         "h": 5,
         "w": 6,
         "x": 0,
-        "y": 61
+        "y": 83
       },
       "id": 4,
       "options": {
@@ -1406,7 +1886,7 @@
         "h": 8,
         "w": 18,
         "x": 6,
-        "y": 61
+        "y": 83
       },
       "id": 13,
       "options": {
@@ -1483,7 +1963,7 @@
         "h": 9,
         "w": 16,
         "x": 0,
-        "y": 69
+        "y": 91
       },
       "id": 14,
       "options": {
@@ -1592,7 +2072,7 @@
         "h": 9,
         "w": 8,
         "x": 16,
-        "y": 69
+        "y": 91
       },
       "id": 15,
       "options": {
@@ -1623,486 +2103,6 @@
       ],
       "title": "BGP Routes/NLRI Received vs Advertised",
       "type": "timeseries"
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 78
-      },
-      "id": 104,
-      "panels": [],
-      "title": "Device Hardware",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "Prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "mappings": [],
-          "unit": "none"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 8,
-        "x": 0,
-        "y": 79
-      },
-      "id": 18,
-      "options": {
-        "displayLabels": [
-          "name",
-          "percent"
-        ],
-        "legend": {
-          "displayMode": "table",
-          "placement": "right",
-          "showLegend": true,
-          "values": [
-            "value",
-            "percent"
-          ]
-        },
-        "pieType": "pie",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "11.3.0",
-      "targets": [
-        {
-          "expr": "count by (version) (aiops_device_hardware_info{device=~\"$device\"})",
-          "legendFormat": "{{version}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Software Version Share",
-      "type": "piechart"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "Prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "s"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 8,
-        "x": 8,
-        "y": 79
-      },
-      "id": 19,
-      "options": {
-        "colorMode": "background",
-        "graphMode": "area",
-        "justifyMode": "center",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showPercentChange": false,
-        "textMode": "value_and_name",
-        "wideLayout": true
-      },
-      "pluginVersion": "11.3.0",
-      "targets": [
-        {
-          "expr": "aiops_device_uptime_seconds{device=~\"$device\"}",
-          "legendFormat": "{{device}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Device Uptime",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "Prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "drawStyle": "line",
-            "fillOpacity": 12,
-            "lineInterpolation": "linear",
-            "lineWidth": 2,
-            "pointSize": 4,
-            "showPoints": "never",
-            "spanNulls": false
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 70
-              },
-              {
-                "color": "red",
-                "value": 90
-              }
-            ]
-          },
-          "unit": "percent"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 8,
-        "x": 16,
-        "y": 79
-      },
-      "id": 20,
-      "options": {
-        "legend": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "expr": "aiops_device_cpu_utilization_percent{device=~\"$device\"}",
-          "legendFormat": "{{device}}",
-          "refId": "A"
-        }
-      ],
-      "title": "CPU Utilization",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "Prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "drawStyle": "line",
-            "fillOpacity": 12,
-            "lineInterpolation": "linear",
-            "lineWidth": 2,
-            "pointSize": 4,
-            "showPoints": "never",
-            "spanNulls": false
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 70
-              },
-              {
-                "color": "red",
-                "value": 90
-              }
-            ]
-          },
-          "unit": "percent"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 12,
-        "x": 0,
-        "y": 86
-      },
-      "id": 21,
-      "options": {
-        "legend": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "expr": "aiops_device_memory_utilization_percent{device=~\"$device\"}",
-          "legendFormat": "{{device}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Memory Utilization",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "Prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "cellOptions": {
-              "type": "auto"
-            },
-            "inspect": false
-          },
-          "mappings": [],
-          "unit": "none"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 12,
-        "x": 12,
-        "y": 86
-      },
-      "id": 16,
-      "options": {
-        "cellHeight": "sm",
-        "footer": {
-          "countRows": false,
-          "fields": "",
-          "reducer": [
-            "sum"
-          ],
-          "show": false
-        },
-        "showHeader": true
-      },
-      "pluginVersion": "11.3.0",
-      "targets": [
-        {
-          "expr": "aiops_device_hardware_info{device=~\"$device\"}",
-          "format": "table",
-          "instant": true,
-          "legendFormat": "{{device}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Device Version and Inventory",
-      "transformations": [
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {
-              "Time": true,
-              "Value": true,
-              "__name__": true,
-              "job": true,
-              "instance": true
-            },
-            "renameByName": {
-              "architecture": "Architecture",
-              "device": "Device",
-              "host": "Host",
-              "hw_version": "HW Version",
-              "model": "Model",
-              "serial": "Serial",
-              "version": "EOS Version"
-            }
-          }
-        }
-      ],
-      "type": "table"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "Prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "cellOptions": {
-              "type": "auto"
-            },
-            "inspect": false
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "none"
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Health"
-            },
-            "properties": [
-              {
-                "id": "custom.cellOptions",
-                "value": {
-                  "type": "color-background"
-                }
-              },
-              {
-                "id": "mappings",
-                "value": [
-                  {
-                    "type": "value",
-                    "options": {
-                      "0": {
-                        "color": "red",
-                        "text": "critical"
-                      },
-                      "0.5": {
-                        "color": "yellow",
-                        "text": "warning"
-                      },
-                      "1": {
-                        "color": "green",
-                        "text": "ok"
-                      }
-                    }
-                  }
-                ]
-              },
-              {
-                "id": "thresholds",
-                "value": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "red",
-                      "value": null
-                    },
-                    {
-                      "color": "yellow",
-                      "value": 0.5
-                    },
-                    {
-                      "color": "green",
-                      "value": 1
-                    }
-                  ]
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 24,
-        "x": 0,
-        "y": 93
-      },
-      "id": 17,
-      "options": {
-        "cellHeight": "sm",
-        "footer": {
-          "countRows": false,
-          "fields": "",
-          "reducer": [
-            "sum"
-          ],
-          "show": false
-        },
-        "showHeader": true
-      },
-      "pluginVersion": "11.3.0",
-      "targets": [
-        {
-          "expr": "aiops_hardware_component_status{device=~\"$device\"}",
-          "format": "table",
-          "instant": true,
-          "legendFormat": "{{device}} {{component_type}} {{name}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Power and Module Status",
-      "transformations": [
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {
-              "Time": true,
-              "__name__": true,
-              "job": true,
-              "instance": true
-            },
-            "renameByName": {
-              "Value": "Health",
-              "component_type": "Type",
-              "device": "Device",
-              "model": "Model",
-              "name": "Name",
-              "serial": "Serial",
-              "status": "Status"
-            }
-          }
-        }
-      ],
-      "type": "table"
     }
   ],
   "refresh": "30s",
@@ -2180,6 +2180,6 @@
   "timezone": "browser",
   "title": "AI Networking OPS",
   "uid": "eve-aiops-overview",
-  "version": 9,
+  "version": 10,
   "weekStart": ""
 }
