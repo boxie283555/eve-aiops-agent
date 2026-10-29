@@ -219,9 +219,9 @@ def parse_panos_arp(output: str) -> list[ArpEntry]:
 def parse_panos_sessions(output: str) -> dict[str, float]:
     values: dict[str, float] = {}
     patterns = {
-        "sessions_active": r"(?:active sessions|sessions active)\s*[:=]\s*([\d,]+)",
-        "sessions_per_second": r"(?:session setup rate|sessions/sec)\s*[:=]\s*([\d.]+)",
-        "throughput_bps": r"(?:throughput|bytes/sec)\s*[:=]\s*([\d.]+)\s*([KMG]?)",
+        "sessions_active": r"(?:allocated sessions|active sessions|sessions active)\s*:\s*([\d,]+)",
+        "sessions_per_second": r"(?:new connection establish rate|session setup rate|sessions/sec)\s*:\s*([\d.]+)",
+        "throughput_bps": r"(?:throughput|bytes/sec)\s*:\s*([\d.]+)\s*([KMG]?)bps",
     }
     text = output.lower()
     for key, pattern in patterns.items():
@@ -237,7 +237,15 @@ def parse_panos_sessions(output: str) -> dict[str, float]:
 def parse_panos_resources(output: str) -> DeviceResourceUsage:
     text = output.lower()
     cpu = _to_float(_match_value(r"(?:cpu utilization|cpu usage|mp\s+cpu)\s*[:=]\s*([0-9.]+)", text))
+    if cpu is None:
+        match = re.search(r"%cpu\(s\):\s*([0-9.]+)\s+us,\s*([0-9.]+)\s+sy", text)
+        if match:
+            cpu = float(match.group(1)) + float(match.group(2))
     mem = _to_float(_match_value(r"(?:memory utilization|memory usage)\s*[:=]\s*([0-9.]+)", text))
+    if mem is None:
+        match = re.search(r"mem\s*:\s*([0-9.]+)\s+total,\s*([0-9.]+)\s+free,\s*([0-9.]+)\s+used", text)
+        if match and float(match.group(1)) > 0:
+            mem = float(match.group(3)) / float(match.group(1)) * 100
     return DeviceResourceUsage(cpu_percent=cpu, memory_percent=mem)
 
 
