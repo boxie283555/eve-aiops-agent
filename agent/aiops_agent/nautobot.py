@@ -107,6 +107,52 @@ class NautobotClient:
             ),
         )
 
+    def topology(self) -> dict[str, list[dict[str, Any]]]:
+        """Read the Nautobot design graph in the normalized topology shape.
+
+        This is intentionally read-only.  A missing optional endpoint yields a
+        NautobotError so callers can retain the last valid snapshot.
+        """
+        devices = self._get("dcim/devices/?limit=0").get("results", [])
+        interfaces = self._get("dcim/interfaces/?limit=0").get("results", [])
+        addresses = self._get("ipam/ip-addresses/?limit=0").get("results", [])
+        cables = self._get("dcim/cables/?limit=0").get("results", [])
+        device_names = {item.get("id"): item.get("name") or item.get("display") for item in devices}
+        interface_names = {item.get("id"): (item.get("device", {}).get("id"), item.get("name")) for item in interfaces}
+        normalized_devices = []
+        for item in devices:
+            custom = item.get("custom_fields") or {}
+            normalized_devices.append({"name": item.get("name") or item.get("display"),
+                "role": self._related_name(item.get("role")), "site": self._related_name(item.get("site") or item.get("location")),
+                "host": _address(item.get("primary_ip4") or item.get("primary_ip6") or custom.get("management_ip")),
+                "platform": self._related_name(item.get("platform")), "source": "nautobot"})
+        normalized_interfaces = []
+        for item in interfaces:
+            device_id = (item.get("device") or {}).get("id")
+            if not device_id:
+                continue
+            normalized_interfaces.append({"device": device_names.get(device_id), "name": item.get("name"),
+                "description": item.get("description") or "", "type": self._related_name(item.get("type")),
+                "source": "nautobot", "status": self._related_name(item.get("status"))})
+        normalized_endpoints = []
+        for item in addresses:
+            interface = item.get("assigned_object") or {}
+            interface_id = interface.get("id")
+            device_id, interface_name = interface_names.get(interface_id, (None, None))
+            normalized_endpoints.append({"ip": _address(item.get("address")), "vrf": self._related_name(item.get("vrf")),
+                "device": device_names.get(device_id), "interface": interface_name, "source": "nautobot"})
+        normalized_links = []
+        for cable in cables:
+            a, b = cable.get("termination_a") or {}, cable.get("termination_b") or {}
+            a_device, a_int = interface_names.get(a.get("id"), (None, None))
+            b_device, b_int = interface_names.get(b.get("id"), (None, None))
+            if a_device and b_device:
+                normalized_links.append({"from": a_device, "to": b_device, "local_interface": a_int,
+                    "remote_interface": b_int, "type": "physical", "source": "nautobot",
+                    "confidence": 1.0, "status": self._related_name(cable.get("status"))})
+        return {"devices": normalized_devices, "interfaces": normalized_interfaces,
+                "links": normalized_links, "endpoints": normalized_endpoints}
+
     def _request(self, method: str, path: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
         data = json.dumps(payload).encode() if payload is not None else None
         request = urllib.request.Request(

@@ -24,7 +24,7 @@ class TopologySnapshot:
     endpoints: list[dict[str, Any]] = field(default_factory=list)
 
 
-def build_snapshot(results: dict[str, Any]) -> TopologySnapshot:
+def build_snapshot(results: dict[str, Any], design: dict[str, list[dict[str, Any]]] | None = None) -> TopologySnapshot:
     now = datetime.now(timezone.utc).isoformat()
     snapshot = TopologySnapshot(observed_at=now)
     known = set(results)
@@ -57,6 +57,26 @@ def build_snapshot(results: dict[str, Any]) -> TopologySnapshot:
             snapshot.endpoints.append({"mac": entry.mac, "vlan": entry.vlan,
                                         "device": name, "interface": entry.port,
                                         "source": "mac", "observed_at": now})
+    if design:
+        # Design data supplies inventory and cabling even when a device is not
+        # currently reachable; runtime fields remain authoritative when both exist.
+        runtime_devices = {row["name"]: row for row in snapshot.devices}
+        for row in design.get("devices", []):
+            existing = runtime_devices.get(row.get("name"))
+            if existing:
+                existing.update({k: v for k, v in row.items() if k not in {"up", "error"}})
+            elif row.get("name"):
+                snapshot.devices.append({**row, "up": False, "error": "not_collected"})
+        existing_interfaces = {(row.get("device"), row.get("name")) for row in snapshot.interfaces}
+        snapshot.interfaces.extend(row for row in design.get("interfaces", [])
+                                   if (row.get("device"), row.get("name")) not in existing_interfaces)
+        known_links = {(row.get("from"), row.get("to"), row.get("local_interface"), row.get("remote_interface"))
+                       for row in snapshot.links}
+        snapshot.links.extend(row for row in design.get("links", [])
+                              if (row.get("from"), row.get("to"), row.get("local_interface"), row.get("remote_interface")) not in known_links)
+        known_endpoints = {(row.get("ip"), row.get("mac"), row.get("device"), row.get("interface")) for row in snapshot.endpoints}
+        snapshot.endpoints.extend(row for row in design.get("endpoints", [])
+                                  if (row.get("ip"), row.get("mac"), row.get("device"), row.get("interface")) not in known_endpoints)
     return snapshot
 
 

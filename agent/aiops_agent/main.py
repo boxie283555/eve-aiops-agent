@@ -40,7 +40,16 @@ def _hour_minute(value: str) -> tuple[int, int]:
 async def _collect_loop_once() -> None:
     global interface_sync_task
     await asyncio.to_thread(collector.collect_all)
-    await asyncio.to_thread(save_snapshot, build_snapshot(collector.latest_results))
+    design = None
+    if settings.nautobot_url and settings.nautobot_token:
+        try:
+            design = await asyncio.to_thread(
+                NautobotClient(settings.nautobot_url, settings.nautobot_token, settings.nautobot_timeout_seconds).topology
+            )
+        except NautobotError:
+            # Runtime topology remains usable when Nautobot is temporarily down.
+            design = None
+    await asyncio.to_thread(save_snapshot, build_snapshot(collector.latest_results, design))
     if settings.nautobot_url and settings.nautobot_token:
         if interface_sync_task is None or interface_sync_task.done():
             interface_sync_task = asyncio.create_task(_sync_interfaces_background())
