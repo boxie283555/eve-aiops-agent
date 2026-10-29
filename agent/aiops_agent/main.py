@@ -140,6 +140,7 @@ def structured_state() -> dict[str, object]:
                 "hardware_components": [asdict(component) for component in result.hardware_components],
                 "tcam_resources": [asdict(resource) for resource in result.tcam_resources],
                 "resources": asdict(result.resources),
+                "firewall_metrics": result.firewall_metrics,
                 "interfaces": result.interfaces,
                 "mac_table": [asdict(entry) for entry in result.mac_table],
                 "arp_table": [asdict(entry) for entry in result.arp_table],
