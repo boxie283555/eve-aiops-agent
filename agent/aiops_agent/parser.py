@@ -191,7 +191,8 @@ def parse_panos_interfaces(output: str) -> list[dict[str, object]]:
             fields = re.split(r"\s+", stripped)
             if len(fields) >= 4 and re.match(r"^(ethernet|ae)\S+$", fields[0], re.I):
                 state = fields[2].lower()
-                rows.append({"name": fields[0], "oper_up": state == "up", "admin_up": state != "down",
+                is_up = state.endswith("/up") or state == "up"
+                rows.append({"name": fields[0], "oper_up": is_up, "admin_up": "down" not in state,
                              "mac": normalize_mac(fields[3]), "description": ""})
                 continue
         # logical interface rows contain an address in the final column
