@@ -231,6 +231,10 @@ DEVICE_MEMORY_FREE_BYTES = Gauge(
     ["device", "host"],
 )
 
+FIREWALL_SESSIONS_ACTIVE = Gauge("aiops_firewall_sessions_active", "Active PAN-OS sessions.", ["device", "host"])
+FIREWALL_SESSIONS_PER_SECOND = Gauge("aiops_firewall_sessions_per_second", "PAN-OS session setup rate.", ["device", "host"])
+FIREWALL_THROUGHPUT_BPS = Gauge("aiops_firewall_throughput_bps", "PAN-OS aggregate throughput.", ["device", "host"])
+
 ROUTE_SUMMARY_ROUTES = Gauge(
     "aiops_route_summary_routes",
     "Route count by VRF and route source.",

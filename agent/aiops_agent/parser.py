@@ -216,6 +216,31 @@ def parse_panos_arp(output: str) -> list[ArpEntry]:
     return entries
 
 
+def parse_panos_sessions(output: str) -> dict[str, float]:
+    values: dict[str, float] = {}
+    patterns = {
+        "sessions_active": r"(?:active sessions|sessions active)\s*[:=]\s*([\d,]+)",
+        "sessions_per_second": r"(?:session setup rate|sessions/sec)\s*[:=]\s*([\d.]+)",
+        "throughput_bps": r"(?:throughput|bytes/sec)\s*[:=]\s*([\d.]+)\s*([KMG]?)",
+    }
+    text = output.lower()
+    for key, pattern in patterns.items():
+        match = re.search(pattern, text, re.I)
+        if match:
+            value = float(match.group(1).replace(",", ""))
+            if key == "throughput_bps":
+                value *= {"k": 1e3, "m": 1e6, "g": 1e9}.get(match.group(2).lower(), 1)
+            values[key] = value
+    return values
+
+
+def parse_panos_resources(output: str) -> DeviceResourceUsage:
+    text = output.lower()
+    cpu = _to_float(_match_value(r"(?:cpu utilization|cpu usage|mp\s+cpu)\s*[:=]\s*([0-9.]+)", text))
+    mem = _to_float(_match_value(r"(?:memory utilization|memory usage)\s*[:=]\s*([0-9.]+)", text))
+    return DeviceResourceUsage(cpu_percent=cpu, memory_percent=mem)
+
+
 def parse_show_interface(output: str) -> dict[str, InterfaceCounters]:
     counters: dict[str, InterfaceCounters] = {}
     current: str | None = None

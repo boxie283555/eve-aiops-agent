@@ -30,6 +30,8 @@ from .parser import (
     parse_ip_interface_brief,
     parse_panos_interfaces,
     parse_panos_arp,
+    parse_panos_sessions,
+    parse_panos_resources,
     parse_lldp_neighbors,
     parse_mac_address_table,
     parse_nve_peers,
@@ -51,6 +53,8 @@ COMMANDS_BY_PLATFORM = {
         "version": "show system info | match sw-version",
         "interface": "show interface all",
         "arp": "show arp all",
+        "sessions": "show session info",
+        "resources": "show system resources",
         # Keep PAN-OS collection bounded; these commands can enter a long
         # pagination/commit wait on VM firewalls and are not needed for the
         # physical topology graph.
@@ -122,6 +126,7 @@ class DeviceResult:
     hardware_components: list[HardwareComponent] = field(default_factory=list)
     tcam_resources: list[TcamResource] = field(default_factory=list)
     resources: DeviceResourceUsage = field(default_factory=DeviceResourceUsage)
+    firewall_metrics: dict[str, float] = field(default_factory=dict)
 
 
 class Collector:
@@ -270,9 +275,10 @@ class Collector:
                     structured_outputs.get("inventory"),
                 ),
                 resources=merge_resources(
-                    parse_device_resources(outputs.get("version", ""), outputs.get("processes", "")),
+                    parse_panos_resources(outputs.get("resources", "")) if device.platform == "paloalto_panos" else parse_device_resources(outputs.get("version", ""), outputs.get("processes", "")),
                     snmp_sample.resources,
                 ),
+                firewall_metrics=parse_panos_sessions(outputs.get("sessions", "")) if device.platform == "paloalto_panos" else {},
                 hardware_components=[
                     *parse_power_supplies(outputs.get("power", ""), structured_outputs.get("power")),
                     *parse_modules(
@@ -409,6 +415,15 @@ class Collector:
             metrics.DEVICE_MEMORY_TOTAL_BYTES.labels(result.device.name, result.device.host).set(result.resources.memory_total_bytes)
         if result.resources.memory_free_bytes is not None:
             metrics.DEVICE_MEMORY_FREE_BYTES.labels(result.device.name, result.device.host).set(result.resources.memory_free_bytes)
+
+        if result.firewall_metrics:
+            fm = result.firewall_metrics
+            if "sessions_active" in fm:
+                metrics.FIREWALL_SESSIONS_ACTIVE.labels(result.device.name, result.device.host).set(fm["sessions_active"])
+            if "sessions_per_second" in fm:
+                metrics.FIREWALL_SESSIONS_PER_SECOND.labels(result.device.name, result.device.host).set(fm["sessions_per_second"])
+            if "throughput_bps" in fm:
+                metrics.FIREWALL_THROUGHPUT_BPS.labels(result.device.name, result.device.host).set(fm["throughput_bps"])
 
         for iface in result.interfaces:
             name = str(iface["name"])
