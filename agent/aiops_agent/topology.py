@@ -15,6 +15,25 @@ from pathlib import Path
 from typing import Any
 
 
+HOSTNAME_ALIASES = {
+    "DUT-7050CX3M": "DUT-7050CX3M-32S",
+    "DUT-720XP-48TXH": "DUT-720XP-48TXH-2C-S",
+    "DUT-1": "DUT-7804",
+}
+
+
+def _canonical_neighbor(value: str, known: set[str]) -> str:
+    value = HOSTNAME_ALIASES.get(value, value)
+    if value in known:
+        return value
+    matches = [name for name in known if name.startswith(value) or value.startswith(name)]
+    return matches[0] if len(matches) == 1 else value
+
+
+def _is_management_interface(value: str) -> bool:
+    return str(value or "").lower().startswith(("management", "mgmt"))
+
+
 @dataclass
 class TopologySnapshot:
     observed_at: str
@@ -41,9 +60,12 @@ def build_snapshot(results: dict[str, Any], design: dict[str, list[dict[str, Any
             if row["name"]:
                 snapshot.interfaces.append(row)
         for neighbor in result.lldp_neighbors:
-            if neighbor.neighbor not in known:
+            if _is_management_interface(neighbor.local_interface) or _is_management_interface(neighbor.neighbor_interface):
                 continue
-            edge = {"from": name, "to": neighbor.neighbor,
+            remote = _canonical_neighbor(neighbor.neighbor, known)
+            if remote not in known or remote == name:
+                continue
+            edge = {"from": name, "to": remote,
                     "local_interface": neighbor.local_interface,
                     "remote_interface": neighbor.neighbor_interface,
                     "type": "physical", "source": "lldp", "confidence": 0.98,
