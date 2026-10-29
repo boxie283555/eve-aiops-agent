@@ -28,6 +28,8 @@ from .parser import (
     parse_modules,
     parse_power_supplies,
     parse_ip_interface_brief,
+    parse_panos_interfaces,
+    parse_panos_arp,
     parse_lldp_neighbors,
     parse_mac_address_table,
     parse_nve_peers,
@@ -49,8 +51,9 @@ COMMANDS_BY_PLATFORM = {
         "version": "show system info | match sw-version",
         "interface": "show interface all",
         "arp": "show arp all",
-        "route_summary": "show routing route",
-        "running_config": "show config running",
+        # Keep PAN-OS collection bounded; these commands can enter a long
+        # pagination/commit wait on VM firewalls and are not needed for the
+        # physical topology graph.
     },
     "arista_eos": {
         "hostname": "show hostname",
@@ -197,13 +200,17 @@ class Collector:
             connection.send_command("terminal length 0", expect_string=r"#|>")
             command_set = COMMANDS_BY_PLATFORM.get(device.platform, COMMANDS_BY_PLATFORM["cisco_nxos"])
             for key, command in command_set.items():
-                outputs[key] = self._safe_command(connection.send_command, command)
+                # PAN-OS prompts can repeat the hostname and do not reliably
+                # satisfy Netmiko's default prompt detector; timing mode still
+                # returns the complete operational output.
+                runner = connection.send_command_timing if device.platform == "paloalto_panos" else connection.send_command
+                outputs[key] = self._safe_command(runner, command)
                 if key in TEXTFSM_COMMAND_KEYS:
                     structured = self._safe_textfsm_command(connection.send_command, command)
                     if structured is not None:
                         structured_outputs[key] = structured
 
-            interfaces = parse_ip_interface_brief(outputs.get("ip_interface_brief", ""))
+            interfaces = parse_panos_interfaces(outputs.get("interface", "")) if device.platform == "paloalto_panos" else parse_ip_interface_brief(outputs.get("ip_interface_brief", ""))
             interface_counters = parse_show_interface(outputs.get("interface", ""))
             snmp_sample = self._collect_snmp_sample(device)
             if snmp_sample.interfaces:
@@ -216,12 +223,17 @@ class Collector:
                 }
             interface_payload: list[dict[str, object]] = []
             for iface in interfaces:
-                counters = interface_counters.get(iface.name)
+                iface_name = iface.get("name") if isinstance(iface, dict) else iface.name
+                iface_admin = iface.get("admin_up") if isinstance(iface, dict) else iface.admin_up
+                iface_oper = iface.get("oper_up") if isinstance(iface, dict) else iface.oper_up
+                counters = interface_counters.get(str(iface_name))
                 interface_payload.append(
                     {
-                        "name": iface.name,
-                        "admin_up": iface.admin_up,
-                        "oper_up": iface.oper_up,
+                        "name": iface_name,
+                        "admin_up": iface_admin,
+                        "oper_up": iface_oper,
+                        "mac": iface.get("mac") if isinstance(iface, dict) else None,
+                        "ip": iface.get("ip") if isinstance(iface, dict) else None,
                         "rx_bps": counters.rx_bps if counters else None,
                         "tx_bps": counters.tx_bps if counters else None,
                         "input_errors": counters.input_errors if counters else None,
@@ -248,7 +260,7 @@ class Collector:
                 nve=parse_nve_peers(outputs.get("nve_peers", "")),
                 interfaces=interface_payload,
                 mac_table=parse_mac_address_table(outputs.get("mac_address_table", "")),
-                arp_table=parse_ip_arp(outputs.get("arp", "")),
+                arp_table=parse_panos_arp(outputs.get("arp", "")) if device.platform == "paloalto_panos" else parse_ip_arp(outputs.get("arp", "")),
                 lldp_neighbors=parse_lldp_neighbors(outputs.get("lldp_neighbors", "")),
                 route_summary=parse_route_summary(outputs.get("route_summary", "")),
                 hardware=parse_device_hardware(

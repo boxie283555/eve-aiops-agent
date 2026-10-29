@@ -176,6 +176,45 @@ def parse_ip_interface_addresses(output: str) -> dict[str, str]:
     return addresses
 
 
+def parse_panos_interfaces(output: str) -> list[dict[str, object]]:
+    """Parse PAN-OS ``show interface all`` summary into normalized interfaces."""
+    rows: list[dict[str, object]] = []
+    in_hw = False
+    for line in output.splitlines():
+        stripped = line.strip()
+        if stripped.lower().startswith("name") and "mac address" in stripped.lower():
+            in_hw = True
+            continue
+        if in_hw and stripped.startswith("---"):
+            continue
+        if in_hw:
+            fields = re.split(r"\s+", stripped)
+            if len(fields) >= 4 and re.match(r"^(ethernet|ae)\S+$", fields[0], re.I):
+                state = fields[2].lower()
+                rows.append({"name": fields[0], "oper_up": state == "up", "admin_up": state != "down",
+                             "mac": normalize_mac(fields[3]), "description": ""})
+                continue
+        # logical interface rows contain an address in the final column
+        fields = re.split(r"\s+", stripped)
+        if len(fields) >= 2 and re.match(r"^(ethernet|ae)\S+$", fields[0], re.I):
+            address = next((f.split("/")[0] for f in fields[1:] if re.match(r"^\d{1,3}(?:\.\d{1,3}){3}/\d+$", f)), None)
+            rows.append({"name": fields[0], "oper_up": True, "admin_up": True, "ip": address, "description": ""})
+    # de-duplicate summary/logical records while retaining addresses
+    merged: dict[str, dict[str, object]] = {}
+    for row in rows:
+        merged.setdefault(str(row["name"]), {}).update(row)
+    return list(merged.values())
+
+
+def parse_panos_arp(output: str) -> list[ArpEntry]:
+    entries: list[ArpEntry] = []
+    for line in output.splitlines():
+        fields = re.split(r"\s+", line.strip())
+        if len(fields) >= 4 and re.match(r"^\d{1,3}(?:\.\d{1,3}){3}$", fields[1]) and _looks_like_mac(fields[2]):
+            entries.append(ArpEntry(vrf="default", ip=fields[1], age=fields[-1], mac=normalize_mac(fields[2]), interface=fields[0]))
+    return entries
+
+
 def parse_show_interface(output: str) -> dict[str, InterfaceCounters]:
     counters: dict[str, InterfaceCounters] = {}
     current: str | None = None

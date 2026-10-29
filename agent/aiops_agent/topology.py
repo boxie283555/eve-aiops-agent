@@ -56,6 +56,7 @@ def build_snapshot(results: dict[str, Any], design: dict[str, list[dict[str, Any
             row = {"device": name, "name": str(interface.get("name") or ""),
                    "admin_up": interface.get("admin_up"), "oper_up": interface.get("oper_up"),
                    "description": interface.get("description", ""), "speed_bps": interface.get("speed_bps"),
+                   "mac": interface.get("mac"), "ip": interface.get("ip"),
                    "observed_at": now}
             if row["name"]:
                 snapshot.interfaces.append(row)
@@ -86,6 +87,41 @@ def build_snapshot(results: dict[str, Any], design: dict[str, list[dict[str, Any
             snapshot.endpoints.append({"mac": entry.mac, "vlan": entry.vlan,
                                         "device": name, "interface": entry.port,
                                         "source": "mac", "observed_at": now})
+    # PAN-OS does not advertise LLDP in this lab. Infer its physical uplink by
+    # matching each firewall interface MAC against the switch forwarding tables.
+    for fw_name, fw_result in results.items():
+        if fw_result.device.platform != "paloalto_panos":
+            continue
+        fw_interfaces = {str(i.get("mac", "")).lower(): str(i.get("name", ""))
+                         for i in fw_result.interfaces if isinstance(i, dict) and i.get("mac")}
+        for sw_name, sw_result in results.items():
+            if sw_name == fw_name:
+                continue
+            # The two lab firewalls use the p1/p2 service leaf pair; this
+            # narrows an otherwise identical VM MAC to the correct chassis.
+            fw_hint = fw_name.rsplit("-", 1)[-1]
+            if fw_hint in {"171", "172"} and sw_name.startswith("p"):
+                pair_hint = "p1" if fw_hint == "171" else "p2"
+                if not sw_name.startswith(pair_hint + "-"):
+                    continue
+            for entry in sw_result.mac_table:
+                local = fw_interfaces.get(str(entry.mac).lower())
+                if not local:
+                    continue
+                snapshot.links.append({"from": fw_name, "to": sw_name,
+                    "local_interface": local, "remote_interface": entry.port,
+                    "type": "physical", "source": "ip_mac_inferred", "confidence": 0.85,
+                    "mac": entry.mac, "observed_at": now})
+            # Some Arista ASICs expose the firewall MAC in ARP while the L2
+            # forwarding table is suppressed (e.g. routed VLAN handoff).
+            for entry in sw_result.arp_table:
+                local = fw_interfaces.get(str(entry.mac).lower())
+                if not local:
+                    continue
+                snapshot.links.append({"from": fw_name, "to": sw_name,
+                    "local_interface": local, "remote_interface": entry.interface,
+                    "type": "physical", "source": "ip_mac_inferred", "confidence": 0.75,
+                    "mac": entry.mac, "observed_at": now})
     if design:
         # Design data supplies inventory and cabling even when a device is not
         # currently reachable; runtime fields remain authoritative when both exist.
@@ -106,6 +142,16 @@ def build_snapshot(results: dict[str, Any], design: dict[str, list[dict[str, Any
         known_endpoints = {(row.get("ip"), row.get("mac"), row.get("device"), row.get("interface")) for row in snapshot.endpoints}
         snapshot.endpoints.extend(row for row in design.get("endpoints", [])
                                   if (row.get("ip"), row.get("mac"), row.get("device"), row.get("interface")) not in known_endpoints)
+    # Collapse duplicate inference evidence for one physical pair, keeping the
+    # strongest source (forwarding table over ARP-only evidence).
+    ranked = {"lldp": 3, "nautobot": 2, "ip_mac_inferred": 1}
+    dedup: dict[tuple[Any, ...], dict[str, Any]] = {}
+    for link in snapshot.links:
+        key = (link.get("from"), link.get("to"), link.get("local_interface"))
+        old = dedup.get(key)
+        if old is None or ranked.get(str(link.get("source")), 0) > ranked.get(str(old.get("source")), 0):
+            dedup[key] = link
+    snapshot.links = list(dedup.values())
     return snapshot
 
 
