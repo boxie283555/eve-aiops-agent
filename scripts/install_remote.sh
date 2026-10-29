@@ -102,9 +102,9 @@ if ! command -v grafana-server >/dev/null 2>&1; then
   sudo apt-get install -y "$tmp_deb"
 fi
 
-sudo rsync -a /opt/eve-aiops-agent/grafana/provisioning/ /etc/grafana/provisioning/
+sudo rsync -a --exclude='._*' --exclude='.DS_Store' /opt/eve-aiops-agent/grafana/provisioning/ /etc/grafana/provisioning/
 sudo mkdir -p /var/lib/grafana/dashboards
-sudo rsync -a /opt/eve-aiops-agent/grafana/dashboards/ /var/lib/grafana/dashboards/
+sudo rsync -a --exclude='._*' --exclude='.DS_Store' /opt/eve-aiops-agent/grafana/dashboards/ /var/lib/grafana/dashboards/
 sudo chown -R grafana:grafana /var/lib/grafana /etc/grafana/provisioning
 sudo systemctl enable --now grafana-server
 grafana_admin_password="${GRAFANA_ADMIN_PASSWORD:-$(project_value grafana.admin_password admin)}"
