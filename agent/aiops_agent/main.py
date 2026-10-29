@@ -499,12 +499,35 @@ def topology_view() -> str:
 body{margin:0;background:#f5f7fa;color:#17202a;font:14px system-ui,sans-serif}header{padding:16px 22px;background:#17202a;color:#fff;display:flex;justify-content:space-between;align-items:center}h1{font-size:20px;margin:0}button{padding:8px 14px;border:0;border-radius:5px;background:#2f80ed;color:#fff;cursor:pointer}main{padding:16px}.meta{margin-bottom:10px;color:#52606d}.legend{display:flex;gap:14px;margin:8px 0}.legend span:before{content:"";display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:5px;background:#27ae60}.legend .down:before{background:#eb5757}.legend .unknown:before{background:#f2c94c}svg{width:100%;height:calc(100vh - 145px);min-height:500px;background:#fff;border:1px solid #d9e2ec;border-radius:8px}.link{stroke:#9aa5b1;stroke-width:2}.link.evpn{stroke:#9b51e0;stroke-dasharray:7 5}.node{stroke:#fff;stroke-width:2}.label{font-size:12px;fill:#17202a;text-anchor:middle}.iface{font-size:10px;fill:#52606d;text-anchor:middle}.empty{padding:40px;text-align:center;color:#52606d}
 </style></head><body><header><h1>AI Networking Topology</h1><div><button onclick="load()">Refresh</button> <button onclick="savePositions()">Save layout</button></div></header><main><div id="meta" class="meta">Loading...</div><div class="legend"><span>Device up</span><span class="down">Device down</span><span class="unknown">Design only / not collected</span><span style="color:#9b51e0">EVPN/VXLAN link</span></div><svg id="graph" viewBox="0 0 1200 700" preserveAspectRatio="xMidYMid meet"></svg></main>
 <script>
-let positions={}; let dragged=null;
-async function load(){const meta=document.getElementById('meta'),svg=document.getElementById('graph');try{const r=await fetch('/api/topology',{cache:'no-store'}),d=await r.json();if(d.status!=='ok'){meta.textContent='Topology snapshot unavailable';svg.innerHTML='<text x="600" y="350" class="empty">No topology snapshot available</text>';return}const nodes=d.devices||[],links=d.links||[],pos={};const cols=Math.max(1,Math.ceil(Math.sqrt(nodes.length))),dx=1100/cols,dy=500/Math.max(1,Math.ceil(nodes.length/cols));nodes.forEach((n,i)=>pos[n.name]=positions[n.name]||((d.layout||{})[n.name])||{x:60+(i%cols)*dx,y:110+Math.floor(i/cols)*dy}); positions=pos;let out='';links.forEach(l=>{const a=pos[l.from],b=pos[l.to];if(!a||!b)return;out+=`<line class="link ${l.type==='evpn_vxlan'?'evpn':''}" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"/><title>${esc(l.from)}:${esc(l.local_interface||'')} → ${esc(l.to)}:${esc(l.remote_interface||'')} (${esc(l.type||'link')})</title>`});nodes.forEach(n=>{const p=pos[n.name],c=n.up===true?'#27ae60':n.error==='not_collected'?'#f2c94c':'#eb5757';out+=`<g><circle class="node" cx="${p.x}" cy="${p.y}" r="22" fill="${c}"/><text class="label" x="${p.x}" y="${p.y+42}">${esc(n.name)}</text><text class="iface" x="${p.x}" y="${p.y+57}">${esc(n.role||'')} · ${esc(n.site||'')}</text><title>${esc(n.name)}\n${n.up?'up':'down'}${n.error?' · '+esc(n.error):''}</title></g>`});svg.innerHTML=out;
-svg.querySelectorAll('circle').forEach((el,i)=>{el.addEventListener('pointerdown',e=>{dragged=nodes[i].name;el.setPointerCapture(e.pointerId)});el.addEventListener('pointermove',e=>{if(!dragged)return;const r=svg.getBoundingClientRect(),x=(e.clientX-r.left)*1200/r.width,y=(e.clientY-r.top)*700/r.height;positions[dragged]={x,y};load()});el.addEventListener('pointerup',()=>dragged=null)});
-meta.textContent=`${nodes.length} devices · ${links.length} links · observed ${d.observed_at||'unknown'}`}catch(e){meta.textContent='Failed to load topology: '+e}}
-async function savePositions(){const r=await fetch('/api/topology/layout',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(positions)});document.getElementById('meta').textContent=r.ok?'Layout saved':'Failed to save layout'}
-function esc(v){return String(v??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]))}load();setInterval(load,30000);
+let topology={nodes:[],links:[],positions:{},observedAt:''}, dragged=null, raf=0;
+async function load(){
+  const meta=document.getElementById('meta'),svg=document.getElementById('graph');
+  try { const response=await fetch('/api/topology',{cache:'no-store'}), data=await response.json();
+    if(data.status!=='ok'){meta.textContent='Topology snapshot unavailable';return;}
+    topology={nodes:data.devices||[],links:data.links||[],positions:{...(data.layout||{})},observedAt:data.observed_at||''};
+    const cols=Math.max(1,Math.ceil(Math.sqrt(topology.nodes.length))),dx=1100/cols,dy=500/Math.max(1,Math.ceil(topology.nodes.length/cols));
+    topology.nodes.forEach((node,i)=>{topology.positions[node.name] ||= {x:60+(i%cols)*dx,y:110+Math.floor(i/cols)*dy};});
+    render(); meta.textContent=`${topology.nodes.length} devices · ${topology.links.length} links · observed ${topology.observedAt}`;
+  } catch(error){meta.textContent='Failed to load topology: '+error;}
+}
+function render(){
+  const svg=document.getElementById('graph'), p=topology.positions, escv=esc; let out='';
+  topology.links.forEach((link,i)=>{const a=p[link.from],b=p[link.to];if(!a||!b)return;out+=`<line data-link="${i}" class="link ${link.type==='evpn_vxlan'?'evpn':''}" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"/><title>${escv(link.from)}:${escv(link.local_interface||'')} → ${escv(link.to)}:${escv(link.remote_interface||'')} (${escv(link.type||'link')})</title>`;});
+  topology.nodes.forEach(node=>{const q=p[node.name],color=node.up===true?'#27ae60':node.error==='not_collected'?'#f2c94c':'#eb5757';out+=`<g data-node="${escv(node.name)}"><circle class="node" cx="${q.x}" cy="${q.y}" r="22" fill="${color}"/><text class="label" x="${q.x}" y="${q.y+42}">${escv(node.name)}</text><text class="iface" x="${q.x}" y="${q.y+57}">${escv(node.role||'')} · ${escv(node.site||'')}</text><title>${escv(node.name)}\n${node.up?'up':'down'}${node.error?' · '+escv(node.error):''}</title></g>`;});
+  svg.innerHTML=out;
+  svg.querySelectorAll('[data-node]').forEach(group=>group.addEventListener('pointerdown',startDrag));
+}
+function updateVisuals(){
+  const svg=document.getElementById('graph'), p=topology.positions;
+  svg.querySelectorAll('[data-node]').forEach(group=>{const q=p[group.dataset.node];group.querySelector('circle').setAttribute('cx',q.x);group.querySelector('circle').setAttribute('cy',q.y);group.querySelector('.label').setAttribute('x',q.x);group.querySelector('.label').setAttribute('y',q.y+42);group.querySelector('.iface').setAttribute('x',q.x);group.querySelector('.iface').setAttribute('y',q.y+57);});
+  svg.querySelectorAll('[data-link]').forEach(line=>{const link=topology.links[Number(line.dataset.link)],a=p[link.from],b=p[link.to];if(a&&b){line.setAttribute('x1',a.x);line.setAttribute('y1',a.y);line.setAttribute('x2',b.x);line.setAttribute('y2',b.y);}});
+}
+function startDrag(event){event.preventDefault();const name=event.currentTarget.dataset.node;dragged={name,pointerId:event.pointerId};event.currentTarget.setPointerCapture(event.pointerId);event.currentTarget.addEventListener('pointermove',drag);event.currentTarget.addEventListener('pointerup',endDrag,{once:true});event.currentTarget.addEventListener('pointercancel',endDrag,{once:true});}
+function drag(event){if(!dragged||event.pointerId!==dragged.pointerId)return;const svg=document.getElementById('graph'),box=svg.getBoundingClientRect();topology.positions[dragged.name]={x:Math.max(25,Math.min(1175,(event.clientX-box.left)*1200/box.width)),y:Math.max(25,Math.min(675,(event.clientY-box.top)*700/box.height))};if(!raf)raf=requestAnimationFrame(()=>{updateVisuals();raf=0;});}
+function endDrag(){dragged=null;}
+async function savePositions(){const response=await fetch('/api/topology/layout',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(topology.positions)});document.getElementById('meta').textContent=response.ok?'Layout saved':'Failed to save layout';}
+function esc(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+load();setInterval(load,30000);
 </script></body></html>"""
 
 
