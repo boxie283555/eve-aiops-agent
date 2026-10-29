@@ -2430,6 +2430,27 @@
       ],
       "title": "BGP Routes/NLRI Received vs Advertised",
       "type": "timeseries"
+    },
+    {
+      "id": 108,
+      "type": "text",
+      "title": "Topology and A to B Path Query",
+      "description": "Q2 normalized topology and path lookup",
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 999
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**Q2 topology tools**\n\n- [Open A to B path query](http://192.168.20.169:8080/tools)\n- [Topology JSON API](http://192.168.20.169:8080/api/topology)\n- [Topology anomalies](http://192.168.20.169:8080/api/topology/anomalies)\n\nAPI example: `/api/path?src=<IP-or-MAC>&dst=<IP-or-MAC>&vrf=<VRF>`"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "targets": []
     }
   ],
   "refresh": "30s",
