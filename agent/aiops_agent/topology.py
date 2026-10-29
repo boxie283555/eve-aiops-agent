@@ -49,6 +49,13 @@ def build_snapshot(results: dict[str, Any], design: dict[str, list[dict[str, Any
                     "type": "physical", "source": "lldp", "confidence": 0.98,
                     "observed_at": now}
             snapshot.links.append(edge)
+        for peer in result.nve:
+            remote = peer.peer_hostname if peer.peer_hostname in known else peer.neighbor
+            if remote in known and remote != name:
+                snapshot.links.append({"from": name, "to": remote, "local_interface": "NVE",
+                    "remote_interface": "NVE", "type": "evpn_vxlan", "source": "nve",
+                    "confidence": 0.9 if peer.up else 0.5, "status": "up" if peer.up else "down",
+                    "observed_at": now})
         for entry in result.arp_table:
             snapshot.endpoints.append({"ip": entry.ip, "mac": entry.mac, "vrf": entry.vrf,
                                         "device": name, "interface": entry.interface,
@@ -132,7 +139,14 @@ def find_path(snapshot: TopologySnapshot, src: str, dst: str, vrf: str = "all") 
     for index, edge in enumerate(edges, len(steps) + 1):
         steps.append({"hop": index, **edge, "role": "underlay"})
     if destination_row: steps.append({"hop": len(steps) + 1, "device": end, "interface": destination_row.get("interface"), "role": "destination_attachment", "evidence": destination_row.get("source")})
+    warnings = []
+    if len(source) > 1:
+        warnings.append("source endpoint has multiple matches; first match selected")
+    if len(destination) > 1:
+        warnings.append("destination endpoint has multiple matches; first match selected")
+    if not (edges or start == end):
+        warnings.append("no complete physical or EVPN path in current topology")
     return {"status": "ok" if source_row and destination_row and (start == end or edges) else "incomplete",
             "source": source_row, "destination": destination_row, "path": steps,
             "observed_at": snapshot.observed_at,
-            "warnings": ([] if edges or start == end else ["no complete physical path in current topology"])}
+            "warnings": warnings}
