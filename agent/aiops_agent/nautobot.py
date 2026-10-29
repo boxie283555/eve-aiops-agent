@@ -78,6 +78,8 @@ class NautobotClient:
             platform_name = self._related_name(platform).lower().replace(" ", "_")
             if platform_name in {"arista_eos", "arista_eos_"}:
                 platform_name = "arista_eos"
+            if platform_name in {"palo_alto_pan-os", "palo_alto_panos", "pan-os"}:
+                platform_name = "paloalto_panos"
             devices.append(
                 {
                     "name": item.get("name") or item.get("display") or item.get("id"),

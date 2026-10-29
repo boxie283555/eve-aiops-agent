@@ -44,6 +44,14 @@ from .snmp import SnmpSample, collect_snmp_sample, merge_interface_counters, mer
 TEXTFSM_COMMAND_KEYS = {"version", "inventory", "power", "module", "bgp_summary"}
 
 COMMANDS_BY_PLATFORM = {
+    "paloalto_panos": {
+        "hostname": "show system info | match hostname",
+        "version": "show system info | match sw-version",
+        "interface": "show interface all",
+        "arp": "show arp all",
+        "route_summary": "show routing route",
+        "running_config": "show config running",
+    },
     "arista_eos": {
         "hostname": "show hostname",
         "version": "show version",
