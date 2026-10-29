@@ -208,7 +208,7 @@ def interfaces_api(
 
 @app.post("/collect", response_class=PlainTextResponse)
 async def collect_now() -> str:
-    await asyncio.to_thread(collector.collect_all)
+    await _collect_loop_once()
     return "collection complete"
 
 
