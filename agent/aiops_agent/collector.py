@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field, replace
 from typing import Any, Callable
@@ -160,7 +161,8 @@ class Collector:
     def collect_device(self, device: Device) -> DeviceResult:
         started = time.monotonic()
 
-        if not self.settings.device_username or not self.settings.device_password:
+        username, password, secret = self._device_credentials(device)
+        if not username or not password:
             return DeviceResult(
                 device=device,
                 ok=False,
@@ -176,9 +178,9 @@ class Collector:
                 device_type=device.platform,
                 host=device.host,
                 port=device.port,
-                username=self.settings.device_username,
-                password=self.settings.device_password,
-                secret=self.settings.device_secret or "",
+                username=username,
+                password=password,
+                secret=secret or "",
                 timeout=self.settings.command_timeout_seconds,
                 conn_timeout=self.settings.command_timeout_seconds,
                 auth_timeout=self.settings.command_timeout_seconds,
@@ -280,6 +282,17 @@ class Collector:
         finally:
             if connection:
                 connection.disconnect()
+
+    def _device_credentials(self, device: Device) -> tuple[str | None, str | None, str | None]:
+        """Use per-device Nautobot credential environment fields when present."""
+        username = os.getenv(device.username_env) if device.username_env else None
+        password = os.getenv(device.password_env) if device.password_env else None
+        secret = os.getenv(device.secret_env) if device.secret_env else None
+        return (
+            username or self.settings.device_username,
+            password or self.settings.device_password,
+            secret or self.settings.device_secret,
+        )
 
     def _safe_command(self, runner: Callable[..., str], command: str) -> str:
         try:
