@@ -102,6 +102,21 @@ def load_snapshot(path: Path | None = None) -> TopologySnapshot | None:
         return None
 
 
+def load_layout(path: Path | None = None) -> dict[str, dict[str, float]]:
+    target = path or Path(os.getenv("AIOPS_TOPOLOGY_LAYOUT_PATH", "/app/data/topology-layout.json"))
+    try:
+        raw = json.loads(target.read_text(encoding="utf-8"))
+        return {str(k): {"x": float(v["x"]), "y": float(v["y"])} for k, v in raw.items()}
+    except (FileNotFoundError, OSError, ValueError, TypeError, KeyError):
+        return {}
+
+
+def save_layout(layout: dict[str, dict[str, float]], path: Path | None = None) -> None:
+    target = path or Path(os.getenv("AIOPS_TOPOLOGY_LAYOUT_PATH", "/app/data/topology-layout.json"))
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(layout, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
 def find_path(snapshot: TopologySnapshot, src: str, dst: str, vrf: str = "all") -> dict[str, Any]:
     def resolve(query: str) -> list[dict[str, Any]]:
         q = query.lower()

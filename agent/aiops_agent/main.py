@@ -19,7 +19,7 @@ from .nautobot import NautobotClient, NautobotError
 from .parser import normalize_mac
 from .settings import load_settings
 from .snapshots import collect_and_snapshot, compare_latest
-from .topology import build_snapshot, find_path, load_snapshot, save_snapshot
+from .topology import build_snapshot, find_path, load_layout, load_snapshot, save_layout, save_snapshot
 
 settings = load_settings()
 devices = load_inventory()
@@ -497,9 +497,13 @@ def topology_view() -> str:
 <title>AI Networking Topology</title>
 <style>
 body{margin:0;background:#f5f7fa;color:#17202a;font:14px system-ui,sans-serif}header{padding:16px 22px;background:#17202a;color:#fff;display:flex;justify-content:space-between;align-items:center}h1{font-size:20px;margin:0}button{padding:8px 14px;border:0;border-radius:5px;background:#2f80ed;color:#fff;cursor:pointer}main{padding:16px}.meta{margin-bottom:10px;color:#52606d}.legend{display:flex;gap:14px;margin:8px 0}.legend span:before{content:"";display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:5px;background:#27ae60}.legend .down:before{background:#eb5757}.legend .unknown:before{background:#f2c94c}svg{width:100%;height:calc(100vh - 145px);min-height:500px;background:#fff;border:1px solid #d9e2ec;border-radius:8px}.link{stroke:#9aa5b1;stroke-width:2}.link.evpn{stroke:#9b51e0;stroke-dasharray:7 5}.node{stroke:#fff;stroke-width:2}.label{font-size:12px;fill:#17202a;text-anchor:middle}.iface{font-size:10px;fill:#52606d;text-anchor:middle}.empty{padding:40px;text-align:center;color:#52606d}
-</style></head><body><header><h1>AI Networking Topology</h1><button onclick="load()">Refresh</button></header><main><div id="meta" class="meta">Loading...</div><div class="legend"><span>Device up</span><span class="down">Device down</span><span class="unknown">Design only / not collected</span><span style="color:#9b51e0">EVPN/VXLAN link</span></div><svg id="graph" viewBox="0 0 1200 700" preserveAspectRatio="xMidYMid meet"></svg></main>
+</style></head><body><header><h1>AI Networking Topology</h1><div><button onclick="load()">Refresh</button> <button onclick="savePositions()">Save layout</button></div></header><main><div id="meta" class="meta">Loading...</div><div class="legend"><span>Device up</span><span class="down">Device down</span><span class="unknown">Design only / not collected</span><span style="color:#9b51e0">EVPN/VXLAN link</span></div><svg id="graph" viewBox="0 0 1200 700" preserveAspectRatio="xMidYMid meet"></svg></main>
 <script>
-async function load(){const meta=document.getElementById('meta'),svg=document.getElementById('graph');try{const r=await fetch('/api/topology',{cache:'no-store'}),d=await r.json();if(d.status!=='ok'){meta.textContent='Topology snapshot unavailable';svg.innerHTML='<text x="600" y="350" class="empty">No topology snapshot available</text>';return}const nodes=d.devices||[],links=d.links||[],pos={};const cols=Math.max(1,Math.ceil(Math.sqrt(nodes.length))),dx=1100/cols,dy=500/Math.max(1,Math.ceil(nodes.length/cols));nodes.forEach((n,i)=>pos[n.name]={x:60+(i%cols)*dx,y:110+Math.floor(i/cols)*dy});let out='';links.forEach(l=>{const a=pos[l.from],b=pos[l.to];if(!a||!b)return;out+=`<line class="link ${l.type==='evpn_vxlan'?'evpn':''}" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"/><title>${esc(l.from)}:${esc(l.local_interface||'')} → ${esc(l.to)}:${esc(l.remote_interface||'')} (${esc(l.type||'link')})</title>`});nodes.forEach(n=>{const p=pos[n.name],c=n.up===true?'#27ae60':n.error==='not_collected'?'#f2c94c':'#eb5757';out+=`<g><circle class="node" cx="${p.x}" cy="${p.y}" r="22" fill="${c}"/><text class="label" x="${p.x}" y="${p.y+42}">${esc(n.name)}</text><text class="iface" x="${p.x}" y="${p.y+57}">${esc(n.role||'')} · ${esc(n.site||'')}</text><title>${esc(n.name)}\n${n.up?'up':'down'}${n.error?' · '+esc(n.error):''}</title></g>`});svg.innerHTML=out;meta.textContent=`${nodes.length} devices · ${links.length} links · observed ${d.observed_at||'unknown'}`}catch(e){meta.textContent='Failed to load topology: '+e}}
+let positions={}; let dragged=null;
+async function load(){const meta=document.getElementById('meta'),svg=document.getElementById('graph');try{const r=await fetch('/api/topology',{cache:'no-store'}),d=await r.json();if(d.status!=='ok'){meta.textContent='Topology snapshot unavailable';svg.innerHTML='<text x="600" y="350" class="empty">No topology snapshot available</text>';return}const nodes=d.devices||[],links=d.links||[],pos={};const cols=Math.max(1,Math.ceil(Math.sqrt(nodes.length))),dx=1100/cols,dy=500/Math.max(1,Math.ceil(nodes.length/cols));nodes.forEach((n,i)=>pos[n.name]=positions[n.name]||((d.layout||{})[n.name])||{x:60+(i%cols)*dx,y:110+Math.floor(i/cols)*dy}); positions=pos;let out='';links.forEach(l=>{const a=pos[l.from],b=pos[l.to];if(!a||!b)return;out+=`<line class="link ${l.type==='evpn_vxlan'?'evpn':''}" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"/><title>${esc(l.from)}:${esc(l.local_interface||'')} → ${esc(l.to)}:${esc(l.remote_interface||'')} (${esc(l.type||'link')})</title>`});nodes.forEach(n=>{const p=pos[n.name],c=n.up===true?'#27ae60':n.error==='not_collected'?'#f2c94c':'#eb5757';out+=`<g><circle class="node" cx="${p.x}" cy="${p.y}" r="22" fill="${c}"/><text class="label" x="${p.x}" y="${p.y+42}">${esc(n.name)}</text><text class="iface" x="${p.x}" y="${p.y+57}">${esc(n.role||'')} · ${esc(n.site||'')}</text><title>${esc(n.name)}\n${n.up?'up':'down'}${n.error?' · '+esc(n.error):''}</title></g>`});svg.innerHTML=out;
+svg.querySelectorAll('circle').forEach((el,i)=>{el.addEventListener('pointerdown',e=>{dragged=nodes[i].name;el.setPointerCapture(e.pointerId)});el.addEventListener('pointermove',e=>{if(!dragged)return;const r=svg.getBoundingClientRect(),x=(e.clientX-r.left)*1200/r.width,y=(e.clientY-r.top)*700/r.height;positions[dragged]={x,y};load()});el.addEventListener('pointerup',()=>dragged=null)});
+meta.textContent=`${nodes.length} devices · ${links.length} links · observed ${d.observed_at||'unknown'}`}catch(e){meta.textContent='Failed to load topology: '+e}}
+async function savePositions(){const r=await fetch('/api/topology/layout',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(positions)});document.getElementById('meta').textContent=r.ok?'Layout saved':'Failed to save layout'}
 function esc(v){return String(v??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]))}load();setInterval(load,30000);
 </script></body></html>"""
 
@@ -548,7 +552,21 @@ def topology_api() -> dict[str, object]:
     if snapshot is None:
         return {"status": "unavailable", "devices": [], "interfaces": [], "links": [], "endpoints": []}
     return {"status": "ok", "observed_at": snapshot.observed_at, "devices": snapshot.devices,
-            "interfaces": snapshot.interfaces, "links": snapshot.links, "endpoints": snapshot.endpoints}
+            "interfaces": snapshot.interfaces, "links": snapshot.links, "endpoints": snapshot.endpoints,
+            "layout": load_layout()}
+
+
+@app.get("/api/topology/layout")
+def topology_layout_get() -> dict[str, object]:
+    return {"layout": load_layout()}
+
+
+@app.put("/api/topology/layout")
+def topology_layout_put(payload: dict[str, dict[str, float]]) -> dict[str, object]:
+    layout = {str(name): {"x": float(value["x"]), "y": float(value["y"])} for name, value in payload.items()
+              if isinstance(value, dict) and "x" in value and "y" in value}
+    save_layout(layout)
+    return {"status": "ok", "layout": layout}
 
 
 @app.get("/api/path")
