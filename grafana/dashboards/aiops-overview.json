@@ -2444,7 +2444,7 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "**Q2 topology tools**\n\n- [Open A to B path query](http://192.168.20.169:8080/tools)\n- [Topology JSON API](http://192.168.20.169:8080/api/topology)\n- [Topology anomalies](http://192.168.20.169:8080/api/topology/anomalies)\n\nAPI example: `/api/path?src=<IP-or-MAC>&dst=<IP-or-MAC>&vrf=<VRF>`"
+        "content": "**Q2 topology tools**\n\n- [Open interactive topology graph](http://192.168.20.169:8080/topology)\n- [Open A to B path query](http://192.168.20.169:8080/tools)\n- [Topology JSON API](http://192.168.20.169:8080/api/topology)\n- [Topology anomalies](http://192.168.20.169:8080/api/topology/anomalies)\n\nAPI example: `/api/path?src=<IP-or-MAC>&dst=<IP-or-MAC>&vrf=<VRF>`"
       },
       "fieldConfig": {
         "defaults": {},
