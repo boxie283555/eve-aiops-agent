@@ -19,6 +19,7 @@ from .nautobot import NautobotClient, NautobotError
 from .parser import normalize_mac
 from .settings import load_settings
 from .snapshots import collect_and_snapshot, compare_latest
+from .topology import build_snapshot, find_path, load_snapshot, save_snapshot
 
 settings = load_settings()
 devices = load_inventory()
@@ -39,6 +40,7 @@ def _hour_minute(value: str) -> tuple[int, int]:
 async def _collect_loop_once() -> None:
     global interface_sync_task
     await asyncio.to_thread(collector.collect_all)
+    await asyncio.to_thread(save_snapshot, build_snapshot(collector.latest_results))
     if settings.nautobot_url and settings.nautobot_token:
         if interface_sync_task is None or interface_sync_task.done():
             interface_sync_task = asyncio.create_task(_sync_interfaces_background())
@@ -513,6 +515,42 @@ def path_lookup(
             ],
         },
     }
+
+
+@app.get("/api/topology")
+def topology_api() -> dict[str, object]:
+    """Return the persisted normalized topology v1 snapshot."""
+    snapshot = load_snapshot()
+    if snapshot is None:
+        return {"status": "unavailable", "devices": [], "interfaces": [], "links": [], "endpoints": []}
+    return {"status": "ok", "observed_at": snapshot.observed_at, "devices": snapshot.devices,
+            "interfaces": snapshot.interfaces, "links": snapshot.links, "endpoints": snapshot.endpoints}
+
+
+@app.get("/api/path")
+def normalized_path_lookup(src: str, dst: str, vrf: str = "all") -> dict[str, object]:
+    """Resolve IP/MAC/device:interface endpoints against the durable topology."""
+    snapshot = load_snapshot()
+    if snapshot is None:
+        return {"status": "unavailable", "source": {}, "destination": {}, "path": [],
+                "warnings": ["topology snapshot is not available"]}
+    return find_path(snapshot, src, dst, vrf)
+
+
+@app.get("/api/topology/anomalies")
+def topology_anomalies() -> dict[str, object]:
+    """Expose actionable topology freshness and link/interface anomalies."""
+    snapshot = load_snapshot()
+    if snapshot is None:
+        return {"status": "unavailable", "anomalies": ["topology snapshot is not available"]}
+    anomalies: list[dict[str, object]] = []
+    for device in snapshot.devices:
+        if not device.get("up"):
+            anomalies.append({"type": "device_down", "device": device.get("name"), "detail": device.get("error")})
+    for interface in snapshot.interfaces:
+        if interface.get("admin_up") and interface.get("oper_up") is False:
+            anomalies.append({"type": "interface_down", "device": interface.get("device"), "interface": interface.get("name")})
+    return {"status": "ok", "observed_at": snapshot.observed_at, "anomalies": anomalies}
 
 
 @app.get("/tools/options")

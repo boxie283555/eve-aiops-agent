@@ -45,6 +45,8 @@ The older `.env`, `config/aiops.yml`, and `inventory/devices.yml` files are stil
 
 The collector can use Nautobot as its device source of truth. Configure `NAUTOBOT_URL`, `NAUTOBOT_TOKEN`, and set `nautobot.inventory_source: nautobot` (or `AIOPS_INVENTORY_SOURCE=nautobot`). Nautobot devices must have a name, location, role, platform, and either a primary management IP or the `management_ip` custom field. The adapter reads connection settings from device custom fields and falls back to the global Agent credentials. Interface status, collection time, and collection errors are synchronized back to Nautobot asynchronously after each collection cycle.
 
+The Agent also builds a normalized topology v1 snapshot after every collection cycle at `/app/data/topology.json` (override with `AIOPS_TOPOLOGY_PATH`). It contains devices, interfaces, LLDP links, and ARP/MAC endpoint locations and survives Agent restarts. Query it with `GET /api/topology`, `GET /api/topology/anomalies`, or `GET /api/path?src=<IP-or-MAC>&dst=<IP-or-MAC>&vrf=<VRF>`. A query can also use `device:interface` endpoints. The response includes each hop, evidence source, collection timestamp, and warnings when the path is incomplete.
+
 The optional Nautobot stack is defined in `docker-compose.nautobot.yml`. On the monitor host, create a separate `nautobot/.env` with database, secret-key, superuser, and API-token values, then start it with:
 
 ```bash
