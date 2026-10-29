@@ -50,6 +50,15 @@ telemetry:
   gnmi_port: 6030
   gnmi_addresses: []
 
+# Optional source of truth. Keep inventory_source as yaml until Nautobot has
+# been populated and validated. The agent falls back to YAML by default.
+nautobot:
+  url: ""
+  token: ""
+  inventory_source: yaml
+  fallback_to_yaml: true
+  timeout_seconds: 5
+
 grafana:
   admin_user: admin
   admin_password: admin

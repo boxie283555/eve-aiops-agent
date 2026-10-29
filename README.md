@@ -41,6 +41,19 @@ vi config/project.yml
 
 The older `.env`, `config/aiops.yml`, and `inventory/devices.yml` files are still supported for backward compatibility. Environment variables override values from `config/project.yml`.
 
+### Nautobot inventory (Q1)
+
+The collector can use Nautobot as its device source of truth. Configure `NAUTOBOT_URL`, `NAUTOBOT_TOKEN`, and set `nautobot.inventory_source: nautobot` (or `AIOPS_INVENTORY_SOURCE=nautobot`). Nautobot devices must have a name, location, role, platform, and either a primary management IP or the `management_ip` custom field. The adapter reads connection settings from device custom fields and falls back to the global Agent credentials. Interface status, collection time, and collection errors are synchronized back to Nautobot asynchronously after each collection cycle.
+
+The optional Nautobot stack is defined in `docker-compose.nautobot.yml`. On the monitor host, create a separate `nautobot/.env` with database, secret-key, superuser, and API-token values, then start it with:
+
+```bash
+cd /opt/eve-aiops-agent/nautobot
+docker compose --env-file .env up -d
+```
+
+The current deployment exposes Nautobot on port `8082`; the existing firewall policy UI uses port `8081`. After importing and validating the inventory, set `AIOPS_INVENTORY_SOURCE=nautobot` in the Agent environment and rebuild the Agent container.
+
 ## Quick Start
 
 On the monitoring host:

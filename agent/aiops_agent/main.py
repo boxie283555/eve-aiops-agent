@@ -9,12 +9,13 @@ from dataclasses import asdict
 from datetime import datetime
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from fastapi import FastAPI, Response
+from fastapi import FastAPI, Query, Response
 from fastapi.responses import HTMLResponse, PlainTextResponse
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from .collector import Collector
 from .inventory import load_inventory
+from .nautobot import NautobotClient, NautobotError
 from .parser import normalize_mac
 from .settings import load_settings
 from .snapshots import collect_and_snapshot, compare_latest
@@ -23,6 +24,7 @@ settings = load_settings()
 devices = load_inventory()
 collector = Collector(settings, devices)
 scheduler = AsyncIOScheduler(timezone="Asia/Shanghai")
+interface_sync_task: asyncio.Task[None] | None = None
 MRTG_TELEMETRY_METRICS_URL = os.getenv("AIOPS_TELEGRAF_METRICS_URL", "http://telegraf:9273/metrics")
 MRTG_TELEMETRY_CACHE: dict[tuple[str, str, str], tuple[float, float]] = {}
 
@@ -35,7 +37,22 @@ def _hour_minute(value: str) -> tuple[int, int]:
 
 
 async def _collect_loop_once() -> None:
+    global interface_sync_task
     await asyncio.to_thread(collector.collect_all)
+    if settings.nautobot_url and settings.nautobot_token:
+        if interface_sync_task is None or interface_sync_task.done():
+            interface_sync_task = asyncio.create_task(_sync_interfaces_background())
+
+
+async def _sync_interfaces_background() -> None:
+    try:
+        await asyncio.to_thread(
+            NautobotClient(settings.nautobot_url or "", settings.nautobot_token or "", settings.nautobot_timeout_seconds).sync_interface_states,
+            list(collector.latest_results.values()),
+        )
+    except NautobotError:
+        # Nautobot is an inventory sink; a sync outage must not stop metrics.
+        return
 
 
 async def _snapshot_once() -> None:
@@ -125,6 +142,57 @@ def structured_state() -> dict[str, object]:
             for result in sorted(collector.latest_results.values(), key=lambda item: item.device.name)
         ]
     }
+
+
+@app.get("/api/devices")
+def devices_api() -> list[dict[str, object]]:
+    """Return the latest device state for the network operations UI."""
+    return [
+        {
+            "device": result.device.name,
+            "host": result.device.host,
+            "role": result.device.role,
+            "site": result.device.site,
+            "up": result.ok,
+            "error": result.error,
+            "duration_seconds": result.duration_seconds,
+        }
+        for result in sorted(collector.latest_results.values(), key=lambda item: item.device.name)
+    ]
+
+
+@app.get("/api/interfaces")
+def interfaces_api(
+    device: str | None = Query(default=None),
+    state: str = Query(default="all", pattern="^(all|up|down)$"),
+) -> list[dict[str, object]]:
+    """Return interface state without requiring a device login."""
+    rows: list[dict[str, object]] = []
+    for result in collector.latest_results.values():
+        if device and result.device.name != device:
+            continue
+        for interface in result.interfaces:
+            oper_up = interface.get("oper_up")
+            if state == "up" and oper_up is not True:
+                continue
+            if state == "down" and oper_up is not False:
+                continue
+            rows.append(
+                {
+                    "device": result.device.name,
+                    "host": result.device.host,
+                    "role": result.device.role,
+                    "site": result.device.site,
+                    "interface": interface.get("name"),
+                    "admin_up": interface.get("admin_up"),
+                    "oper_up": oper_up,
+                    "description": interface.get("description", ""),
+                    "speed_bps": interface.get("speed_bps"),
+                    "device_up": result.ok,
+                    "collection_error": result.error,
+                }
+            )
+    return sorted(rows, key=lambda item: (str(item["device"]), str(item["interface"])))
 
 
 @app.post("/collect", response_class=PlainTextResponse)

@@ -43,6 +43,9 @@ class Settings:
     snmp_port: int
     snmp_timeout_seconds: float
     snmp_retries: int
+    nautobot_url: str | None
+    nautobot_token: str | None
+    nautobot_timeout_seconds: float
 
 
 def _env_bool(name: str, default: bool = False) -> bool:
@@ -102,6 +105,7 @@ def load_settings(path: str = "/app/config/aiops.yml") -> Settings:
     device_credentials = credentials.get("device", {})
     smtp_credentials = credentials.get("smtp", {})
     snmp = raw.get("snmp", {})
+    nautobot = raw.get("nautobot", {})
 
     return Settings(
         collector_interval_seconds=int(collector.get("interval_seconds", 60)),
@@ -128,4 +132,7 @@ def load_settings(path: str = "/app/config/aiops.yml") -> Settings:
         snmp_port=int(os.getenv("AIOPS_SNMP_PORT") or snmp.get("port", 161)),
         snmp_timeout_seconds=float(os.getenv("AIOPS_SNMP_TIMEOUT_SECONDS") or snmp.get("timeout_seconds", 3)),
         snmp_retries=int(os.getenv("AIOPS_SNMP_RETRIES") or snmp.get("retries", 1)),
+        nautobot_url=_first_env_or_config("NAUTOBOT_URL", nautobot.get("url")),
+        nautobot_token=_first_env_or_config("NAUTOBOT_TOKEN", nautobot.get("token")),
+        nautobot_timeout_seconds=float(os.getenv("NAUTOBOT_TIMEOUT_SECONDS") or nautobot.get("timeout_seconds", 5)),
     )
