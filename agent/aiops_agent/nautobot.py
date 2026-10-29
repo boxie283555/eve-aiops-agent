@@ -193,6 +193,8 @@ class NautobotClient:
         collected_at = datetime.now(timezone.utc).isoformat()
         devices = self._get("dcim/devices/?limit=0").get("results", [])
         device_ids = {item.get("name"): item.get("id") for item in devices}
+        statuses = self._get("extras/statuses/?limit=100").get("results", [])
+        active_status = next((item["id"] for item in statuses if item.get("name") == "Active"), None)
         interfaces = self._get("dcim/interfaces/?limit=0").get("results", [])
         interface_ids = {
             (item.get("device", {}).get("id"), item.get("name")): item
@@ -209,7 +211,18 @@ class NautobotClient:
                     continue
                 match = interface_ids.get((device_id, name))
                 if not match:
-                    continue
+                    # Create discovered interfaces so Nautobot becomes the
+                    # complete source of truth, including PAN-OS logical and
+                    # aggregate interfaces that were not pre-seeded.
+                    payload: dict[str, Any] = {"device": device_id, "name": name, "type": "other"}
+                    if active_status:
+                        payload["status"] = active_status
+                    if interface.get("description"):
+                        payload["description"] = interface["description"]
+                    if interface.get("mac") and ":" in str(interface["mac"]):
+                        payload["mac_address"] = str(interface["mac"])
+                    match = self._request("POST", "dcim/interfaces/", payload)
+                    interface_ids[(device_id, name)] = match
                 current = match.get("custom_fields") or {}
                 current.update(
                     {
