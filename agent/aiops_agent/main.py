@@ -497,14 +497,14 @@ def topology_view() -> str:
 <title>AI Networking Topology</title>
 <style>
 body{margin:0;background:#f5f7fa;color:#17202a;font:14px system-ui,sans-serif}header{padding:16px 22px;background:#17202a;color:#fff;display:flex;justify-content:space-between;align-items:center}h1{font-size:20px;margin:0}button{padding:8px 14px;border:0;border-radius:5px;background:#2f80ed;color:#fff;cursor:pointer}main{padding:16px}.meta{margin-bottom:10px;color:#52606d}.legend{display:flex;gap:14px;margin:8px 0}.legend span:before{content:"";display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:5px;background:#27ae60}.legend .down:before{background:#eb5757}.legend .unknown:before{background:#f2c94c}svg{width:100%;height:calc(100vh - 145px);min-height:500px;background:#fff;border:1px solid #d9e2ec;border-radius:8px}.link{stroke:#9aa5b1;stroke-width:2}.link.evpn{stroke:#9b51e0;stroke-dasharray:7 5}.node{stroke:#fff;stroke-width:2}.label{font-size:12px;fill:#17202a;text-anchor:middle}.iface{font-size:10px;fill:#52606d;text-anchor:middle}.empty{padding:40px;text-align:center;color:#52606d}
-</style></head><body><header><h1>AI Networking Topology</h1><div><button onclick="load()">Refresh</button> <button onclick="savePositions()">Save layout</button></div></header><main><div id="meta" class="meta">Loading...</div><div class="legend"><span>Device up</span><span class="down">Device down</span><span class="unknown">Design only / not collected</span><span style="color:#9b51e0">EVPN/VXLAN link</span></div><svg id="graph" viewBox="0 0 1200 700" preserveAspectRatio="xMidYMid meet"></svg></main>
+</style></head><body><header><h1>AI Networking Topology</h1><div><button onclick="load()">Refresh</button> <button onclick="savePositions()">Save layout</button></div></header><main><div id="meta" class="meta">Loading...</div><div class="legend"><span>Device up</span><span class="down">Device down</span><span class="unknown">Design only / not collected</span></div><svg id="graph" viewBox="0 0 1200 700" preserveAspectRatio="xMidYMid meet"></svg></main>
 <script>
 let topology={nodes:[],links:[],positions:{},observedAt:''}, dragged=null, raf=0;
 async function load(){
   const meta=document.getElementById('meta'),svg=document.getElementById('graph');
   try { const response=await fetch('/api/topology',{cache:'no-store'}), data=await response.json();
     if(data.status!=='ok'){meta.textContent='Topology snapshot unavailable';return;}
-    topology={nodes:data.devices||[],links:data.links||[],positions:{...(data.layout||{})},observedAt:data.observed_at||''};
+    topology={nodes:data.devices||[],links:(data.links||[]).filter(link=>link.type==='physical'),positions:{...(data.layout||{})},observedAt:data.observed_at||''};
     const cols=Math.max(1,Math.ceil(Math.sqrt(topology.nodes.length))),dx=1100/cols,dy=500/Math.max(1,Math.ceil(topology.nodes.length/cols));
     topology.nodes.forEach((node,i)=>{topology.positions[node.name] ||= {x:60+(i%cols)*dx,y:110+Math.floor(i/cols)*dy};});
     render(); meta.textContent=`${topology.nodes.length} devices · ${topology.links.length} links · observed ${topology.observedAt}`;
