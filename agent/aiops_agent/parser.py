@@ -189,7 +189,7 @@ def parse_panos_interfaces(output: str) -> list[dict[str, object]]:
             continue
         if in_hw:
             fields = re.split(r"\s+", stripped)
-            if len(fields) >= 4 and re.match(r"^(ethernet|ae)\S+$", fields[0], re.I):
+            if len(fields) >= 4 and re.match(r"^(ethernet|ae)\S+$", fields[0], re.I) and "/" in fields[2]:
                 state = fields[2].lower()
                 is_up = state.endswith("/up") or state == "up"
                 rows.append({"name": fields[0], "oper_up": is_up, "admin_up": "down" not in state,

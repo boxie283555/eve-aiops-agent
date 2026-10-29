@@ -180,6 +180,7 @@ class NautobotClient:
             "aiops_oper_status": "text",
             "aiops_last_collected": "text",
             "aiops_collection_error": "text",
+            "aiops_ip_address": "text",
         }
         existing = self._get("extras/custom-fields/?limit=100").get("results", [])
         for key, field_type in fields.items():
@@ -230,9 +231,16 @@ class NautobotClient:
                         "aiops_oper_status": "up" if interface.get("oper_up") else "down",
                         "aiops_last_collected": collected_at,
                         "aiops_collection_error": result.error or "",
+                        "aiops_ip_address": str(interface.get("ip") or ""),
                     }
                 )
-                updates.append((f"dcim/interfaces/{match['id']}/", {"custom_fields": current}))
+                mac = str(interface.get("mac") or "")
+                if mac and "." in mac:
+                    mac = ":".join(mac.replace(".", "")[i:i+2] for i in range(0, 12, 2))
+                patch = {"custom_fields": current}
+                if mac and len(mac) == 17:
+                    patch["mac_address"] = mac
+                updates.append((f"dcim/interfaces/{match['id']}/", patch))
 
         def update(item: tuple[str, dict[str, Any]]) -> bool:
             self._request("PATCH", item[0], item[1])
