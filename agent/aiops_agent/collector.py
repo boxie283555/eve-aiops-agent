@@ -14,7 +14,7 @@ from typing import Any, Callable
 from netmiko import ConnectHandler, NetmikoAuthenticationException, NetmikoTimeoutException
 
 from . import metrics
-from .inventory import Device
+from .inventory import Device, device_classification
 from .parser import (
     BgpSummaryEntry,
     ArpEntry,
@@ -146,6 +146,18 @@ class Collector:
         self.settings = settings
         self.devices = devices
         self.latest_results: dict[str, DeviceResult] = {}
+        for device in devices:
+            self._publish_classification(device)
+
+    def _publish_classification(self, device: Device) -> None:
+        manufacturer, device_type = device_classification(device)
+        labels = dict(device=device.name, manufacturer=manufacturer, device_type=device_type,
+                      hardware_group=f"{manufacturer} / {device_type}")
+        for family in metrics.DEVICE_CLASSIFICATION_INFO.collect():
+            for sample in family.samples:
+                if sample.labels.get("device") == device.name and sample.labels != labels:
+                    metrics.DEVICE_CLASSIFICATION_INFO.remove(*(sample.labels[key] for key in labels))
+        metrics.DEVICE_CLASSIFICATION_INFO.labels(**labels).set(1)
 
     def collect_all(self) -> dict[str, DeviceResult]:
         results: dict[str, DeviceResult] = {}
@@ -400,6 +412,7 @@ class Collector:
             return SnmpSample()
 
     def _publish_metrics(self, result: DeviceResult) -> None:
+        self._publish_classification(result.device)
         labels = {
             "device": result.device.name,
             "host": result.device.host,

@@ -18,17 +18,17 @@
   ],
   "panels": [
     {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 0
-      },
       "id": 104,
+      "type": "row",
+      "title": "Software Version Share",
+      "collapsed": false,
       "panels": [],
-      "title": "Device Hardware",
-      "type": "row"
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      }
     },
     {
       "datasource": {
@@ -44,7 +44,8 @@
             },
             "inspect": false
           },
-          "mappings": []
+          "mappings": [],
+          "noValue": "No data"
         },
         "overrides": [
           {
@@ -110,10 +111,10 @@
         ]
       },
       "gridPos": {
-        "h": 8,
-        "w": 12,
         "x": 0,
-        "y": 1
+        "y": 1,
+        "w": 12,
+        "h": 9
       },
       "id": 18,
       "options": {
@@ -132,23 +133,23 @@
       "pluginVersion": "11.3.0",
       "targets": [
         {
-          "expr": "count by (version) (aiops_device_hardware_info{device=~\"$device\"})",
+          "expr": "count by (version) ((aiops_device_hardware_info{device=~\"$device\"} and on(device) max by(device) (aiops_device_classification_info{manufacturer=~\"$manufacturer\",device_type=~\"$device_type\",hardware_group=~\"$hardware_group\"} @ end())))",
           "format": "table",
           "instant": true,
           "range": false,
           "refId": "A"
         },
         {
-          "expr": "100 * (count by (version) (aiops_device_hardware_info{device=~\"$device\"})) / scalar(count(aiops_device_hardware_info{device=~\"$device\"}))",
+          "expr": "100 * (count by (version) ((aiops_device_hardware_info{device=~\"$device\"} and on(device) max by(device) (aiops_device_classification_info{manufacturer=~\"$manufacturer\",device_type=~\"$device_type\",hardware_group=~\"$hardware_group\"} @ end())))) / scalar(count((aiops_device_hardware_info{device=~\"$device\"} and on(device) max by(device) (aiops_device_classification_info{manufacturer=~\"$manufacturer\",device_type=~\"$device_type\",hardware_group=~\"$hardware_group\"} @ end()))))",
           "format": "table",
           "instant": true,
           "range": false,
           "refId": "B"
         }
       ],
-      "title": "Software Version Share",
+      "title": "Software Version Share · $hardware_group",
       "type": "table",
-      "description": "Current software version distribution for the selected devices. Each row shows the full reported version, device count and percentage. Unknown means the collector has not reported a version.",
+      "description": "Grouped by manufacturer → device type (Switch / Firewall); device names and models remain visible. Manufacturer, Device type and Device filters narrow the groups. No data means this device group has no observations for this metric, not zero or healthy. Historical curves use inventory classification at the selected range endpoint.",
       "transformations": [
         {
           "id": "joinByField",
@@ -184,7 +185,23 @@
             }
           }
         }
-      ]
+      ],
+      "repeat": "hardware_group",
+      "repeatDirection": "h",
+      "maxPerRow": 2
+    },
+    {
+      "id": 200,
+      "type": "row",
+      "title": "Device Uptime",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 10,
+        "w": 24,
+        "h": 1
+      }
     },
     {
       "datasource": {
@@ -193,56 +210,110 @@
       },
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "thresholds"
+          "unit": "none",
+          "custom": {
+            "cellOptions": {
+              "type": "auto"
+            }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
+          "noValue": "No data"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Uptime"
+            },
+            "properties": [
               {
-                "color": "green",
-                "value": null
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "custom.width",
+                "value": 160
               }
             ]
-          },
-          "unit": "s"
-        },
-        "overrides": []
+          }
+        ]
       },
       "gridPos": {
-        "h": 8,
-        "w": 6,
-        "x": 12,
-        "y": 1
+        "x": 0,
+        "y": 11,
+        "w": 12,
+        "h": 9
       },
       "id": 19,
       "options": {
-        "colorMode": "background",
-        "graphMode": "area",
-        "justifyMode": "center",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showPercentChange": false,
-        "textMode": "value_and_name",
-        "wideLayout": true
+        "showHeader": true,
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "displayName": "Device",
+            "desc": false
+          }
+        ],
+        "footer": {
+          "show": false
+        }
       },
       "pluginVersion": "11.3.0",
       "targets": [
         {
-          "expr": "aiops_device_uptime_seconds{device=~\"$device\"}",
+          "expr": "(aiops_device_uptime_seconds{device=~\"$device\"}) and on(device) max by(device) (aiops_device_classification_info{manufacturer=~\"$manufacturer\",device_type=~\"$device_type\",hardware_group=~\"$hardware_group\"} @ end())",
           "legendFormat": "{{device}}",
-          "refId": "A"
+          "refId": "A",
+          "format": "table",
+          "instant": true,
+          "range": false
         }
       ],
-      "title": "Device Uptime",
-      "type": "stat"
+      "title": "Device Uptime · $hardware_group",
+      "type": "table",
+      "repeat": "hardware_group",
+      "repeatDirection": "h",
+      "maxPerRow": 2,
+      "description": "Grouped by manufacturer → device type (Switch / Firewall); device names and models remain visible. Manufacturer, Device type and Device filters narrow the groups. No data means this device group has no observations for this metric, not zero or healthy. Historical curves use inventory classification at the selected range endpoint.",
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "device",
+                "Value"
+              ]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "indexByName": {
+              "device": 0,
+              "Value": 1
+            },
+            "renameByName": {
+              "device": "Device",
+              "Value": "Uptime"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 201,
+      "type": "row",
+      "title": "CPU Utilization",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 24,
+        "h": 1
+      }
     },
     {
       "datasource": {
@@ -278,15 +349,16 @@
               }
             ]
           },
-          "unit": "percent"
+          "unit": "percent",
+          "noValue": "No data"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
-        "w": 6,
-        "x": 18,
-        "y": 1
+        "x": 0,
+        "y": 21,
+        "w": 12,
+        "h": 8
       },
       "id": 20,
       "options": {
@@ -305,13 +377,30 @@
       },
       "targets": [
         {
-          "expr": "aiops_device_cpu_utilization_percent{device=~\"$device\"}",
+          "expr": "(aiops_device_cpu_utilization_percent{device=~\"$device\"}) and on(device) max by(device) (aiops_device_classification_info{manufacturer=~\"$manufacturer\",device_type=~\"$device_type\",hardware_group=~\"$hardware_group\"} @ end())",
           "legendFormat": "{{device}}",
           "refId": "A"
         }
       ],
-      "title": "CPU Utilization",
-      "type": "timeseries"
+      "title": "CPU Utilization · $hardware_group",
+      "type": "timeseries",
+      "repeat": "hardware_group",
+      "repeatDirection": "h",
+      "maxPerRow": 2,
+      "description": "Grouped by manufacturer → device type (Switch / Firewall); device names and models remain visible. Manufacturer, Device type and Device filters narrow the groups. No data means this device group has no observations for this metric, not zero or healthy. Historical curves use inventory classification at the selected range endpoint."
+    },
+    {
+      "id": 202,
+      "type": "row",
+      "title": "Memory Utilization",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 29,
+        "w": 24,
+        "h": 1
+      }
     },
     {
       "datasource": {
@@ -347,15 +436,16 @@
               }
             ]
           },
-          "unit": "percent"
+          "unit": "percent",
+          "noValue": "No data"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 7,
-        "w": 12,
         "x": 0,
-        "y": 9
+        "y": 30,
+        "w": 12,
+        "h": 8
       },
       "id": 21,
       "options": {
@@ -374,13 +464,30 @@
       },
       "targets": [
         {
-          "expr": "aiops_device_memory_utilization_percent{device=~\"$device\"}",
+          "expr": "(aiops_device_memory_utilization_percent{device=~\"$device\"}) and on(device) max by(device) (aiops_device_classification_info{manufacturer=~\"$manufacturer\",device_type=~\"$device_type\",hardware_group=~\"$hardware_group\"} @ end())",
           "legendFormat": "{{device}}",
           "refId": "A"
         }
       ],
-      "title": "Memory Utilization",
-      "type": "timeseries"
+      "title": "Memory Utilization · $hardware_group",
+      "type": "timeseries",
+      "repeat": "hardware_group",
+      "repeatDirection": "h",
+      "maxPerRow": 2,
+      "description": "Grouped by manufacturer → device type (Switch / Firewall); device names and models remain visible. Manufacturer, Device type and Device filters narrow the groups. No data means this device group has no observations for this metric, not zero or healthy. Historical curves use inventory classification at the selected range endpoint."
+    },
+    {
+      "id": 203,
+      "type": "row",
+      "title": "Device Version and Inventory",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 38,
+        "w": 24,
+        "h": 1
+      }
     },
     {
       "datasource": {
@@ -396,15 +503,16 @@
             "inspect": false
           },
           "mappings": [],
-          "unit": "none"
+          "unit": "none",
+          "noValue": "No data"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 7,
-        "w": 12,
-        "x": 12,
-        "y": 9
+        "x": 0,
+        "y": 39,
+        "w": 24,
+        "h": 8
       },
       "id": 16,
       "options": {
@@ -422,14 +530,14 @@
       "pluginVersion": "11.3.0",
       "targets": [
         {
-          "expr": "aiops_device_hardware_info{device=~\"$device\"}",
+          "expr": "(aiops_device_hardware_info{device=~\"$device\"}) and on(device) max by(device) (aiops_device_classification_info{manufacturer=~\"$manufacturer\",device_type=~\"$device_type\",hardware_group=~\"$hardware_group\"} @ end())",
           "format": "table",
           "instant": true,
           "legendFormat": "{{device}}",
           "refId": "A"
         }
       ],
-      "title": "Device Version and Inventory",
+      "title": "Device Version and Inventory · $hardware_group",
       "transformations": [
         {
           "id": "organize",
@@ -448,12 +556,29 @@
               "hw_version": "HW Version",
               "model": "Model",
               "serial": "Serial",
-              "version": "EOS Version"
+              "version": "Software Version"
             }
           }
         }
       ],
-      "type": "table"
+      "type": "table",
+      "repeat": "hardware_group",
+      "repeatDirection": "h",
+      "maxPerRow": 1,
+      "description": "Grouped by manufacturer → device type (Switch / Firewall); device names and models remain visible. Manufacturer, Device type and Device filters narrow the groups. No data means this device group has no observations for this metric, not zero or healthy. Historical curves use inventory classification at the selected range endpoint."
+    },
+    {
+      "id": 204,
+      "type": "row",
+      "title": "Power and Module Status",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 47,
+        "w": 24,
+        "h": 1
+      }
     },
     {
       "datasource": {
@@ -478,7 +603,8 @@
               }
             ]
           },
-          "unit": "none"
+          "unit": "none",
+          "noValue": "No data"
         },
         "overrides": [
           {
@@ -536,14 +662,56 @@
                 }
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Model"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "not_applicable": {
+                        "text": "N/A (not installed)"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Serial"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "not_applicable": {
+                        "text": "N/A (not installed)"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
           }
         ]
       },
       "gridPos": {
-        "h": 7,
-        "w": 24,
         "x": 0,
-        "y": 16
+        "y": 48,
+        "w": 24,
+        "h": 9
       },
       "id": 17,
       "options": {
@@ -561,14 +729,14 @@
       "pluginVersion": "11.3.0",
       "targets": [
         {
-          "expr": "aiops_hardware_component_status{device=~\"$device\"}",
+          "expr": "(aiops_hardware_component_status{device=~\"$device\"}) and on(device) max by(device) (aiops_device_classification_info{manufacturer=~\"$manufacturer\",device_type=~\"$device_type\",hardware_group=~\"$hardware_group\"} @ end())",
           "format": "table",
           "instant": true,
           "legendFormat": "{{device}} {{component_type}} {{name}}",
           "refId": "A"
         }
       ],
-      "title": "Power and Module Status",
+      "title": "Power and Module Status · $hardware_group",
       "transformations": [
         {
           "id": "organize",
@@ -591,20 +759,24 @@
           }
         }
       ],
-      "type": "table"
+      "type": "table",
+      "repeat": "hardware_group",
+      "repeatDirection": "h",
+      "maxPerRow": 1,
+      "description": "Grouped by manufacturer → device type (Switch / Firewall); device names and models remain visible. Manufacturer, Device type and Device filters narrow the groups. No data means this device group has no observations for this metric, not zero or healthy. Historical curves use inventory classification at the selected range endpoint."
     },
     {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 23
-      },
       "id": 106,
+      "type": "row",
+      "title": "TCAM Utilization",
+      "collapsed": false,
       "panels": [],
-      "title": "ASIC/TCAM Resource",
-      "type": "row"
+      "gridPos": {
+        "x": 0,
+        "y": 57,
+        "w": 24,
+        "h": 1
+      }
     },
     {
       "datasource": {
@@ -640,15 +812,16 @@
               }
             ]
           },
-          "unit": "percent"
+          "unit": "percent",
+          "noValue": "No data"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
-        "w": 12,
         "x": 0,
-        "y": 24
+        "y": 58,
+        "w": 12,
+        "h": 8
       },
       "id": 25,
       "options": {
@@ -667,13 +840,30 @@
       },
       "targets": [
         {
-          "expr": "(label_replace(aiops_telemetry_asic_tcam_resource_utilization_percent{device=~\"$device\"}, \"collection_source\", \"telemetry\", \"__name__\", \".*\")) or on(device, resource, region) (label_replace(aiops_asic_tcam_resource_utilization_percent{device=~\"$device\"}, \"collection_source\", \"cli\", \"__name__\", \".*\"))",
+          "expr": "((label_replace(aiops_telemetry_asic_tcam_resource_utilization_percent{device=~\"$device\"}, \"collection_source\", \"telemetry\", \"__name__\", \".*\")) or on(device, resource, region) (label_replace(aiops_asic_tcam_resource_utilization_percent{device=~\"$device\"}, \"collection_source\", \"cli\", \"__name__\", \".*\"))) and on(device) max by(device) (aiops_device_classification_info{manufacturer=~\"$manufacturer\",device_type=~\"$device_type\",hardware_group=~\"$hardware_group\"} @ end())",
           "legendFormat": "{{device}} {{resource}} {{region}} {{collection_source}}",
           "refId": "A"
         }
       ],
-      "title": "TCAM Utilization",
-      "type": "timeseries"
+      "title": "TCAM Utilization · $hardware_group",
+      "type": "timeseries",
+      "repeat": "hardware_group",
+      "repeatDirection": "h",
+      "maxPerRow": 2,
+      "description": "Grouped by manufacturer → device type (Switch / Firewall); device names and models remain visible. Manufacturer, Device type and Device filters narrow the groups. No data means this device group has no observations for this metric, not zero or healthy. Historical curves use inventory classification at the selected range endpoint."
+    },
+    {
+      "id": 205,
+      "type": "row",
+      "title": "TCAM Resource Details",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 66,
+        "w": 24,
+        "h": 1
+      }
     },
     {
       "datasource": {
@@ -706,7 +896,8 @@
               }
             ]
           },
-          "unit": "none"
+          "unit": "none",
+          "noValue": "No data"
         },
         "overrides": [
           {
@@ -774,10 +965,10 @@
         ]
       },
       "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 24
+        "x": 0,
+        "y": 67,
+        "w": 24,
+        "h": 9
       },
       "id": 26,
       "options": {
@@ -795,14 +986,14 @@
       "pluginVersion": "11.3.0",
       "targets": [
         {
-          "expr": "label_replace(((label_replace(aiops_telemetry_asic_tcam_resource_used_entries{device=~\"$device\"}, \"collection_source\", \"telemetry\", \"__name__\", \".*\")) or on(device, resource, region) (label_replace(aiops_asic_tcam_resource_used_entries{device=~\"$device\"}, \"collection_source\", \"cli\", \"__name__\", \".*\"))), \"metric\", \"used\", \"__name__\", \".*\") or label_replace(((label_replace(aiops_telemetry_asic_tcam_resource_free_entries{device=~\"$device\"}, \"collection_source\", \"telemetry\", \"__name__\", \".*\")) or on(device, resource, region) (label_replace(aiops_asic_tcam_resource_free_entries{device=~\"$device\"}, \"collection_source\", \"cli\", \"__name__\", \".*\"))), \"metric\", \"free\", \"__name__\", \".*\") or label_replace(((label_replace(aiops_telemetry_asic_tcam_resource_total_entries{device=~\"$device\"}, \"collection_source\", \"telemetry\", \"__name__\", \".*\")) or on(device, resource, region) (label_replace(aiops_asic_tcam_resource_total_entries{device=~\"$device\"}, \"collection_source\", \"cli\", \"__name__\", \".*\"))), \"metric\", \"total\", \"__name__\", \".*\") or label_replace(((label_replace(aiops_telemetry_asic_tcam_resource_utilization_percent{device=~\"$device\"}, \"collection_source\", \"telemetry\", \"__name__\", \".*\")) or on(device, resource, region) (label_replace(aiops_asic_tcam_resource_utilization_percent{device=~\"$device\"}, \"collection_source\", \"cli\", \"__name__\", \".*\"))), \"metric\", \"utilization_percent\", \"__name__\", \".*\")",
+          "expr": "(label_replace(((label_replace(aiops_telemetry_asic_tcam_resource_used_entries{device=~\"$device\"}, \"collection_source\", \"telemetry\", \"__name__\", \".*\")) or on(device, resource, region) (label_replace(aiops_asic_tcam_resource_used_entries{device=~\"$device\"}, \"collection_source\", \"cli\", \"__name__\", \".*\"))), \"metric\", \"used\", \"__name__\", \".*\") or label_replace(((label_replace(aiops_telemetry_asic_tcam_resource_free_entries{device=~\"$device\"}, \"collection_source\", \"telemetry\", \"__name__\", \".*\")) or on(device, resource, region) (label_replace(aiops_asic_tcam_resource_free_entries{device=~\"$device\"}, \"collection_source\", \"cli\", \"__name__\", \".*\"))), \"metric\", \"free\", \"__name__\", \".*\") or label_replace(((label_replace(aiops_telemetry_asic_tcam_resource_total_entries{device=~\"$device\"}, \"collection_source\", \"telemetry\", \"__name__\", \".*\")) or on(device, resource, region) (label_replace(aiops_asic_tcam_resource_total_entries{device=~\"$device\"}, \"collection_source\", \"cli\", \"__name__\", \".*\"))), \"metric\", \"total\", \"__name__\", \".*\") or label_replace(((label_replace(aiops_telemetry_asic_tcam_resource_utilization_percent{device=~\"$device\"}, \"collection_source\", \"telemetry\", \"__name__\", \".*\")) or on(device, resource, region) (label_replace(aiops_asic_tcam_resource_utilization_percent{device=~\"$device\"}, \"collection_source\", \"cli\", \"__name__\", \".*\"))), \"metric\", \"utilization_percent\", \"__name__\", \".*\")) and on(device) max by(device) (aiops_device_classification_info{manufacturer=~\"$manufacturer\",device_type=~\"$device_type\",hardware_group=~\"$hardware_group\"} @ end())",
           "format": "table",
           "instant": true,
           "legendFormat": "{{device}} {{resource}} {{metric}}",
           "refId": "A"
         }
       ],
-      "title": "TCAM Resource Details",
+      "title": "TCAM Resource Details · $hardware_group",
       "transformations": [
         {
           "id": "organize",
@@ -824,7 +1015,11 @@
           }
         }
       ],
-      "type": "table"
+      "type": "table",
+      "repeat": "hardware_group",
+      "repeatDirection": "h",
+      "maxPerRow": 1,
+      "description": "Grouped by manufacturer → device type (Switch / Firewall); device names and models remain visible. Manufacturer, Device type and Device filters narrow the groups. No data means this device group has no observations for this metric, not zero or healthy. Historical curves use inventory classification at the selected range endpoint."
     },
     {
       "collapsed": false,
@@ -832,7 +1027,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 32
+        "y": 76
       },
       "id": 100,
       "panels": [],
@@ -871,7 +1066,7 @@
         "h": 5,
         "w": 12,
         "x": 0,
-        "y": 33
+        "y": 77
       },
       "id": 1,
       "options": {
@@ -937,7 +1132,7 @@
         "h": 5,
         "w": 12,
         "x": 12,
-        "y": 33
+        "y": 77
       },
       "id": 2,
       "options": {
@@ -1002,7 +1197,7 @@
         "h": 6,
         "w": 24,
         "x": 0,
-        "y": 38
+        "y": 82
       },
       "id": 107,
       "options": {
@@ -1067,7 +1262,7 @@
       "panels": [],
       "gridPos": {
         "x": 0,
-        "y": 44,
+        "y": 88,
         "w": 24,
         "h": 1
       }
@@ -1092,7 +1287,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 45,
+        "y": 89,
         "w": 8,
         "h": 4
       },
@@ -1151,7 +1346,7 @@
       },
       "gridPos": {
         "x": 8,
-        "y": 45,
+        "y": 89,
         "w": 8,
         "h": 4
       },
@@ -1210,7 +1405,7 @@
       },
       "gridPos": {
         "x": 16,
-        "y": 45,
+        "y": 89,
         "w": 8,
         "h": 4
       },
@@ -1293,7 +1488,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 49,
+        "y": 93,
         "w": 8,
         "h": 8
       },
@@ -1373,7 +1568,7 @@
       },
       "gridPos": {
         "x": 8,
-        "y": 49,
+        "y": 93,
         "w": 8,
         "h": 8
       },
@@ -1453,7 +1648,7 @@
       },
       "gridPos": {
         "x": 16,
-        "y": 49,
+        "y": 93,
         "w": 8,
         "h": 8
       },
@@ -1534,7 +1729,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 57,
+        "y": 101,
         "w": 8,
         "h": 8
       },
@@ -1615,7 +1810,7 @@
       },
       "gridPos": {
         "x": 8,
-        "y": 57,
+        "y": 101,
         "w": 8,
         "h": 8
       },
@@ -1657,7 +1852,7 @@
       "title": "Firewall Collection Status",
       "gridPos": {
         "x": 16,
-        "y": 57,
+        "y": 101,
         "w": 8,
         "h": 8
       },
@@ -1818,7 +2013,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 65
+        "y": 109
       },
       "id": 102,
       "panels": [],
@@ -1857,7 +2052,7 @@
         "h": 5,
         "w": 8,
         "x": 0,
-        "y": 66
+        "y": 110
       },
       "id": 5,
       "options": {
@@ -1967,7 +2162,7 @@
         "h": 8,
         "w": 16,
         "x": 8,
-        "y": 66
+        "y": 110
       },
       "id": 11,
       "options": {
@@ -2042,7 +2237,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 74
+        "y": 118
       },
       "id": 22,
       "options": {
@@ -2114,7 +2309,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 82
+        "y": 126
       },
       "id": 23,
       "options": {
@@ -2147,7 +2342,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 90
+        "y": 134
       },
       "id": 105,
       "panels": [],
@@ -2186,7 +2381,7 @@
         "h": 5,
         "w": 8,
         "x": 0,
-        "y": 91
+        "y": 135
       },
       "id": 6,
       "options": {
@@ -2296,7 +2491,7 @@
         "h": 8,
         "w": 16,
         "x": 8,
-        "y": 91
+        "y": 135
       },
       "id": 12,
       "options": {
@@ -2357,7 +2552,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 99
+        "y": 143
       },
       "id": 103,
       "panels": [],
@@ -2396,7 +2591,7 @@
         "h": 5,
         "w": 6,
         "x": 0,
-        "y": 100
+        "y": 144
       },
       "id": 4,
       "options": {
@@ -2506,7 +2701,7 @@
         "h": 8,
         "w": 18,
         "x": 6,
-        "y": 100
+        "y": 144
       },
       "id": 13,
       "options": {
@@ -2583,7 +2778,7 @@
         "h": 9,
         "w": 16,
         "x": 0,
-        "y": 108
+        "y": 152
       },
       "id": 14,
       "options": {
@@ -2692,7 +2887,7 @@
         "h": 9,
         "w": 8,
         "x": 16,
-        "y": 108
+        "y": 152
       },
       "id": 15,
       "options": {
@@ -2734,7 +2929,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 117
+        "y": 161
       }
     },
     {
@@ -2746,7 +2941,7 @@
         "h": 5,
         "w": 24,
         "x": 0,
-        "y": 118
+        "y": 162
       },
       "options": {
         "mode": "markdown",
@@ -2764,7 +2959,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 123
+        "y": 167
       },
       "id": 101,
       "panels": [],
@@ -2807,7 +3002,7 @@
         "h": 4,
         "w": 24,
         "x": 0,
-        "y": 124
+        "y": 168
       },
       "id": 3,
       "options": {
@@ -2881,7 +3076,7 @@
         "h": 10,
         "w": 16,
         "x": 0,
-        "y": 128
+        "y": 172
       },
       "id": 7,
       "options": {
@@ -2994,7 +3189,7 @@
         "h": 10,
         "w": 8,
         "x": 16,
-        "y": 128
+        "y": 172
       },
       "id": 8,
       "options": {
@@ -3119,7 +3314,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 138
+        "y": 182
       },
       "id": 24,
       "options": {
@@ -3320,7 +3515,8 @@
   "tags": [
     "eve",
     "aiops",
-    "arista"
+    "arista",
+    "hardware-classification"
   ],
   "templating": {
     "list": [
@@ -3335,7 +3531,63 @@
           "type": "prometheus",
           "uid": "Prometheus"
         },
-        "definition": "label_values(aiops_device_up, device)",
+        "definition": "label_values(aiops_device_classification_info, manufacturer)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "厂商 / Manufacturer",
+        "multi": true,
+        "name": "manufacturer",
+        "options": [],
+        "query": {
+          "query": "label_values(aiops_device_classification_info, manufacturer)",
+          "refId": "PrometheusVariableQueryEditor-manufacturer"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "Prometheus"
+        },
+        "definition": "label_values(aiops_device_classification_info{manufacturer=~\"$manufacturer\"}, device_type)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "设备类型 / Device type",
+        "multi": true,
+        "name": "device_type",
+        "options": [],
+        "query": {
+          "query": "label_values(aiops_device_classification_info{manufacturer=~\"$manufacturer\"}, device_type)",
+          "refId": "PrometheusVariableQueryEditor-device_type"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allValue": null,
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "Prometheus"
+        },
+        "definition": "label_values(aiops_device_classification_info{manufacturer=~\"$manufacturer\",device_type=~\"$device_type\"}, device)",
         "hide": 0,
         "includeAll": true,
         "label": "Device",
@@ -3343,7 +3595,7 @@
         "name": "device",
         "options": [],
         "query": {
-          "query": "label_values(aiops_device_up, device)",
+          "query": "label_values(aiops_device_classification_info{manufacturer=~\"$manufacturer\",device_type=~\"$device_type\"}, device)",
           "refId": "PrometheusVariableQueryEditor-Device"
         },
         "refresh": 1,
@@ -3377,6 +3629,34 @@
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allValue": null,
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "Prometheus"
+        },
+        "definition": "label_values(aiops_device_classification_info{manufacturer=~\"$manufacturer\",device_type=~\"$device_type\",device=~\"$device\"}, hardware_group)",
+        "hide": 2,
+        "includeAll": true,
+        "label": "Hardware group",
+        "multi": true,
+        "name": "hardware_group",
+        "options": [],
+        "query": {
+          "query": "label_values(aiops_device_classification_info{manufacturer=~\"$manufacturer\",device_type=~\"$device_type\",device=~\"$device\"}, hardware_group)",
+          "refId": "PrometheusVariableQueryEditor-hardware_group"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": true,
         "sort": 1,
         "type": "query"
       }

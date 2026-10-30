@@ -212,7 +212,11 @@ def build(lang):
         if existing['id'] == 1:existing['gridPos']['h'] += 1
         else:existing['gridPos']['y'] += 1
     panels.sort(key=lambda p:(p['gridPos']['y'],p['gridPos']['x']))
-    variable=json.loads((ROOT/'grafana/dashboards/aiops-overview.json').read_text())['templating']['list'][0]
+    variables=json.loads((ROOT/'grafana/dashboards/aiops-overview.json').read_text())['templating']['list']
+    variable=next(v for v in variables if v['name']=='device')
+    # Reports have an independent device selector, without operations-only dependencies.
+    variable['definition']=variable['query']['query']='label_values(aiops_device_up, device)'
+    variable['allValue']='.*'
     variable['label']=tr('设备范围','Device scope')
     return dict(annotations={'list':[]},editable=True,fiscalYearStartMonth=0,graphTooltip=1,id=None,
                 links=[{'title':'语言 / Language','type':'dashboards','tags':['aiops-report-language'],'asDropdown':True,'includeVars':True,'keepTime':True,'targetBlank':False},

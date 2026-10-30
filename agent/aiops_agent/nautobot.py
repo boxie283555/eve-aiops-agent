@@ -126,6 +126,14 @@ class NautobotClient:
                 platform_name = "arista_eos"
             if platform_name in {"palo_alto_pan-os", "palo_alto_panos", "pan-os"}:
                 platform_name = "paloalto_panos"
+            # Classification is optional metadata: a failed related lookup must
+            # not prevent the primary inventory from reaching the collector.
+            manufacturer = "unknown"
+            try:
+                device_type = self._related_object(item.get("device_type") or {})
+                manufacturer = self._related_name(device_type.get("manufacturer") or platform.get("manufacturer"))
+            except NautobotError:
+                pass
             devices.append(
                 {
                     "name": item.get("name") or item.get("display") or item.get("id"),
@@ -134,6 +142,7 @@ class NautobotClient:
                     "site": self._related_name(site),
                     "host": primary_ip,
                     "platform": platform_name or "cisco_nxos",
+                    "manufacturer": manufacturer,
                     "port": int(custom_fields.get("connection_port") or 22),
                     "use_ssh": _bool(custom_fields.get("use_ssh")),
                     "use_snmp": _bool(custom_fields.get("use_snmp")),

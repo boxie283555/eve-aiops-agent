@@ -170,6 +170,12 @@ NVE_PEER_UP = Gauge(
     ["device", "peer", "peer_hostname", "state"],
 )
 
+DEVICE_CLASSIFICATION_INFO = Gauge(
+    "aiops_device_classification_info",
+    "Device manufacturer and functional type from inventory, independent of reachability.",
+    ["device", "manufacturer", "device_type", "hardware_group"],
+)
+
 DEVICE_HARDWARE_INFO = Gauge(
     "aiops_device_hardware_info",
     "Device hardware and software inventory information.",

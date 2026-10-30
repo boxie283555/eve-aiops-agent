@@ -33,6 +33,27 @@ class Device:
     secret_env: str | None = None
     snmp: SnmpTarget = SnmpTarget()
     id: str | None = None
+    manufacturer: str = ""
+
+
+def device_classification(device: Device) -> tuple[str, str]:
+    """Inventory identity remains available even when device collection fails."""
+    platform = getattr(device, "platform", "").lower()
+    manufacturer = getattr(device, "manufacturer", "").strip()
+    if not manufacturer or manufacturer.lower() == "unknown":
+        manufacturer = {"arista_eos": "Arista", "paloalto_panos": "Palo Alto Networks",
+                        "cisco_nxos": "Cisco"}.get(platform, "Unknown")
+    aliases = {"arista": "Arista", "arista networks": "Arista", "palo alto": "Palo Alto Networks",
+               "paloalto": "Palo Alto Networks", "palo alto networks": "Palo Alto Networks", "cisco": "Cisco"}
+    manufacturer = aliases.get(manufacturer.lower(), manufacturer)
+    role = getattr(device, "role", "").lower()
+    if role in {"firewall", "fw"} or platform == "paloalto_panos":
+        device_type = "Firewall"
+    elif role in {"switch", "leaf", "spine", "border-leaf", "access-switch", "core-switch"} or platform in {"arista_eos", "cisco_nxos"}:
+        device_type = "Switch"
+    else:
+        device_type = "Other"
+    return manufacturer, device_type
 
 
 def load_inventory(path: str = "/app/inventory/devices.yml") -> list[Device]:
@@ -62,6 +83,7 @@ def load_inventory(path: str = "/app/inventory/devices.yml") -> list[Device]:
             Device(
                 name=str(merged["name"]),
                 id=merged.get("id"),
+                manufacturer=str(merged.get("manufacturer") or ""),
                 role=str(merged.get("role", "unknown")),
                 site=str(merged.get("site", "unknown")),
                 host=str(merged["host"]),
