@@ -505,9 +505,13 @@ async function load(){
   const meta=document.getElementById('meta'),svg=document.getElementById('graph');
   try { const response=await fetch('/api/topology',{cache:'no-store'}), data=await response.json();
     if(data.status!=='ok'){meta.textContent='Topology snapshot unavailable';return;}
-    topology={nodes:data.devices||[],links:(data.links||[]).filter(link=>link.type==='physical'),positions:{...(data.layout||{})},observedAt:data.observed_at||''};
+    // Manual data refresh preserves the positions currently being edited.
+    if(dragged||selecting)return;
+    const positions=Object.fromEntries((data.devices||[]).map(node=>[node.name,topology.positions[node.name]||data.layout?.[node.name]]));
+    topology={nodes:data.devices||[],links:(data.links||[]).filter(link=>link.type==='physical'),positions,observedAt:data.observed_at||''};
     const cols=Math.max(1,Math.ceil(Math.sqrt(topology.nodes.length))),dx=1100/cols,dy=500/Math.max(1,Math.ceil(topology.nodes.length/cols));
     topology.nodes.forEach((node,i)=>{topology.positions[node.name] ||= {x:60+(i%cols)*dx,y:110+Math.floor(i/cols)*dy};});
+    selected=new Set([...selected].filter(name=>Object.hasOwn(topology.positions,name)));
     render(); meta.textContent=`${topology.nodes.length} devices · ${topology.links.length} links · observed ${topology.observedAt}`;
   } catch(error){meta.textContent='Failed to load topology: '+error;}
 }
@@ -532,7 +536,7 @@ function drag(event){if(!dragged||event.pointerId!==dragged.pointerId)return;con
 function endDrag(){dragged=null;}
 async function savePositions(){const response=await fetch('/api/topology/layout',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(topology.positions)});document.getElementById('meta').textContent=response.ok?'Layout saved':'Failed to save layout';}
 function esc(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-document.getElementById('graph').addEventListener('pointerdown',startBox);load();setInterval(load,30000);
+document.getElementById('graph').addEventListener('pointerdown',startBox);load();
 </script></body></html>"""
 
 
