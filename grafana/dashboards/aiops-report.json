@@ -1,0 +1,1142 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "title": "完整运维视图 ↗",
+      "type": "link",
+      "url": "/d/eve-aiops-overview/ai-networking-ops",
+      "includeVars": true,
+      "keepTime": true,
+      "targetBlank": true,
+      "icon": "dashboard",
+      "tags": []
+    },
+    {
+      "title": "物理拓扑 ↗",
+      "type": "link",
+      "url": "http://192.168.20.169:8080/topology",
+      "targetBlank": true,
+      "icon": "external link",
+      "tags": []
+    }
+  ],
+  "panels": [
+    {
+      "id": 1,
+      "title": "网络运行简报",
+      "type": "text",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 3
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "暂无数据",
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "### 运行状态 · 资产概况 · 待关注事项\n面向汇报的简明视图。卡片展示所选时间终点的最近采集结果，趋势覆盖右上角所选时段。**设备可达不等于业务可用性。**"
+      }
+    },
+    {
+      "id": 2,
+      "title": "01  在线设备",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 3,
+        "w": 6,
+        "h": 5
+      },
+      "description": "最近一次设备采集报告的可达数量；采集服务不可用时显示暂无数据。",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "暂无数据",
+          "mappings": [],
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "green"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(sum(aiops_device_up{device=~\"$device\"})) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "",
+          "format": "time_series",
+          "instant": true,
+          "range": false
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "02  不可达设备",
+      "type": "stat",
+      "gridPos": {
+        "x": 6,
+        "y": 3,
+        "w": 6,
+        "h": 5
+      },
+      "description": "大于 0 时请在下方设备清单查看具体设备。不可达不一定代表设备断电。",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "暂无数据",
+          "mappings": [],
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(count(aiops_device_up{device=~\"$device\"}) - sum(aiops_device_up{device=~\"$device\"})) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "",
+          "format": "time_series",
+          "instant": true,
+          "range": false
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "03  采集成功率",
+      "type": "stat",
+      "gridPos": {
+        "x": 12,
+        "y": 3,
+        "w": 6,
+        "h": 5
+      },
+      "description": "各设备最近一次采集的成功比例；不是时段可用率或业务 SLA。",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "暂无数据",
+          "mappings": [],
+          "unit": "percent",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 90
+              },
+              {
+                "color": "green",
+                "value": 100
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(100 * sum(aiops_collect_success{device=~\"$device\"}) / count(aiops_collect_success{device=~\"$device\"})) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "",
+          "format": "time_series",
+          "instant": true,
+          "range": false
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "04  资产同步距今",
+      "type": "stat",
+      "gridPos": {
+        "x": 18,
+        "y": 3,
+        "w": 6,
+        "h": 5
+      },
+      "description": "全局指标，不随设备筛选变化。距最近一次 Nautobot 接口同步成功的时间；超过 5 分钟需关注，15 分钟为红色。无成功记录时显示暂无数据。",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "暂无数据",
+          "mappings": [],
+          "unit": "s",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 300
+              },
+              {
+                "color": "red",
+                "value": 900
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(time() - (aiops_nautobot_sync_last_success_timestamp_seconds > 0)) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "",
+          "format": "time_series",
+          "instant": true,
+          "range": false
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "设备状态趋势",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 12,
+        "h": 10
+      },
+      "description": "绿色为可达设备，红色为不可达设备。数据中断保留空白，不补零。",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "spanNulls": false,
+            "showPoints": "never",
+            "axisLabel": "设备数",
+            "axisBorderShow": false,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisPlacement": "auto",
+            "axisColorMode": "text",
+            "axisCenteredZero": false,
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "在线设备"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "不可达设备"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(sum(aiops_device_up{device=~\"$device\"})) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "在线设备",
+          "format": "time_series",
+          "instant": false,
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(count(aiops_device_up{device=~\"$device\"}) - sum(aiops_device_up{device=~\"$device\"})) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "B",
+          "legendFormat": "不可达设备",
+          "format": "time_series",
+          "instant": false,
+          "range": true
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "软件版本分布 · Software Version Share",
+      "type": "bargauge",
+      "gridPos": {
+        "x": 12,
+        "y": 8,
+        "w": 12,
+        "h": 10
+      },
+      "description": "每条横柱代表一个版本的设备数量。未识别表示采集暂未返回版本，不能据此判断设备健康。",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "暂无数据",
+          "mappings": [],
+          "unit": "suffix: 台",
+          "decimals": 0,
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "displayName": "${__field.labels.version}"
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": false,
+        "valueMode": "color",
+        "namePlacement": "top",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "sizing": "auto",
+        "minVizHeight": 16,
+        "minVizWidth": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(sort_desc(count by(version)(label_replace(aiops_device_hardware_info{device=~\"$device\"}, \"version\", \"未识别\", \"version\", \"unknown|^$\")))) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "{{version}}",
+          "format": "time_series",
+          "instant": true,
+          "range": false
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "关注重点",
+      "type": "text",
+      "gridPos": {
+        "x": 0,
+        "y": 18,
+        "w": 24,
+        "h": 2
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "暂无数据",
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**先看不可达和采集失败，再看资源使用。** CPU / 内存 ≥ 80% 提醒关注，≥ 95% 标红；这是统一展示参考线，单次高值不等于故障。"
+      }
+    },
+    {
+      "id": 9,
+      "title": "CPU 使用率 · 最高 5 台",
+      "type": "bargauge",
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 6,
+        "h": 9
+      },
+      "description": "最新采集值，按使用率降序排列；颜色表示参考阈值。",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "暂无数据",
+          "mappings": [],
+          "unit": "percent",
+          "decimals": 1,
+          "min": 0,
+          "max": 100,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 80
+              },
+              {
+                "color": "red",
+                "value": 95
+              }
+            ]
+          },
+          "displayName": "${__field.labels.device}"
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "top",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "sizing": "auto",
+        "minVizHeight": 16,
+        "minVizWidth": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(topk(5, aiops_device_cpu_utilization_percent{device=~\"$device\"})) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "{{device}}",
+          "format": "time_series",
+          "instant": true,
+          "range": false
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "内存使用率 · 最高 5 台",
+      "type": "bargauge",
+      "gridPos": {
+        "x": 6,
+        "y": 20,
+        "w": 6,
+        "h": 9
+      },
+      "description": "最新采集值，按使用率降序排列；颜色表示参考阈值。",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "暂无数据",
+          "mappings": [],
+          "unit": "percent",
+          "decimals": 1,
+          "min": 0,
+          "max": 100,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 80
+              },
+              {
+                "color": "red",
+                "value": 95
+              }
+            ]
+          },
+          "displayName": "${__field.labels.device}"
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "top",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "sizing": "auto",
+        "minVizHeight": 16,
+        "minVizWidth": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(topk(5, aiops_device_memory_utilization_percent{device=~\"$device\"})) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "{{device}}",
+          "format": "time_series",
+          "instant": true,
+          "range": false
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "title": "设备清单 · 不可达优先",
+      "type": "table",
+      "gridPos": {
+        "x": 12,
+        "y": 20,
+        "w": 12,
+        "h": 9
+      },
+      "description": "逐台展示可达性与采集结果，失败的设备排在前面。完整指标请进入运维视图。",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "暂无数据",
+          "mappings": []
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "可达状态"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "不可达",
+                        "color": "red"
+                      },
+                      "1": {
+                        "text": "在线",
+                        "color": "green"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 110
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "采集状态"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "失败",
+                        "color": "red"
+                      },
+                      "1": {
+                        "text": "成功",
+                        "color": "green"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 110
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "md",
+        "sortBy": [
+          {
+            "displayName": "可达状态",
+            "desc": false
+          },
+          {
+            "displayName": "采集状态",
+            "desc": false
+          }
+        ],
+        "footer": {
+          "show": false
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(min by(device)(aiops_device_up{device=~\"$device\"})) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "",
+          "format": "table",
+          "instant": true,
+          "range": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(min by(device)(aiops_collect_success{device=~\"$device\"})) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "B",
+          "legendFormat": "",
+          "format": "table",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "device",
+            "mode": "outerTabular"
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "device",
+                "Value #A",
+                "Value #B"
+              ]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "indexByName": {
+              "device": 0,
+              "Value #A": 1,
+              "Value #B": 2
+            },
+            "renameByName": {
+              "device": "设备",
+              "Value #A": "可达状态",
+              "Value #B": "采集状态"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "title": "接口概况 · 供进一步核查",
+      "type": "text",
+      "gridPos": {
+        "x": 0,
+        "y": 29,
+        "w": 24,
+        "h": 2
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "暂无数据",
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "接口指标放在最后。**“已启用但未连通”可能包含未接线的空闲端口，不直接计为业务故障。** 需要接口名称、流量和错误详情时，请打开原有运维视图。"
+      }
+    },
+    {
+      "id": 13,
+      "title": "已监测接口",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 31,
+        "w": 8,
+        "h": 4
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "暂无数据",
+          "mappings": [],
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(count(aiops_interface_oper_up{device=~\"$device\"})) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "",
+          "format": "time_series",
+          "instant": true,
+          "range": false
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "title": "已连通接口",
+      "type": "stat",
+      "gridPos": {
+        "x": 8,
+        "y": 31,
+        "w": 8,
+        "h": 4
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "暂无数据",
+          "mappings": [],
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "green"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(sum(aiops_interface_oper_up{device=~\"$device\"})) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "",
+          "format": "time_series",
+          "instant": true,
+          "range": false
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "title": "已启用但未连通 · 待核查",
+      "type": "stat",
+      "gridPos": {
+        "x": 16,
+        "y": 31,
+        "w": 8,
+        "h": 4
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "暂无数据",
+          "mappings": [],
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "orange"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(sum((aiops_interface_admin_up{device=~\"$device\"} == bool 1) * on(device,interface) (aiops_interface_oper_up{device=~\"$device\"} == bool 0))) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "",
+          "format": "time_series",
+          "instant": true,
+          "range": false
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "title": "阅读说明",
+      "type": "text",
+      "gridPos": {
+        "x": 0,
+        "y": 35,
+        "w": 24,
+        "h": 3
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "暂无数据",
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**暂无数据 ≠ 正常。** 采集服务无法被 Prometheus 抓取时，业务卡片留空。设备卡片表示最近一次采集结果，无法单独证明采集循环仍在更新；请结合“资产同步距今”及原有运维视图判断。\n\n资产同步为全局状态，其余指标随设备筛选变化。版本未识别的设备仍计入版本分布。"
+      }
+    }
+  ],
+  "refresh": "1m",
+  "schemaVersion": 40,
+  "tags": [
+    "aiops",
+    "report",
+    "汇报"
+  ],
+  "templating": {
+    "list": [
+      {
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "Prometheus"
+        },
+        "definition": "label_values(aiops_device_up, device)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "设备范围",
+        "multi": true,
+        "name": "device",
+        "options": [],
+        "query": {
+          "query": "label_values(aiops_device_up, device)",
+          "refId": "PrometheusVariableQueryEditor-Device"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "网络运行简报 | Network Operations Report",
+  "uid": "eve-aiops-report",
+  "version": 1,
+  "weekStart": ""
+}
