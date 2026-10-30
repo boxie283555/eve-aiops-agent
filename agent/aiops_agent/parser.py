@@ -262,7 +262,21 @@ def parse_panos_sessions(output: str) -> dict[str, float]:
     return values
 
 
-def parse_panos_resources(output: str) -> DeviceResourceUsage:
+def _parse_panos_uptime(system_info: str) -> float | None:
+    """PAN-OS system uptime is a duration, e.g. '12 days, 01:02:03'."""
+    if _hardware_command_failed(system_info):
+        return None
+    field = re.search(r"^\s*uptime[^\S\r\n]*:[^\S\r\n]*([^\r\n]*)", system_info, re.I | re.M)
+    if not field:
+        return None
+    duration = re.fullmatch(r"\s*(?:(\d+)\s+days?\s*,\s*)?(\d+):([0-5]\d):([0-5]\d)\s*", field.group(1), re.I)
+    if not duration:
+        return None
+    days, hours, minutes, seconds = (int(value or 0) for value in duration.groups())
+    return float(days * 86400 + hours * 3600 + minutes * 60 + seconds)
+
+
+def parse_panos_resources(output: str, system_info: str = "") -> DeviceResourceUsage:
     text = output.lower()
     cpu = _to_float(_match_value(r"(?:cpu utilization|cpu usage|mp\s+cpu)\s*[:=]\s*([0-9.]+)", text))
     if cpu is None:
@@ -274,7 +288,7 @@ def parse_panos_resources(output: str) -> DeviceResourceUsage:
         match = re.search(r"mem\s*:\s*([0-9.]+)\s+total,\s*([0-9.]+)\s+free,\s*([0-9.]+)\s+used", text)
         if match and float(match.group(1)) > 0:
             mem = float(match.group(3)) / float(match.group(1)) * 100
-    return DeviceResourceUsage(cpu_percent=cpu, memory_percent=mem)
+    return DeviceResourceUsage(uptime_seconds=_parse_panos_uptime(system_info), cpu_percent=cpu, memory_percent=mem)
 
 
 def parse_show_interface(output: str) -> dict[str, InterfaceCounters]:

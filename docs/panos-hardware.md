@@ -10,7 +10,10 @@ PA 使用完整的 `show system info`，由 `parse_panos_hardware()` 解析明�
 采集失败则保留最后一次硬件观察，并由采集状态指标标示失败。历史 Prometheus 样本保留。
 
 Grafana 原运维视图和双语汇报视图使用相同指标，无需修改面板或重启 Grafana。
-本次修改为版本、型号及同一条系统信息中的硬件字段；Uptime 仍需单独接入资源解析。
+PAN-OS 资源解析复用同一轮 `show system info` 的 `uptime` 字段，将
+`12 days, 01:02:03` 转为完整秒数，发布到 `aiops_device_uptime_seconds`。
+Device Uptime 和双语汇报视图直接使用该指标，无需额外 SSH 命令。
+零秒是有效的重启后观察；缺失、失败或格式无效时不伪造为零。
 
 测试使用合成 PAN-OS / EOS 输出，包括空字段、命令失败、热修复版本号、平台分流、
 重复发布和旧指标清理，不连接网络设备。线上仅检查 lab PA 的正常采集结果。

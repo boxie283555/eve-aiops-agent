@@ -323,7 +323,8 @@ class Collector:
                     structured_outputs.get("inventory"),
                 ),
                 resources=merge_resources(
-                    parse_panos_resources(outputs.get("resources", "")) if device.platform == "paloalto_panos" else parse_device_resources(outputs.get("version", ""), outputs.get("processes", "")),
+                    parse_panos_resources(outputs.get("resources", ""), outputs.get("version", ""))
+                    if device.platform == "paloalto_panos" else parse_device_resources(outputs.get("version", ""), outputs.get("processes", "")),
                     snmp_sample.resources,
                 ),
                 firewall_metrics=parse_panos_sessions(outputs.get("sessions", "")) if device.platform == "paloalto_panos" else {},
