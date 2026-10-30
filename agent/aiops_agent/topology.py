@@ -98,6 +98,7 @@ def build_snapshot(
             ),
             "freshness": "fresh" if result and result.ok else "stale",
             "datasets": getattr(result, "dataset_status", {}) if result else {},
+            "forwarding": getattr(result, "forwarding", None) if result else None,
         }
         device_rows[name] = row
         snapshot.devices.append(row)
@@ -205,6 +206,7 @@ def build_snapshot(
                         route["prefix"],
                         route.get("next_hop"),
                         route.get("interface"),
+                        *((route["vtep"], route.get("vni")) if route.get("vtep") else ()),
                     ),
                     "device": name,
                     "device_id": did,

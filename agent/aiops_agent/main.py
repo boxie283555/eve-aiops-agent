@@ -323,6 +323,7 @@ def tools_view() -> str:
     </section>
     <section>
       <h2>End-to-End Path</h2>
+      <div class="actions"><label for="pathSite">Site / 站点</label><select id="pathSite" onchange="loadPathOptions()"></select></div>
       <div class="form-grid">
         <div class="wide">
           <label for="srcQuery">Source MAC, IP or device:interface</label>
@@ -380,6 +381,7 @@ def tools_view() -> str:
       const params = new URLSearchParams({
         src,
         dst,
+        site: document.getElementById("pathSite").value,
         src_device: document.getElementById("srcDevice").value,
         src_vrf: document.getElementById("srcVrf").value,
         mode: document.getElementById("pathMode").value,
@@ -392,7 +394,7 @@ def tools_view() -> str:
     async function showRoutes() {
       const target = document.getElementById("routesResult");
       target.textContent = "Loading routes...";
-      const params = new URLSearchParams({device: document.getElementById("srcDevice").value, vrf: document.getElementById("srcVrf").value});
+      const params = new URLSearchParams({device: document.getElementById("srcDevice").value, vrf: document.getElementById("srcVrf").value, site: document.getElementById("pathSite").value});
       try {
         const payload = await (await fetch("/api/routes?" + params)).json();
         target.innerHTML = tableSection("Collected RIB routes", payload.routes || [], ["device", "vrf", "prefix", "next_hop", "interface", "protocol", "freshness", "last_success_at"]);
@@ -420,9 +422,28 @@ def tools_view() -> str:
         const payload = await response.json();
         for (const id of deviceSelects) fillSelect(id, payload.devices || [], "All devices");
         for (const id of vrfSelects) fillSelect(id, payload.vrfs || [], "All VRFs");
+        fillSelect("pathSite", payload.sites || [], "All sites");
+        const params = new URLSearchParams(location.search);
+        const preferredSite = params.get("site") || ((payload.sites || []).includes("lab") ? "lab" : "all");
+        if (["all", ...(payload.sites || [])].includes(preferredSite)) document.getElementById("pathSite").value = preferredSite;
+        await loadPathOptions();
+        for (const [key, id] of [["src", "srcQuery"], ["dst", "dstQuery"]]) if (params.has(key)) document.getElementById(id).value = params.get(key);
+        if (params.has("src") && params.has("dst")) await lookupPath();
       } catch (error) {
         for (const id of deviceSelects) fillSelect(id, [], "All devices");
         for (const id of vrfSelects) fillSelect(id, [], "All VRFs");
+        fillSelect("pathSite", [], "All sites");
+      }
+    }
+
+    async function loadPathOptions() {
+      const site = document.getElementById("pathSite").value;
+      const payload = await (await fetch("/tools/options?site=" + encodeURIComponent(site), {cache: "no-store"})).json();
+      for (const id of ["srcDevice", "dstDevice", "srcVrf", "dstVrf"]) {
+        const current = document.getElementById(id).value;
+        const values = id.endsWith("Device") ? payload.devices || [] : payload.vrfs || [];
+        fillSelect(id, values, id.endsWith("Device") ? "All devices" : "All VRFs");
+        if (values.includes(current)) document.getElementById(id).value = current;
       }
     }
 
@@ -473,16 +494,27 @@ def tools_view() -> str:
         + tableSection("CLF Matches", payload.clf_matches || [], ["device", "vlan", "mac", "port", "site", "location_type"]);
     }
 
+    function deviceSequence(steps) {
+      const nodes = [];
+      for (const s of steps) {
+        for (const name of (s.type === "physical" ? [s.from, s.to] : [s.device])) {
+          if (name && nodes[nodes.length - 1] !== name) nodes.push(name);
+        }
+      }
+      return nodes;
+    }
+
     function pathHtml(payload) {
       const candidates = payload.status === "ambiguous"
         ? tableSection("Source candidates — select device and VRF above", payload.source_candidates || [], ["device", "vrf", "interface", "ip", "mac", "vlan"])
           + tableSection("Destination candidates", payload.destination_candidates || [], ["device", "vrf", "interface", "ip", "mac", "vlan"]) : "";
       const branches = payload.paths || [];
       const paths = branches.map((branch, i) => '<h3>Path ' + (i+1) + ' · ' + escapeHtml(branch.status) + '</h3>'
+        + '<div class="message">' + escapeHtml(deviceSequence(branch.path || []).join(" → ")) + '</div>'
         + '<div class="path">' + (branch.path || []).map(stepHtml).join("") + '</div>'
         + (branch.reason ? '<div class="message">' + escapeHtml(branch.reason) + '</div>' : '')).join("");
       return '<div class="summary">' + pill(payload.status || "unavailable", payload.status === "ok" ? "good" : "warn")
-        + pill(payload.mode || "auto") + '</div>'
+        + pill(payload.mode || "auto") + pill("Site: " + (payload.site || "all")) + '</div>'
         + endpointSummary("Source", payload.source || {}) + endpointSummary("Destination", payload.destination || {})
         + candidates + (paths || '<div class="message">No verified path available.</div>')
         + '<div class="summary">' + (payload.warnings || []).map(n => pill(n, "warn")).join("") + '</div>';
@@ -496,7 +528,7 @@ def tools_view() -> str:
 
     function stepHtml(step, index) {
       const title = step.label || String(step.type || "step").replaceAll("_", " ");
-      const fields = ["device", "vrf", "prefix", "next_hop", "interface", "protocol", "from", "to", "local_interface", "remote_interface", "confirmation", "source", "freshness", "observed_at"];
+      const fields = ["device", "vrf", "prefix", "lookup_ip", "next_hop", "interface", "protocol", "policy", "action", "ingress_vlan", "empty_fieldsets", "vtep", "vni", "from", "to", "local_interface", "remote_interface", "confirmation", "source", "freshness", "observed_at"];
       const details = fields.filter(key => step[key] != null && step[key] !== "")
         .map(key => pill(label(key) + ': ' + step[key])).join("");
       const evidence = Array.isArray(step.evidence) ? step.evidence.map(e =>
@@ -620,6 +652,7 @@ def topology_layout_put(payload: dict[str, dict[str, float]]) -> dict[str, objec
 def normalized_path_lookup(src: str, dst: str, vrf: str = "all",
                            src_device: str = "all", dst_device: str = "all",
                            src_vrf: str = "all", dst_vrf: str = "all",
+                           site: str = "all",
                            mode: str = Query("auto", pattern="^(auto|physical|routed)$")) -> dict[str, object]:
     """Shared engine for the tools page and API; old query parameters remain valid."""
     snapshot = load_snapshot()
@@ -627,16 +660,17 @@ def normalized_path_lookup(src: str, dst: str, vrf: str = "all",
         return {"status": "unavailable", "source": {}, "destination": {}, "path": [], "paths": [],
                 "warnings": ["topology snapshot is not available"]}
     return find_path(snapshot, src, dst, vrf, src_device=src_device, dst_device=dst_device,
-                     src_vrf=src_vrf, dst_vrf=dst_vrf, mode=mode)
+                     src_vrf=src_vrf, dst_vrf=dst_vrf, mode=mode, site=site)
 
 
 @app.get("/api/routes")
-def routes_api(device: str = "all", vrf: str = "all", prefix: str = "all") -> dict[str, object]:
+def routes_api(device: str = "all", vrf: str = "all", prefix: str = "all", site: str = "all") -> dict[str, object]:
     snapshot = load_snapshot()
     if snapshot is None:
         return {"status": "unavailable", "routes": []}
+    allowed = {d["id"] for d in snapshot.devices if site == "all" or d.get("site") == site}
     rows = [r for r in snapshot.routes
-            if (device == "all" or device in {r["device"], r["device_id"]})
+            if r["device_id"] in allowed and (device == "all" or device in {r["device"], r["device_id"]})
             and (vrf == "all" or vrf in {r["vrf"], r["vrf_id"]})
             and (prefix == "all" or prefix == r["prefix"])]
     return {"status": "ok", "observed_at": snapshot.observed_at, "routes": rows}
@@ -663,11 +697,15 @@ def topology_anomalies() -> dict[str, object]:
 
 
 @app.get("/tools/options")
-def tools_options() -> dict[str, object]:
+def tools_options(site: str = "all") -> dict[str, object]:
     snapshot = load_snapshot()
+    inventory = snapshot.devices if snapshot else [asdict(d) for d in devices]
+    selected = [d for d in inventory if site == "all" or d.get("site") == site]
+    ids = {d.get("id") for d in selected}
     return {
-        "devices": sorted(d["name"] for d in snapshot.devices) if snapshot else sorted(d.name for d in devices),
-        "vrfs": sorted({v["name"] for v in snapshot.vrfs if v["name"] != "unknown"}) if snapshot else [],
+        "devices": sorted(d["name"] for d in selected),
+        "sites": sorted({d["site"] for d in inventory if d.get("site")}),
+        "vrfs": sorted({v["name"] for v in snapshot.vrfs if v["name"] != "unknown" and v["device_id"] in ids}) if snapshot else [],
     }
 
 

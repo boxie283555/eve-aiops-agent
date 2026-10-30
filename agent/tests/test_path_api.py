@@ -26,6 +26,18 @@ class PathApiTests(unittest.TestCase):
                 self.assertEqual(a.status_code, 200)
                 self.assertEqual(a.json(), b.json())
 
+    def test_site_options_and_lab_policy_result_match_api(self):
+        from test_service_path import lab, SRC, DST
+        with patch("aiops_agent.main.load_snapshot", return_value=lab()):
+            params = dict(src=SRC, dst=DST, site="lab")
+            api = self.client.get("/api/path", params=params).json()
+            self.assertEqual(api, self.client.get("/tools/path", params=params).json())
+            self.assertEqual(api["status"], "blocked")
+            self.assertEqual(api["site"], "lab")
+            self.assertEqual(self.client.get("/tools/options?site=missing").json()["devices"], [])
+            self.assertEqual(self.client.get("/api/routes?site=missing").json()["routes"], [])
+            self.assertEqual(self.client.get("/tools/options?site=lab").json()["sites"], ["lab"])
+
     def test_mode_validation(self):
         self.assertEqual(
             self.client.get(

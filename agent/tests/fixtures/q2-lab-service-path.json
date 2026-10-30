@@ -1,0 +1,950 @@
+{
+  "description": "Lab-only read-only observations, 2026-10-30. Reduced to path evidence; timestamps and Nautobot identifiers omitted. Dynamic DC fieldsets were empty. Populated variants in tests are synthetic, not live observations.",
+  "devices": {
+    "PA-171": {
+      "platform": "paloalto_panos",
+      "interfaces": [
+        {
+          "name": "Ethernet1/1",
+          "admin_up": null,
+          "oper_up": true,
+          "vrf": "unknown",
+          "mac": "ba:db:ee:fb:ad:30",
+          "aggregate": "ae1"
+        },
+        {
+          "name": "ae1",
+          "admin_up": null,
+          "oper_up": true,
+          "vrf": "unknown",
+          "mac": "ba:db:ee:fb:ad:30",
+          "vlan": "0"
+        },
+        {
+          "name": "ae1.10",
+          "admin_up": null,
+          "oper_up": true,
+          "vrf": "VR-EW",
+          "mac": null,
+          "addresses": [
+            "192.168.111.2/29"
+          ],
+          "vlan": "10",
+          "parent": "ae1"
+        },
+        {
+          "name": "management",
+          "admin_up": null,
+          "oper_up": null,
+          "vrf": "unknown"
+        }
+      ],
+      "routes": [
+        {
+          "vrf": "VR-EW",
+          "prefix": "0.0.0.0/0",
+          "next_hop": "192.168.111.1",
+          "interface": "ae1.10",
+          "protocol": "static"
+        },
+        {
+          "vrf": "VR-EW",
+          "prefix": "192.168.111.0/29",
+          "next_hop": null,
+          "interface": "ae1.10",
+          "protocol": "connected"
+        },
+        {
+          "vrf": "VR-EW",
+          "prefix": "192.168.111.2/32",
+          "next_hop": null,
+          "interface": "",
+          "protocol": "local"
+        }
+      ]
+    },
+    "PA-172": {
+      "platform": "paloalto_panos",
+      "interfaces": [
+        {
+          "name": "Ethernet1/1",
+          "admin_up": null,
+          "oper_up": true,
+          "vrf": "unknown",
+          "mac": "ba:db:ee:fb:ad:30",
+          "aggregate": "ae1"
+        },
+        {
+          "name": "ae1",
+          "admin_up": null,
+          "oper_up": true,
+          "vrf": "unknown",
+          "mac": "ba:db:ee:fb:ad:30",
+          "vlan": "0"
+        },
+        {
+          "name": "ae1.20",
+          "admin_up": null,
+          "oper_up": true,
+          "vrf": "VR-EW",
+          "mac": null,
+          "addresses": [
+            "192.168.111.2/29"
+          ],
+          "vlan": "20",
+          "parent": "ae1"
+        },
+        {
+          "name": "management",
+          "admin_up": null,
+          "oper_up": null,
+          "vrf": "unknown"
+        }
+      ],
+      "routes": [
+        {
+          "vrf": "VR-EW",
+          "prefix": "0.0.0.0/0",
+          "next_hop": "192.168.111.1",
+          "interface": "ae1.20",
+          "protocol": "static"
+        },
+        {
+          "vrf": "VR-EW",
+          "prefix": "192.168.111.0/29",
+          "next_hop": null,
+          "interface": "ae1.20",
+          "protocol": "connected"
+        },
+        {
+          "vrf": "VR-EW",
+          "prefix": "192.168.111.2/32",
+          "next_hop": null,
+          "interface": "",
+          "protocol": "local"
+        }
+      ]
+    },
+    "p1-host": {
+      "platform": "arista_eos",
+      "interfaces": [
+        {
+          "name": "Vlan101",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "VLAN101",
+          "mac": "50:00:00:20:5a:5b",
+          "addresses": [
+            "10.100.101.111/24"
+          ],
+          "vlan": "101"
+        },
+        {
+          "name": "Vlan123",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "VLAN123",
+          "mac": "50:00:00:20:5a:5b",
+          "addresses": [
+            "10.200.123.112/24"
+          ],
+          "vlan": "123"
+        },
+        {
+          "name": "Ethernet1",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:6b:00:01"
+        },
+        {
+          "name": "Ethernet2",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:6b:00:02"
+        },
+        {
+          "name": "Ethernet3",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:6b:00:03"
+        },
+        {
+          "name": "Ethernet4",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:6b:00:04"
+        },
+        {
+          "name": "Ethernet5",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:6b:00:05"
+        },
+        {
+          "name": "Ethernet6",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:6b:00:06"
+        },
+        {
+          "name": "Ethernet7",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:6b:00:07"
+        },
+        {
+          "name": "Ethernet8",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:6b:00:08"
+        },
+        {
+          "name": "Loopback610",
+          "admin_up": null,
+          "oper_up": null,
+          "vrf": "unknown"
+        },
+        {
+          "name": "Vlan610",
+          "admin_up": null,
+          "oper_up": null,
+          "vrf": "unknown"
+        }
+      ],
+      "config": "alias srnz show interface counter rate | nz\nno service interface inactive port-id allocation disabled\ninterface Ethernet1\n   mtu 9214\n   switchport trunk allowed vlan 101,123\n   switchport mode trunk\ninterface Ethernet2\ninterface Ethernet3\ninterface Ethernet4\ninterface Ethernet5\ninterface Ethernet6\ninterface Ethernet7\ninterface Ethernet8\ninterface Vlan101\n   vrf VLAN101\n   ip address 10.100.101.111/24\ninterface Vlan123\n   vrf VLAN123\n   ip address 10.200.123.112/24\n",
+      "route_output": "{\"vrfs\": {\"default\": {\"routingDisabled\": true, \"allRoutesProgrammedHardware\": true, \"allRoutesProgrammedKernel\": true, \"defaultRouteState\": \"notSet\", \"routes\": {}}, \"VLAN101\": {\"routingDisabled\": true, \"allRoutesProgrammedHardware\": true, \"allRoutesProgrammedKernel\": true, \"defaultRouteState\": \"reachable\", \"routes\": {\"0.0.0.0/0\": {\"hardwareProgrammed\": true, \"routeType\": \"static\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 1, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"10.100.101.1\", \"interface\": \"Vlan101\"}]}, \"10.100.101.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"connected\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"routeAction\": \"forward\", \"vias\": [{\"interface\": \"Vlan101\"}], \"directlyConnected\": true}}}, \"VLAN123\": {\"routingDisabled\": true, \"allRoutesProgrammedHardware\": true, \"allRoutesProgrammedKernel\": true, \"defaultRouteState\": \"reachable\", \"routes\": {\"0.0.0.0/0\": {\"hardwareProgrammed\": true, \"routeType\": \"static\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 1, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"10.200.123.1\", \"interface\": \"Vlan123\"}]}, \"10.200.123.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"connected\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"routeAction\": \"forward\", \"vias\": [{\"interface\": \"Vlan123\"}], \"directlyConnected\": true}}}, \"mgt\": {\"routingDisabled\": true, \"allRoutesProgrammedHardware\": true, \"allRoutesProgrammedKernel\": true, \"defaultRouteState\": \"reachable\", \"routes\": {\"0.0.0.0/0\": {\"hardwareProgrammed\": true, \"routeType\": \"static\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 1, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"172.16.250.1\", \"interface\": \"Management1\"}]}, \"172.16.250.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"connected\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"routeAction\": \"forward\", \"vias\": [{\"interface\": \"Management1\"}], \"directlyConnected\": true}}}}}",
+      "fieldsets": ""
+    },
+    "p1-leaf": {
+      "platform": "arista_eos",
+      "interfaces": [
+        {
+          "name": "Ethernet1",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:26:60:4b",
+          "addresses": [
+            "10.173.175.0/31"
+          ]
+        },
+        {
+          "name": "Loopback0",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": null,
+          "addresses": [
+            "1.1.1.173/32"
+          ]
+        },
+        {
+          "name": "Vlan101",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "FUSION",
+          "mac": "50:00:00:26:60:4b",
+          "addresses": [
+            "10.100.101.1/24"
+          ],
+          "vlan": "101"
+        },
+        {
+          "name": "Vlan123",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "FUSION",
+          "mac": "50:00:00:26:60:4b",
+          "addresses": [
+            "10.200.123.1/24"
+          ],
+          "vlan": "123"
+        },
+        {
+          "name": "Vlan4097",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "unknown",
+          "mac": "50:00:00:26:60:4b"
+        },
+        {
+          "name": "Ethernet2",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:67:00:02"
+        },
+        {
+          "name": "Ethernet3",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:67:00:03"
+        },
+        {
+          "name": "Ethernet4",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:67:00:04"
+        },
+        {
+          "name": "Ethernet5",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:67:00:05"
+        },
+        {
+          "name": "Ethernet6",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:67:00:06"
+        },
+        {
+          "name": "Ethernet7",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:67:00:07"
+        },
+        {
+          "name": "Ethernet8",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:67:00:08"
+        },
+        {
+          "name": "Vxlan1",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": null
+        },
+        {
+          "name": "Loopback6",
+          "admin_up": null,
+          "oper_up": null,
+          "vrf": "unknown"
+        },
+        {
+          "name": "Vlan610",
+          "admin_up": null,
+          "oper_up": null,
+          "vrf": "unknown"
+        }
+      ],
+      "config": "alias srnz show interface counter rate | nz\nno service interface inactive port-id allocation disabled\ninterface Ethernet1\n   description p1-svc\n   mtu 9214\n   no switchport\n   ip address 10.173.175.0/31\ninterface Ethernet2\n   description p1-host\n   mtu 9214\n   switchport trunk allowed vlan 101,123\n   switchport mode trunk\ninterface Ethernet3\ninterface Ethernet4\ninterface Ethernet5\ninterface Ethernet6\ninterface Ethernet7\ninterface Ethernet8\ninterface Loopback0\n   ip address 1.1.1.173/32\ninterface Vlan101\n   vrf FUSION\n   ip attached-host route export 19\n   ip address virtual 10.100.101.1/24\ninterface Vlan123\n   vrf FUSION\n   ip attached-host route export 19\n   ip address virtual 10.200.123.1/24\ninterface Vxlan1\n   vxlan source-interface Loopback0\n   vxlan udp-port 4789\n   vxlan vlan 101 vni 10101\n   vxlan vlan 123 vni 10123\n   vxlan vrf FUSION vni 10000\ntraffic-policies\n   vrf FUSION\n      traffic-policy input pSDN-OWEN physical\n   !\n   field-set ipv4 prefix INTERNET\n      0.0.0.0/5 8.0.0.0/7 11.0.0.0/8 12.0.0.0/6 16.0.0.0/4 32.0.0.0/3 64.0.0.0/2 128.0.0.0/3 160.0.0.0/5 168.0.0.0/6 172.0.0.0/12 172.32.0.0/11 172.64.0.0/10 172.128.0.0/9 173.0.0.0/8 174.0.0.0/7 176.0.0.0/4 192.0.0.0/9 192.128.0.0/11 192.160.0.0/13 192.169.0.0/16 192.170.0.0/15 192.172.0.0/14 192.176.0.0/12 192.192.0.0/10 193.0.0.0/8 194.0.0.0/7 196.0.0.0/6 200.0.0.0/5 208.0.0.0/4 224.0.0.0/3\n   !\n   field-set ipv4 prefix VASALL\n      10.250.3.0/24 10.250.13.0/24\n   !\n   field-set ipv4 prefix VLAN101\n      10.100.101.0/24\n   !\n   field-set ipv4 prefix VLAN123\n      10.200.123.0/24\n   !\n   field-set ipv4 prefix VLANALL\n      10.100.101.0/24 10.200.123.0/24\n   !\n   field-set ipv4 prefix bgpEXTRANET\n      source bgp\n   !\n   traffic-policy pSDN-OWEN\n      match DC-to-INTERNET ipv4\n         source prefix field-set VLANALL\n         destination prefix field-set INTERNET\n         !\n         actions\n            count\n      !\n      match DC-to-EXTRANET ipv4\n         source prefix field-set VLANALL\n         destination prefix field-set bgpEXTRANET\n         !\n         actions\n            count\n      !\n      match VLAN101-intrazone ipv4\n         source prefix field-set VLAN101\n         destination prefix field-set VLAN101\n         !\n         packet type\n            vxlan decap exclude\n         !\n         actions\n            count\n      !\n      match VLAN123-intrazone ipv4\n         source prefix field-set VLAN123\n         destination prefix field-set VLAN123\n         !\n         packet type\n            vxlan decap exclude\n         !\n         actions\n            count\n      !\n      match DC-interzone-to-FW ipv4\n         source prefix field-set VLANALL\n         destination prefix field-set VLANALL\n         !\n         packet type\n            vxlan decap exclude\n         !\n         actions\n            count\n            redirect next-hop 192.168.111.2 vrf FUSION\n      !\n      match DC-to-VAS-to-FW ipv4\n         source prefix field-set VLANALL\n         destination prefix field-set VASALL\n         !\n         packet type\n            vxlan decap exclude\n         !\n         actions\n            count\n            redirect next-hop 192.168.111.2 vrf FUSION\n      !\n      match ipv4-all-default ipv4\n      !\n      match ipv6-all-default ipv6",
+      "route_output": "{\"vrfs\": {\"default\": {\"routingDisabled\": false, \"allRoutesProgrammedHardware\": true, \"allRoutesProgrammedKernel\": true, \"defaultRouteState\": \"notSet\", \"routes\": {\"1.1.1.173/32\": {\"hardwareProgrammed\": true, \"routeType\": \"connected\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"routeAction\": \"forward\", \"vias\": [{\"interface\": \"Loopback0\"}], \"directlyConnected\": true}, \"1.1.1.174/32\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"10.173.175.1\", \"interface\": \"Ethernet1\"}]}, \"1.1.1.175/32\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"10.173.175.1\", \"interface\": \"Ethernet1\"}]}, \"1.1.1.176/32\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"10.173.175.1\", \"interface\": \"Ethernet1\"}]}, \"10.173.175.0/31\": {\"hardwareProgrammed\": true, \"routeType\": \"connected\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"routeAction\": \"forward\", \"vias\": [{\"interface\": \"Ethernet1\"}], \"directlyConnected\": true}, \"10.174.176.0/31\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"10.173.175.1\", \"interface\": \"Ethernet1\"}]}, \"10.175.176.0/31\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"10.173.175.1\", \"interface\": \"Ethernet1\"}]}}}, \"FUSION\": {\"routingDisabled\": false, \"allRoutesProgrammedHardware\": true, \"allRoutesProgrammedKernel\": true, \"defaultRouteState\": \"reachable\", \"routes\": {\"0.0.0.0/0\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.175\", \"vni\": 10000, \"routerMac\": \"50:00:00:4f:98:8f\", \"localInterface\": \"Vxlan1\"}]}, \"10.10.1.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.175\", \"vni\": 10000, \"routerMac\": \"50:00:00:4f:98:8f\", \"localInterface\": \"Vxlan1\"}]}, \"10.10.2.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.175\", \"vni\": 10000, \"routerMac\": \"50:00:00:4f:98:8f\", \"localInterface\": \"Vxlan1\"}]}, \"10.10.3.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.175\", \"vni\": 10000, \"routerMac\": \"50:00:00:4f:98:8f\", \"localInterface\": \"Vxlan1\"}]}, \"10.10.255.101/32\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.175\", \"vni\": 10000, \"routerMac\": \"50:00:00:4f:98:8f\", \"localInterface\": \"Vxlan1\"}]}, \"10.10.255.102/32\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.176\", \"vni\": 10000, \"routerMac\": \"50:00:00:48:1b:0f\", \"localInterface\": \"Vxlan1\"}]}, \"10.20.1.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.176\", \"vni\": 10000, \"routerMac\": \"50:00:00:48:1b:0f\", \"localInterface\": \"Vxlan1\"}]}, \"10.20.2.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.176\", \"vni\": 10000, \"routerMac\": \"50:00:00:48:1b:0f\", \"localInterface\": \"Vxlan1\"}]}, \"10.20.3.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.176\", \"vni\": 10000, \"routerMac\": \"50:00:00:48:1b:0f\", \"localInterface\": \"Vxlan1\"}]}, \"10.100.101.211/32\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.174\", \"vni\": 10000, \"routerMac\": \"50:00:00:49:c7:60\", \"localInterface\": \"Vxlan1\"}]}, \"10.100.101.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"connected\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"routeAction\": \"forward\", \"vias\": [{\"interface\": \"Vlan101\"}], \"directlyConnected\": true}, \"10.200.123.212/32\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.174\", \"vni\": 10000, \"routerMac\": \"50:00:00:49:c7:60\", \"localInterface\": \"Vxlan1\"}]}, \"10.200.123.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"connected\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"routeAction\": \"forward\", \"vias\": [{\"interface\": \"Vlan123\"}], \"directlyConnected\": true}, \"10.250.2.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.175\", \"vni\": 10000, \"routerMac\": \"50:00:00:4f:98:8f\", \"localInterface\": \"Vxlan1\"}]}, \"10.250.3.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.175\", \"vni\": 10000, \"routerMac\": \"50:00:00:4f:98:8f\", \"localInterface\": \"Vxlan1\"}]}, \"10.250.12.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.176\", \"vni\": 10000, \"routerMac\": \"50:00:00:48:1b:0f\", \"localInterface\": \"Vxlan1\"}]}, \"10.250.13.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.176\", \"vni\": 10000, \"routerMac\": \"50:00:00:48:1b:0f\", \"localInterface\": \"Vxlan1\"}]}, \"192.168.111.0/29\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.175\", \"vni\": 10000, \"routerMac\": \"50:00:00:4f:98:8f\", \"localInterface\": \"Vxlan1\"}]}, \"198.51.100.22/32\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.176\", \"vni\": 10000, \"routerMac\": \"50:00:00:48:1b:0f\", \"localInterface\": \"Vxlan1\"}]}, \"203.0.113.11/32\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.175\", \"vni\": 10000, \"routerMac\": \"50:00:00:4f:98:8f\", \"localInterface\": \"Vxlan1\"}]}}}, \"mgt\": {\"routingDisabled\": true, \"allRoutesProgrammedHardware\": true, \"allRoutesProgrammedKernel\": true, \"defaultRouteState\": \"reachable\", \"routes\": {\"0.0.0.0/0\": {\"hardwareProgrammed\": true, \"routeType\": \"static\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 1, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"172.16.250.1\", \"interface\": \"Management1\"}]}, \"172.16.250.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"connected\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"routeAction\": \"forward\", \"vias\": [{\"interface\": \"Management1\"}], \"directlyConnected\": true}}}}}",
+      "fieldsets": "Traffic policy IPv4 prefix field set: INTERNET\nSource: static\n\nPrefix count: 31\nException prefix count: 0\nPrefix               Exception Prefixes\n-------------------  ----------------------------------------------------------\n0.0.0.0/5            \n8.0.0.0/7            \n11.0.0.0/8           \n12.0.0.0/6           \n16.0.0.0/4           \n32.0.0.0/3           \n64.0.0.0/2           \n128.0.0.0/3          \n160.0.0.0/5          \n168.0.0.0/6          \n172.0.0.0/12         \n172.32.0.0/11        \n172.64.0.0/10        \n172.128.0.0/9        \n173.0.0.0/8          \n174.0.0.0/7          \n176.0.0.0/4          \n192.0.0.0/9          \n192.128.0.0/11       \n192.160.0.0/13       \n192.169.0.0/16       \n192.170.0.0/15       \n192.172.0.0/14       \n192.176.0.0/12       \n192.192.0.0/10       \n193.0.0.0/8          \n194.0.0.0/7          \n196.0.0.0/6          \n200.0.0.0/5          \n208.0.0.0/4          \n224.0.0.0/3          \nUsed in policies: pSDN-OWEN\nTraffic policy IPv4 prefix field set: VASALL\nSource: static\n\nPrefix count: 2\nException prefix count: 0\nPrefix               Exception Prefixes\n-------------------  ----------------------------------------------------------\n10.250.3.0/24        \n10.250.13.0/24       \nUsed in policies: pSDN-OWEN\nTraffic policy IPv4 prefix field set: VLAN101\nSource: static\n\nPrefix count: 1\nException prefix count: 0\nPrefix               Exception Prefixes\n-------------------  ----------------------------------------------------------\n10.100.101.0/24      \nUsed in policies: pSDN-OWEN\nTraffic policy IPv4 prefix field set: VLAN123\nSource: static\n\nPrefix count: 1\nException prefix count: 0\nPrefix               Exception Prefixes\n-------------------  ----------------------------------------------------------\n10.200.123.0/24      \nUsed in policies: pSDN-OWEN\nTraffic policy IPv4 prefix field set: VLANALL\nSource: static\n\nPrefix count: 2\nException prefix count: 0\nPrefix               Exception Prefixes\n-------------------  ----------------------------------------------------------\n10.100.101.0/24      \n10.200.123.0/24      \nUsed in policies: pSDN-OWEN\nTraffic policy IPv4 prefix field set: bgpEXTRANET\nSource: BGP\n\nPrefix count: 2\nException prefix count: 0\nPrefix               Exception Prefixes\n-------------------  ----------------------------------------------------------\n10.250.2.0/24        \n10.250.12.0/24       \nUsed in policies: pSDN-OWEN"
+    },
+    "p1-svc": {
+      "platform": "arista_eos",
+      "interfaces": [
+        {
+          "name": "Ethernet1",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:4f:98:8f",
+          "addresses": [
+            "10.173.175.1/31"
+          ]
+        },
+        {
+          "name": "Ethernet2",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:4f:98:8f",
+          "addresses": [
+            "10.175.176.0/31"
+          ]
+        },
+        {
+          "name": "Loopback0",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": null,
+          "addresses": [
+            "1.1.1.175/32"
+          ]
+        },
+        {
+          "name": "Loopback100",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "FUSION",
+          "mac": null,
+          "addresses": [
+            "10.10.255.101/32"
+          ]
+        },
+        {
+          "name": "Vlan10",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "FUSION",
+          "mac": "50:00:00:4f:98:8f",
+          "addresses": [
+            "192.168.111.1/29"
+          ],
+          "vlan": "10"
+        },
+        {
+          "name": "Vlan11",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "FUSION",
+          "mac": "50:00:00:4f:98:8f",
+          "addresses": [
+            "10.10.1.2/24"
+          ],
+          "vlan": "11"
+        },
+        {
+          "name": "Vlan12",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "FUSION",
+          "mac": "50:00:00:4f:98:8f",
+          "addresses": [
+            "10.10.2.2/24"
+          ],
+          "vlan": "12"
+        },
+        {
+          "name": "Vlan13",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "FUSION",
+          "mac": "50:00:00:4f:98:8f",
+          "addresses": [
+            "10.10.3.2/24"
+          ],
+          "vlan": "13"
+        },
+        {
+          "name": "Vlan4097",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "unknown",
+          "mac": "50:00:00:4f:98:8f"
+        },
+        {
+          "name": "Ethernet3",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:69:00:03",
+          "aggregate": "Port-Channel1"
+        },
+        {
+          "name": "Ethernet4",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:69:00:04"
+        },
+        {
+          "name": "Ethernet5",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:69:00:05"
+        },
+        {
+          "name": "Ethernet6",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:69:00:06"
+        },
+        {
+          "name": "Ethernet7",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:69:00:07"
+        },
+        {
+          "name": "Ethernet8",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:69:00:08"
+        },
+        {
+          "name": "Port-Channel1",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:69:00:03"
+        },
+        {
+          "name": "Vxlan1",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": null
+        },
+        {
+          "name": "Loopback6",
+          "admin_up": null,
+          "oper_up": null,
+          "vrf": "unknown"
+        }
+      ],
+      "config": "alias srnz show interface counter rate | nz\nno service interface inactive port-id allocation disabled\ninterface Port-Channel1\n   description p1-fw\n   mtu 9214\n   switchport trunk allowed vlan 10\n   switchport mode trunk\ninterface Ethernet1\n   description p1-leaf\n   mtu 9214\n   no switchport\n   ip address 10.173.175.1/31\ninterface Ethernet2\n   description p2-svc\n   mtu 9214\n   no switchport\n   ip address 10.175.176.0/31\ninterface Ethernet3\n   description p1-fw\n   channel-group 1 mode active\ninterface Ethernet4\n   description Internet-Extranet-VAS1\n   mtu 9214\n   switchport trunk allowed vlan 11-13\n   switchport mode trunk\ninterface Ethernet5\ninterface Ethernet6\ninterface Ethernet7\ninterface Ethernet8\ninterface Loopback0\n   ip address 1.1.1.175/32\ninterface Loopback100\n   description redirection-object\n   vrf FUSION\n   ip address 10.10.255.101/32\ninterface Vlan10\n   description P1-FW\n   vrf FUSION\n   ip address virtual 192.168.111.1/29\ninterface Vlan11\n   description Internet\n   vrf FUSION\n   ip address 10.10.1.2/24\ninterface Vlan12\n   description Extranet\n   vrf FUSION\n   ip address 10.10.2.2/24\ninterface Vlan13\n   description VAS\n   vrf FUSION\n   ip address 10.10.3.2/24\ninterface Vxlan1\n   vxlan source-interface Loopback0\n   vxlan udp-port 4789\n   vxlan vrf FUSION vni 10000\ntraffic-policies\n   vrf FUSION\n      traffic-policy input pSDN-OWEN physical\n   !\n   field-set ipv4 prefix EXTRANET\n      10.250.2.0/24\n   !\n   field-set ipv4 prefix INTERNET\n      0.0.0.0/5 8.0.0.0/7 11.0.0.0/8 12.0.0.0/6 16.0.0.0/4 32.0.0.0/3 64.0.0.0/2 128.0.0.0/3 160.0.0.0/5 168.0.0.0/6 172.0.0.0/12 172.32.0.0/11 172.64.0.0/10 172.128.0.0/9 173.0.0.0/8 174.0.0.0/7 176.0.0.0/4 192.0.0.0/9 192.128.0.0/11 192.160.0.0/13 192.169.0.0/16 192.170.0.0/15 192.172.0.0/14 192.176.0.0/12 192.192.0.0/10 193.0.0.0/8 194.0.0.0/7 196.0.0.0/6 200.0.0.0/5 208.0.0.0/4 224.0.0.0/3\n   !\n   field-set ipv4 prefix VLANALL\n      10.100.101.0/24 10.200.123.0/24\n   !\n   field-set ipv4 prefix bgpDC1\n      source bgp\n   !\n   field-set ipv4 prefix bgpDC2\n      source bgp\n   !\n   field-set ipv4 prefix bgpVAS1\n      source bgp\n   !\n   field-set ipv4 prefix bgpVAS2\n      source bgp\n   !\n   traffic-policy pSDN-OWEN\n      match DC-to-INTERNET ipv4\n         source prefix field-set VLANALL\n         destination prefix field-set INTERNET\n         !\n         actions\n            count\n      !\n      match INTERNET-to-DC ipv4\n         source prefix field-set INTERNET\n         destination prefix field-set VLANALL\n         !\n         actions\n            count\n      !\n      match DC-to-EXTRANET ipv4\n         source prefix field-set VLANALL\n         destination prefix field-set EXTRANET\n         !\n         actions\n            count\n      !\n      match EXTRANET-to-DC ipv4\n         source prefix field-set EXTRANET\n         destination prefix field-set VLANALL\n         !\n         actions\n            count\n      !\n      match DC-decap-to-FW ipv4\n         source prefix field-set VLANALL\n         destination prefix field-set VLANALL\n         !\n         packet type\n            vxlan decap\n         !\n         actions\n            count\n            redirect next-hop 192.168.111.2 vrf FUSION\n      !\n      match FW-local-to-remote-DC ipv4\n         dot1q vlan 10\n         source prefix field-set bgpDC1\n         destination prefix field-set bgpDC2\n         !\n         packet type\n            vxlan decap exclude\n         !\n         actions\n            count\n            redirect next-hop 10.10.255.102 vrf FUSION\n      !\n      match FW-to-local-DC ipv4\n         dot1q vlan 10\n         source prefix field-set VLANALL\n         destination prefix field-set bgpDC1\n         !\n         packet type\n            vxlan decap exclude\n         !\n         actions\n            count\n      !\n      match FW-unclassified-DC ipv4\n         source prefix field-set VLANALL\n         destination prefix field-set VLANALL\n         !\n         packet type\n            vxlan decap exclude\n         !\n         actions\n            count\n            drop\n      !\n      match VAS1-to-VAS2-bypass ipv4\n         source prefix field-set bgpVAS1\n         destination prefix field-set bgpVAS2\n         !\n         actions\n            count\n      !\n      match VAS2-to-VAS1-bypass ipv4\n         source prefix field-set bgpVAS2\n         destination prefix field-set bgpVAS1\n         !\n         actions\n            count\n      !\n      match VAS-ingress-to-DC ipv4\n         dot1q vlan 13\n         source prefix field-set bgpVAS1\n         destination prefix field-set VLANALL\n         !\n         packet type\n            vxlan decap exclude\n         !\n         actions\n            count\n            redirect next-hop 192.168.111.2 vrf FUSION\n      !\n      match VAS1-to-DC-decap-FW ipv4\n         source prefix field-set bgpVAS1\n         destination prefix field-set VLANALL\n         !\n         packet type\n            vxlan decap\n         !\n         actions\n            count\n            redirect next-hop 192.168.111.2 vrf FUSION\n      !\n      match DC-to-VAS1-decap-FW ipv4\n         source prefix field-set VLANALL\n         destination prefix field-set bgpVAS1\n         !\n         packet type\n            vxlan decap\n         !\n         actions\n            count\n            redirect next-hop 192.168.111.2 vrf FUSION\n      !\n      match VAS2-to-DC-decap-FW ipv4\n         source prefix field-set bgpVAS2\n         destination prefix field-set VLANALL\n         !\n         packet type\n            vxlan decap\n         !\n         actions\n            count\n            redirect next-hop 192.168.111.2 vrf FUSION\n      !\n      match DC-to-VAS2-decap-FW ipv4\n         source prefix field-set VLANALL\n         destination prefix field-set bgpVAS2\n         !\n         packet type\n            vxlan decap\n         !\n         actions\n            count\n            redirect next-hop 192.168.111.2 vrf FUSION\n      !\n      match FW-VAS1-to-local-DC ipv4\n         dot1q vlan 10\n         source prefix field-set bgpVAS1\n         destination prefix field-set bgpDC1\n         !\n         packet type\n            vxlan decap exclude\n         !\n         actions\n            count\n      !\n      match FW-VAS2-to-local-DC ipv4\n         dot1q vlan 10\n         source prefix field-set bgpVAS2\n         destination prefix field-set bgpDC1\n         !\n         packet type\n            vxlan decap exclude\n         !\n         actions\n            count\n      !\n      match FW-local-VAS-to-remote-DC ipv4\n         dot1q vlan 10\n         source prefix field-set bgpVAS1\n         destination prefix field-set bgpDC2\n         !\n         packet type\n            vxlan decap exclude\n         !\n         actions\n            count\n            redirect next-hop 10.10.255.102 vrf FUSION\n      !\n      match FW-local-DC-to-remote-VAS ipv4\n         dot1q vlan 10\n         source prefix field-set bgpDC1\n         destination prefix field-set bgpVAS2\n         !\n         packet type\n            vxlan decap exclude\n         !\n         actions\n            count\n            redirect next-hop 10.10.255.102 vrf FUSION\n      !\n      match FW-DC-to-local-VAS ipv4\n         dot1q vlan 10\n         source prefix field-set VLANALL\n         destination prefix field-set bgpVAS1\n         !\n         packet type\n            vxlan decap exclude\n         !\n         actions\n            count\n      !\n      match VAS1-to-DC-unclassified ipv4\n         source prefix field-set bgpVAS1\n         destination prefix field-set VLANALL\n         !\n         packet type\n            vxlan decap exclude\n         !\n         actions\n            count\n            drop\n      !\n      match DC-to-VAS1-unclassified ipv4\n         source prefix field-set VLANALL\n         destination prefix field-set bgpVAS1\n         !\n         packet type\n            vxlan decap exclude\n         !\n         actions\n            count\n            drop\n      !\n      match VAS2-to-DC-unclassified ipv4\n         source prefix field-set bgpVAS2\n         destination prefix field-set VLANALL\n         !\n         packet type\n            vxlan decap exclude\n         !\n         actions\n            count\n            drop\n      !\n      match DC-to-VAS2-unclassified ipv4\n         source prefix field-set VLANALL\n         destination prefix field-set bgpVAS2\n         !\n         packet type\n            vxlan decap exclude\n         !\n         actions\n            count\n            drop\n      !\n      match ipv4-all-default ipv4\n      !\n      match ipv6-all-default ipv6",
+      "route_output": "{\"vrfs\": {\"default\": {\"routingDisabled\": false, \"allRoutesProgrammedHardware\": true, \"allRoutesProgrammedKernel\": true, \"defaultRouteState\": \"notSet\", \"routes\": {\"1.1.1.173/32\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"10.173.175.0\", \"interface\": \"Ethernet1\"}]}, \"1.1.1.174/32\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"10.175.176.1\", \"interface\": \"Ethernet2\"}]}, \"1.1.1.175/32\": {\"hardwareProgrammed\": true, \"routeType\": \"connected\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"routeAction\": \"forward\", \"vias\": [{\"interface\": \"Loopback0\"}], \"directlyConnected\": true}, \"1.1.1.176/32\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"10.175.176.1\", \"interface\": \"Ethernet2\"}]}, \"10.173.175.0/31\": {\"hardwareProgrammed\": true, \"routeType\": \"connected\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"routeAction\": \"forward\", \"vias\": [{\"interface\": \"Ethernet1\"}], \"directlyConnected\": true}, \"10.174.176.0/31\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"10.175.176.1\", \"interface\": \"Ethernet2\"}]}, \"10.175.176.0/31\": {\"hardwareProgrammed\": true, \"routeType\": \"connected\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"routeAction\": \"forward\", \"vias\": [{\"interface\": \"Ethernet2\"}], \"directlyConnected\": true}}}, \"FUSION\": {\"routingDisabled\": false, \"allRoutesProgrammedHardware\": true, \"allRoutesProgrammedKernel\": true, \"defaultRouteState\": \"reachable\", \"routes\": {\"0.0.0.0/0\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"10.10.1.1\", \"interface\": \"Vlan11\"}]}, \"10.10.1.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"connected\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"routeAction\": \"forward\", \"vias\": [{\"interface\": \"Vlan11\"}], \"directlyConnected\": true}, \"10.10.2.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"connected\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"routeAction\": \"forward\", \"vias\": [{\"interface\": \"Vlan12\"}], \"directlyConnected\": true}, \"10.10.3.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"connected\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"routeAction\": \"forward\", \"vias\": [{\"interface\": \"Vlan13\"}], \"directlyConnected\": true}, \"10.10.255.101/32\": {\"hardwareProgrammed\": true, \"routeType\": \"connected\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"routeAction\": \"forward\", \"vias\": [{\"interface\": \"Loopback100\"}], \"directlyConnected\": true}, \"10.10.255.102/32\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.176\", \"vni\": 10000, \"routerMac\": \"50:00:00:48:1b:0f\", \"localInterface\": \"Vxlan1\"}]}, \"10.20.1.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.176\", \"vni\": 10000, \"routerMac\": \"50:00:00:48:1b:0f\", \"localInterface\": \"Vxlan1\"}]}, \"10.20.2.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.176\", \"vni\": 10000, \"routerMac\": \"50:00:00:48:1b:0f\", \"localInterface\": \"Vxlan1\"}]}, \"10.20.3.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.176\", \"vni\": 10000, \"routerMac\": \"50:00:00:48:1b:0f\", \"localInterface\": \"Vxlan1\"}]}, \"10.100.101.111/32\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.173\", \"vni\": 10000, \"routerMac\": \"50:00:00:26:60:4b\", \"localInterface\": \"Vxlan1\"}]}, \"10.100.101.211/32\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.174\", \"vni\": 10000, \"routerMac\": \"50:00:00:49:c7:60\", \"localInterface\": \"Vxlan1\"}]}, \"10.100.101.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.173\", \"vni\": 10000, \"routerMac\": \"50:00:00:26:60:4b\", \"localInterface\": \"Vxlan1\"}]}, \"10.200.123.112/32\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.173\", \"vni\": 10000, \"routerMac\": \"50:00:00:26:60:4b\", \"localInterface\": \"Vxlan1\"}]}, \"10.200.123.212/32\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.174\", \"vni\": 10000, \"routerMac\": \"50:00:00:49:c7:60\", \"localInterface\": \"Vxlan1\"}]}, \"10.200.123.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.173\", \"vni\": 10000, \"routerMac\": \"50:00:00:26:60:4b\", \"localInterface\": \"Vxlan1\"}]}, \"10.250.2.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"static\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 1, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"10.10.2.1\", \"interface\": \"Vlan12\"}]}, \"10.250.3.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"10.10.3.1\", \"interface\": \"Vlan13\"}]}, \"10.250.12.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.176\", \"vni\": 10000, \"routerMac\": \"50:00:00:48:1b:0f\", \"localInterface\": \"Vxlan1\"}]}, \"10.250.13.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.176\", \"vni\": 10000, \"routerMac\": \"50:00:00:48:1b:0f\", \"localInterface\": \"Vxlan1\"}]}, \"192.168.111.0/29\": {\"hardwareProgrammed\": true, \"routeType\": \"connected\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"routeAction\": \"forward\", \"vias\": [{\"interface\": \"Vlan10\"}], \"directlyConnected\": true}, \"198.51.100.22/32\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.176\", \"vni\": 10000, \"routerMac\": \"50:00:00:48:1b:0f\", \"localInterface\": \"Vxlan1\"}]}, \"203.0.113.11/32\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"10.10.1.1\", \"interface\": \"Vlan11\"}]}}}, \"mgt\": {\"routingDisabled\": true, \"allRoutesProgrammedHardware\": true, \"allRoutesProgrammedKernel\": true, \"defaultRouteState\": \"reachable\", \"routes\": {\"0.0.0.0/0\": {\"hardwareProgrammed\": true, \"routeType\": \"static\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 1, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"172.16.250.1\", \"interface\": \"Management1\"}]}, \"172.16.250.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"connected\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"routeAction\": \"forward\", \"vias\": [{\"interface\": \"Management1\"}], \"directlyConnected\": true}}}}}",
+      "fieldsets": "Traffic policy IPv4 prefix field set: EXTRANET\nSource: static\n\nPrefix count: 1\nException prefix count: 0\nPrefix               Exception Prefixes\n-------------------  ----------------------------------------------------------\n10.250.2.0/24        \nUsed in policies: pSDN-OWEN\nTraffic policy IPv4 prefix field set: INTERNET\nSource: static\n\nPrefix count: 31\nException prefix count: 0\nPrefix               Exception Prefixes\n-------------------  ----------------------------------------------------------\n0.0.0.0/5            \n8.0.0.0/7            \n11.0.0.0/8           \n12.0.0.0/6           \n16.0.0.0/4           \n32.0.0.0/3           \n64.0.0.0/2           \n128.0.0.0/3          \n160.0.0.0/5          \n168.0.0.0/6          \n172.0.0.0/12         \n172.32.0.0/11        \n172.64.0.0/10        \n172.128.0.0/9        \n173.0.0.0/8          \n174.0.0.0/7          \n176.0.0.0/4          \n192.0.0.0/9          \n192.128.0.0/11       \n192.160.0.0/13       \n192.169.0.0/16       \n192.170.0.0/15       \n192.172.0.0/14       \n192.176.0.0/12       \n192.192.0.0/10       \n193.0.0.0/8          \n194.0.0.0/7          \n196.0.0.0/6          \n200.0.0.0/5          \n208.0.0.0/4          \n224.0.0.0/3          \nUsed in policies: pSDN-OWEN\nTraffic policy IPv4 prefix field set: VLANALL\nSource: static\n\nPrefix count: 2\nException prefix count: 0\nPrefix               Exception Prefixes\n-------------------  ----------------------------------------------------------\n10.100.101.0/24      \n10.200.123.0/24      \nUsed in policies: pSDN-OWEN\nTraffic policy IPv4 prefix field set: bgpDC1\nSource: BGP\n\nPrefix count: 0\nException prefix count: 0\nPrefix               Exception Prefixes\n-------------------  ----------------------------------------------------------\nUsed in policies: pSDN-OWEN\nTraffic policy IPv4 prefix field set: bgpDC2\nSource: BGP\n\nPrefix count: 0\nException prefix count: 0\nPrefix               Exception Prefixes\n-------------------  ----------------------------------------------------------\nUsed in policies: pSDN-OWEN\nTraffic policy IPv4 prefix field set: bgpVAS1\nSource: BGP\n\nPrefix count: 1\nException prefix count: 0\nPrefix               Exception Prefixes\n-------------------  ----------------------------------------------------------\n10.250.3.0/24        \nUsed in policies: pSDN-OWEN\nTraffic policy IPv4 prefix field set: bgpVAS2\nSource: BGP\n\nPrefix count: 1\nException prefix count: 0\nPrefix               Exception Prefixes\n-------------------  ----------------------------------------------------------\n10.250.13.0/24       \nUsed in policies: pSDN-OWEN"
+    },
+    "p2-host": {
+      "platform": "arista_eos",
+      "interfaces": [
+        {
+          "name": "Vlan101",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "VLAN101",
+          "mac": "50:00:00:44:64:a2",
+          "addresses": [
+            "10.100.101.211/24"
+          ],
+          "vlan": "101"
+        },
+        {
+          "name": "Vlan123",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "VLAN123",
+          "mac": "50:00:00:44:64:a2",
+          "addresses": [
+            "10.200.123.212/24"
+          ],
+          "vlan": "123"
+        },
+        {
+          "name": "Ethernet1",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:6c:00:01"
+        },
+        {
+          "name": "Ethernet2",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:6c:00:02"
+        },
+        {
+          "name": "Ethernet3",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:6c:00:03"
+        },
+        {
+          "name": "Ethernet4",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:6c:00:04"
+        },
+        {
+          "name": "Ethernet5",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:6c:00:05"
+        },
+        {
+          "name": "Ethernet6",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:6c:00:06"
+        },
+        {
+          "name": "Ethernet7",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:6c:00:07"
+        },
+        {
+          "name": "Ethernet8",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:6c:00:08"
+        },
+        {
+          "name": "Loopback610",
+          "admin_up": null,
+          "oper_up": null,
+          "vrf": "unknown"
+        },
+        {
+          "name": "Vlan610",
+          "admin_up": null,
+          "oper_up": null,
+          "vrf": "unknown"
+        }
+      ],
+      "config": "alias srnz show interface counter rate | nz\nno service interface inactive port-id allocation disabled\ninterface Ethernet1\n   mtu 9214\n   switchport trunk allowed vlan 101,123\n   switchport mode trunk\ninterface Ethernet2\ninterface Ethernet3\ninterface Ethernet4\ninterface Ethernet5\ninterface Ethernet6\ninterface Ethernet7\ninterface Ethernet8\ninterface Vlan101\n   vrf VLAN101\n   ip address 10.100.101.211/24\ninterface Vlan123\n   vrf VLAN123\n   ip address 10.200.123.212/24\n",
+      "route_output": "{\"vrfs\": {\"default\": {\"routingDisabled\": true, \"allRoutesProgrammedHardware\": true, \"allRoutesProgrammedKernel\": true, \"defaultRouteState\": \"notSet\", \"routes\": {}}, \"VLAN101\": {\"routingDisabled\": true, \"allRoutesProgrammedHardware\": true, \"allRoutesProgrammedKernel\": true, \"defaultRouteState\": \"reachable\", \"routes\": {\"0.0.0.0/0\": {\"hardwareProgrammed\": true, \"routeType\": \"static\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 1, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"10.100.101.1\", \"interface\": \"Vlan101\"}]}, \"10.100.101.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"connected\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"routeAction\": \"forward\", \"vias\": [{\"interface\": \"Vlan101\"}], \"directlyConnected\": true}}}, \"VLAN123\": {\"routingDisabled\": true, \"allRoutesProgrammedHardware\": true, \"allRoutesProgrammedKernel\": true, \"defaultRouteState\": \"reachable\", \"routes\": {\"0.0.0.0/0\": {\"hardwareProgrammed\": true, \"routeType\": \"static\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 1, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"10.200.123.1\", \"interface\": \"Vlan123\"}]}, \"10.200.123.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"connected\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"routeAction\": \"forward\", \"vias\": [{\"interface\": \"Vlan123\"}], \"directlyConnected\": true}}}, \"mgt\": {\"routingDisabled\": true, \"allRoutesProgrammedHardware\": true, \"allRoutesProgrammedKernel\": true, \"defaultRouteState\": \"reachable\", \"routes\": {\"0.0.0.0/0\": {\"hardwareProgrammed\": true, \"routeType\": \"static\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 1, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"172.16.250.1\", \"interface\": \"Management1\"}]}, \"172.16.250.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"connected\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"routeAction\": \"forward\", \"vias\": [{\"interface\": \"Management1\"}], \"directlyConnected\": true}}}}}",
+      "fieldsets": ""
+    },
+    "p2-leaf": {
+      "platform": "arista_eos",
+      "interfaces": [
+        {
+          "name": "Ethernet1",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:49:c7:60",
+          "addresses": [
+            "10.174.176.0/31"
+          ]
+        },
+        {
+          "name": "Loopback0",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": null,
+          "addresses": [
+            "1.1.1.174/32"
+          ]
+        },
+        {
+          "name": "Vlan101",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "FUSION",
+          "mac": "50:00:00:49:c7:60",
+          "addresses": [
+            "10.100.101.1/24"
+          ],
+          "vlan": "101"
+        },
+        {
+          "name": "Vlan123",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "FUSION",
+          "mac": "50:00:00:49:c7:60",
+          "addresses": [
+            "10.200.123.1/24"
+          ],
+          "vlan": "123"
+        },
+        {
+          "name": "Vlan4097",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "unknown",
+          "mac": "50:00:00:49:c7:60"
+        },
+        {
+          "name": "Ethernet2",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:68:00:02"
+        },
+        {
+          "name": "Ethernet3",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:68:00:03"
+        },
+        {
+          "name": "Ethernet4",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:68:00:04"
+        },
+        {
+          "name": "Ethernet5",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:68:00:05"
+        },
+        {
+          "name": "Ethernet6",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:68:00:06"
+        },
+        {
+          "name": "Ethernet7",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:68:00:07"
+        },
+        {
+          "name": "Ethernet8",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:68:00:08"
+        },
+        {
+          "name": "Vxlan1",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": null
+        },
+        {
+          "name": "Loopback6",
+          "admin_up": null,
+          "oper_up": null,
+          "vrf": "unknown"
+        },
+        {
+          "name": "Vlan610",
+          "admin_up": null,
+          "oper_up": null,
+          "vrf": "unknown"
+        }
+      ],
+      "config": "alias srnz show interface counter rate | nz\nno service interface inactive port-id allocation disabled\ninterface Ethernet1\n   description p1-svc\n   mtu 9214\n   no switchport\n   ip address 10.174.176.0/31\ninterface Ethernet2\n   description p1-host\n   mtu 9214\n   switchport trunk allowed vlan 101,123\n   switchport mode trunk\ninterface Ethernet3\ninterface Ethernet4\ninterface Ethernet5\ninterface Ethernet6\ninterface Ethernet7\ninterface Ethernet8\ninterface Loopback0\n   ip address 1.1.1.174/32\ninterface Vlan101\n   vrf FUSION\n   ip attached-host route export 19\n   ip address virtual 10.100.101.1/24\ninterface Vlan123\n   vrf FUSION\n   ip attached-host route export 19\n   ip address virtual 10.200.123.1/24\ninterface Vxlan1\n   vxlan source-interface Loopback0\n   vxlan udp-port 4789\n   vxlan vlan 101 vni 10101\n   vxlan vlan 123 vni 10123\n   vxlan vrf FUSION vni 10000\ntraffic-policies\n   vrf FUSION\n      traffic-policy input pSDN-OWEN physical\n   !\n   field-set ipv4 prefix INTERNET\n      0.0.0.0/5 8.0.0.0/7 11.0.0.0/8 12.0.0.0/6 16.0.0.0/4 32.0.0.0/3 64.0.0.0/2 128.0.0.0/3 160.0.0.0/5 168.0.0.0/6 172.0.0.0/12 172.32.0.0/11 172.64.0.0/10 172.128.0.0/9 173.0.0.0/8 174.0.0.0/7 176.0.0.0/4 192.0.0.0/9 192.128.0.0/11 192.160.0.0/13 192.169.0.0/16 192.170.0.0/15 192.172.0.0/14 192.176.0.0/12 192.192.0.0/10 193.0.0.0/8 194.0.0.0/7 196.0.0.0/6 200.0.0.0/5 208.0.0.0/4 224.0.0.0/3\n   !\n   field-set ipv4 prefix VASALL\n      10.250.3.0/24 10.250.13.0/24\n   !\n   field-set ipv4 prefix VLAN101\n      10.100.101.0/24\n   !\n   field-set ipv4 prefix VLAN123\n      10.200.123.0/24\n   !\n   field-set ipv4 prefix VLANALL\n      10.100.101.0/24 10.200.123.0/24\n   !\n   field-set ipv4 prefix bgpEXTRANET\n      source bgp\n   !\n   traffic-policy pSDN-OWEN\n      match DC-to-INTERNET ipv4\n         source prefix field-set VLANALL\n         destination prefix field-set INTERNET\n         !\n         actions\n            count\n      !\n      match DC-to-EXTRANET ipv4\n         source prefix field-set VLANALL\n         destination prefix field-set bgpEXTRANET\n         !\n         actions\n            count\n      !\n      match VLAN101-intrazone ipv4\n         source prefix field-set VLAN101\n         destination prefix field-set VLAN101\n         !\n         packet type\n            vxlan decap exclude\n         !\n         actions\n            count\n      !\n      match VLAN123-intrazone ipv4\n         source prefix field-set VLAN123\n         destination prefix field-set VLAN123\n         !\n         packet type\n            vxlan decap exclude\n         !\n         actions\n            count\n      !\n      match DC-interzone-to-FW ipv4\n         source prefix field-set VLANALL\n         destination prefix field-set VLANALL\n         !\n         packet type\n            vxlan decap exclude\n         !\n         actions\n            count\n            redirect next-hop 192.168.111.2 vrf FUSION\n      !\n      match DC-to-VAS-to-FW ipv4\n         source prefix field-set VLANALL\n         destination prefix field-set VASALL\n         !\n         packet type\n            vxlan decap exclude\n         !\n         actions\n            count\n            redirect next-hop 192.168.111.2 vrf FUSION\n      !\n      match ipv4-all-default ipv4\n      !\n      match ipv6-all-default ipv6",
+      "route_output": "{\"vrfs\": {\"default\": {\"routingDisabled\": false, \"allRoutesProgrammedHardware\": true, \"allRoutesProgrammedKernel\": true, \"defaultRouteState\": \"notSet\", \"routes\": {\"1.1.1.173/32\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"10.174.176.1\", \"interface\": \"Ethernet1\"}]}, \"1.1.1.174/32\": {\"hardwareProgrammed\": true, \"routeType\": \"connected\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"routeAction\": \"forward\", \"vias\": [{\"interface\": \"Loopback0\"}], \"directlyConnected\": true}, \"1.1.1.175/32\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"10.174.176.1\", \"interface\": \"Ethernet1\"}]}, \"1.1.1.176/32\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"10.174.176.1\", \"interface\": \"Ethernet1\"}]}, \"10.173.175.0/31\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"10.174.176.1\", \"interface\": \"Ethernet1\"}]}, \"10.174.176.0/31\": {\"hardwareProgrammed\": true, \"routeType\": \"connected\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"routeAction\": \"forward\", \"vias\": [{\"interface\": \"Ethernet1\"}], \"directlyConnected\": true}, \"10.175.176.0/31\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"10.174.176.1\", \"interface\": \"Ethernet1\"}]}}}, \"FUSION\": {\"routingDisabled\": false, \"allRoutesProgrammedHardware\": true, \"allRoutesProgrammedKernel\": true, \"defaultRouteState\": \"reachable\", \"routes\": {\"0.0.0.0/0\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.176\", \"vni\": 10000, \"routerMac\": \"50:00:00:48:1b:0f\", \"localInterface\": \"Vxlan1\"}]}, \"10.10.1.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.175\", \"vni\": 10000, \"routerMac\": \"50:00:00:4f:98:8f\", \"localInterface\": \"Vxlan1\"}]}, \"10.10.2.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.175\", \"vni\": 10000, \"routerMac\": \"50:00:00:4f:98:8f\", \"localInterface\": \"Vxlan1\"}]}, \"10.10.3.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.175\", \"vni\": 10000, \"routerMac\": \"50:00:00:4f:98:8f\", \"localInterface\": \"Vxlan1\"}]}, \"10.10.255.101/32\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.175\", \"vni\": 10000, \"routerMac\": \"50:00:00:4f:98:8f\", \"localInterface\": \"Vxlan1\"}]}, \"10.10.255.102/32\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.176\", \"vni\": 10000, \"routerMac\": \"50:00:00:48:1b:0f\", \"localInterface\": \"Vxlan1\"}]}, \"10.20.1.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.176\", \"vni\": 10000, \"routerMac\": \"50:00:00:48:1b:0f\", \"localInterface\": \"Vxlan1\"}]}, \"10.20.2.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.176\", \"vni\": 10000, \"routerMac\": \"50:00:00:48:1b:0f\", \"localInterface\": \"Vxlan1\"}]}, \"10.20.3.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.176\", \"vni\": 10000, \"routerMac\": \"50:00:00:48:1b:0f\", \"localInterface\": \"Vxlan1\"}]}, \"10.100.101.111/32\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.173\", \"vni\": 10000, \"routerMac\": \"50:00:00:26:60:4b\", \"localInterface\": \"Vxlan1\"}]}, \"10.100.101.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"connected\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"routeAction\": \"forward\", \"vias\": [{\"interface\": \"Vlan101\"}], \"directlyConnected\": true}, \"10.200.123.112/32\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.173\", \"vni\": 10000, \"routerMac\": \"50:00:00:26:60:4b\", \"localInterface\": \"Vxlan1\"}]}, \"10.200.123.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"connected\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"routeAction\": \"forward\", \"vias\": [{\"interface\": \"Vlan123\"}], \"directlyConnected\": true}, \"10.250.2.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.175\", \"vni\": 10000, \"routerMac\": \"50:00:00:4f:98:8f\", \"localInterface\": \"Vxlan1\"}]}, \"10.250.3.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.175\", \"vni\": 10000, \"routerMac\": \"50:00:00:4f:98:8f\", \"localInterface\": \"Vxlan1\"}]}, \"10.250.12.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.176\", \"vni\": 10000, \"routerMac\": \"50:00:00:48:1b:0f\", \"localInterface\": \"Vxlan1\"}]}, \"10.250.13.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.176\", \"vni\": 10000, \"routerMac\": \"50:00:00:48:1b:0f\", \"localInterface\": \"Vxlan1\"}]}, \"192.168.111.0/29\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.176\", \"vni\": 10000, \"routerMac\": \"50:00:00:48:1b:0f\", \"localInterface\": \"Vxlan1\"}]}, \"198.51.100.22/32\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.176\", \"vni\": 10000, \"routerMac\": \"50:00:00:48:1b:0f\", \"localInterface\": \"Vxlan1\"}]}, \"203.0.113.11/32\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.175\", \"vni\": 10000, \"routerMac\": \"50:00:00:4f:98:8f\", \"localInterface\": \"Vxlan1\"}]}}}, \"mgt\": {\"routingDisabled\": true, \"allRoutesProgrammedHardware\": true, \"allRoutesProgrammedKernel\": true, \"defaultRouteState\": \"reachable\", \"routes\": {\"0.0.0.0/0\": {\"hardwareProgrammed\": true, \"routeType\": \"static\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 1, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"172.16.250.1\", \"interface\": \"Management1\"}]}, \"172.16.250.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"connected\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"routeAction\": \"forward\", \"vias\": [{\"interface\": \"Management1\"}], \"directlyConnected\": true}}}}}",
+      "fieldsets": "Traffic policy IPv4 prefix field set: INTERNET\nSource: static\n\nPrefix count: 31\nException prefix count: 0\nPrefix               Exception Prefixes\n-------------------  ----------------------------------------------------------\n0.0.0.0/5            \n8.0.0.0/7            \n11.0.0.0/8           \n12.0.0.0/6           \n16.0.0.0/4           \n32.0.0.0/3           \n64.0.0.0/2           \n128.0.0.0/3          \n160.0.0.0/5          \n168.0.0.0/6          \n172.0.0.0/12         \n172.32.0.0/11        \n172.64.0.0/10        \n172.128.0.0/9        \n173.0.0.0/8          \n174.0.0.0/7          \n176.0.0.0/4          \n192.0.0.0/9          \n192.128.0.0/11       \n192.160.0.0/13       \n192.169.0.0/16       \n192.170.0.0/15       \n192.172.0.0/14       \n192.176.0.0/12       \n192.192.0.0/10       \n193.0.0.0/8          \n194.0.0.0/7          \n196.0.0.0/6          \n200.0.0.0/5          \n208.0.0.0/4          \n224.0.0.0/3          \nUsed in policies: pSDN-OWEN\nTraffic policy IPv4 prefix field set: VASALL\nSource: static\n\nPrefix count: 2\nException prefix count: 0\nPrefix               Exception Prefixes\n-------------------  ----------------------------------------------------------\n10.250.3.0/24        \n10.250.13.0/24       \nUsed in policies: pSDN-OWEN\nTraffic policy IPv4 prefix field set: VLAN101\nSource: static\n\nPrefix count: 1\nException prefix count: 0\nPrefix               Exception Prefixes\n-------------------  ----------------------------------------------------------\n10.100.101.0/24      \nUsed in policies: pSDN-OWEN\nTraffic policy IPv4 prefix field set: VLAN123\nSource: static\n\nPrefix count: 1\nException prefix count: 0\nPrefix               Exception Prefixes\n-------------------  ----------------------------------------------------------\n10.200.123.0/24      \nUsed in policies: pSDN-OWEN\nTraffic policy IPv4 prefix field set: VLANALL\nSource: static\n\nPrefix count: 2\nException prefix count: 0\nPrefix               Exception Prefixes\n-------------------  ----------------------------------------------------------\n10.100.101.0/24      \n10.200.123.0/24      \nUsed in policies: pSDN-OWEN\nTraffic policy IPv4 prefix field set: bgpEXTRANET\nSource: BGP\n\nPrefix count: 2\nException prefix count: 0\nPrefix               Exception Prefixes\n-------------------  ----------------------------------------------------------\n10.250.2.0/24        \n10.250.12.0/24       \nUsed in policies: pSDN-OWEN"
+    },
+    "p2-svc": {
+      "platform": "arista_eos",
+      "interfaces": [
+        {
+          "name": "Ethernet1",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:48:1b:0f",
+          "addresses": [
+            "10.174.176.1/31"
+          ]
+        },
+        {
+          "name": "Ethernet2",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:48:1b:0f",
+          "addresses": [
+            "10.175.176.1/31"
+          ]
+        },
+        {
+          "name": "Loopback0",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": null,
+          "addresses": [
+            "1.1.1.176/32"
+          ]
+        },
+        {
+          "name": "Loopback100",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "FUSION",
+          "mac": null,
+          "addresses": [
+            "10.10.255.102/32"
+          ]
+        },
+        {
+          "name": "Vlan11",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "FUSION",
+          "mac": "50:00:00:48:1b:0f",
+          "addresses": [
+            "10.20.1.2/24"
+          ],
+          "vlan": "11"
+        },
+        {
+          "name": "Vlan12",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "FUSION",
+          "mac": "50:00:00:48:1b:0f",
+          "addresses": [
+            "10.20.2.2/24"
+          ],
+          "vlan": "12"
+        },
+        {
+          "name": "Vlan13",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "FUSION",
+          "mac": "50:00:00:48:1b:0f",
+          "addresses": [
+            "10.20.3.2/24"
+          ],
+          "vlan": "13"
+        },
+        {
+          "name": "Vlan20",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "FUSION",
+          "mac": "50:00:00:48:1b:0f",
+          "addresses": [
+            "192.168.111.1/29"
+          ],
+          "vlan": "20"
+        },
+        {
+          "name": "Vlan4097",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "unknown",
+          "mac": "50:00:00:48:1b:0f"
+        },
+        {
+          "name": "Ethernet3",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:6a:00:03",
+          "aggregate": "Port-Channel1"
+        },
+        {
+          "name": "Ethernet4",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:6a:00:04"
+        },
+        {
+          "name": "Ethernet5",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:6a:00:05"
+        },
+        {
+          "name": "Ethernet6",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:6a:00:06"
+        },
+        {
+          "name": "Ethernet7",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:6a:00:07"
+        },
+        {
+          "name": "Ethernet8",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:6a:00:08"
+        },
+        {
+          "name": "Port-Channel1",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": "50:00:00:6a:00:03"
+        },
+        {
+          "name": "Vxlan1",
+          "admin_up": true,
+          "oper_up": true,
+          "vrf": "default",
+          "mac": null
+        },
+        {
+          "name": "Loopback6",
+          "admin_up": null,
+          "oper_up": null,
+          "vrf": "unknown"
+        }
+      ],
+      "config": "alias srnz show interface counter rate | nz\nno service interface inactive port-id allocation disabled\ninterface Port-Channel1\n   description p2-fw\n   mtu 9214\n   switchport trunk allowed vlan 20\n   switchport mode trunk\ninterface Ethernet1\n   description p2-leaf\n   mtu 9214\n   no switchport\n   ip address 10.174.176.1/31\ninterface Ethernet2\n   description p1-svc\n   mtu 9214\n   no switchport\n   ip address 10.175.176.1/31\ninterface Ethernet3\n   description p2-fw\n   channel-group 1 mode active\ninterface Ethernet4\n   description Extranet-VAS2\n   mtu 9214\n   switchport trunk allowed vlan 11-13\n   switchport mode trunk\ninterface Ethernet5\ninterface Ethernet6\ninterface Ethernet7\ninterface Ethernet8\ninterface Loopback0\n   ip address 1.1.1.176/32\ninterface Loopback100\n   description redirection-object\n   vrf FUSION\n   ip address 10.10.255.102/32\ninterface Vlan11\n   description Internet\n   vrf FUSION\n   ip address 10.20.1.2/24\ninterface Vlan12\n   description Extranet\n   vrf FUSION\n   ip address 10.20.2.2/24\ninterface Vlan13\n   description VAS\n   vrf FUSION\n   ip address 10.20.3.2/24\ninterface Vlan20\n   description P2-FW\n   vrf FUSION\n   ip address virtual 192.168.111.1/29\ninterface Vxlan1\n   vxlan source-interface Loopback0\n   vxlan udp-port 4789\n   vxlan vrf FUSION vni 10000\ntraffic-policies\n   vrf FUSION\n      traffic-policy input pSDN-OWEN physical\n   !\n   field-set ipv4 prefix EXTRANET\n      10.250.12.0/24\n   !\n   field-set ipv4 prefix INTERNET\n      0.0.0.0/5 8.0.0.0/7 11.0.0.0/8 12.0.0.0/6 16.0.0.0/4 32.0.0.0/3 64.0.0.0/2 128.0.0.0/3 160.0.0.0/5 168.0.0.0/6 172.0.0.0/12 172.32.0.0/11 172.64.0.0/10 172.128.0.0/9 173.0.0.0/8 174.0.0.0/7 176.0.0.0/4 192.0.0.0/9 192.128.0.0/11 192.160.0.0/13 192.169.0.0/16 192.170.0.0/15 192.172.0.0/14 192.176.0.0/12 192.192.0.0/10 193.0.0.0/8 194.0.0.0/7 196.0.0.0/6 200.0.0.0/5 208.0.0.0/4 224.0.0.0/3\n   !\n   field-set ipv4 prefix VLANALL\n      10.100.101.0/24 10.200.123.0/24\n   !\n   field-set ipv4 prefix bgpDC1\n      source bgp\n   !\n   field-set ipv4 prefix bgpDC2\n      source bgp\n   !\n   field-set ipv4 prefix bgpVAS1\n      source bgp\n   !\n   field-set ipv4 prefix bgpVAS2\n      source bgp\n   !\n   traffic-policy pSDN-OWEN\n      match DC-to-INTERNET ipv4\n         source prefix field-set VLANALL\n         destination prefix field-set INTERNET\n         !\n         actions\n            count\n      !\n      match INTERNET-to-DC ipv4\n         source prefix field-set INTERNET\n         destination prefix field-set VLANALL\n         !\n         actions\n            count\n      !\n      match DC-to-EXTRANET ipv4\n         source prefix field-set VLANALL\n         destination prefix field-set EXTRANET\n         !\n         actions\n            count\n      !\n      match EXTRANET-to-DC ipv4\n         source prefix field-set EXTRANET\n         destination prefix field-set VLANALL\n         !\n         actions\n            count\n      !\n      match DC-decap-to-FW ipv4\n         source prefix field-set VLANALL\n         destination prefix field-set VLANALL\n         !\n         packet type\n            vxlan decap\n         !\n         actions\n            count\n            redirect next-hop 192.168.111.2 vrf FUSION\n      !\n      match FW-local-to-remote-DC ipv4\n         dot1q vlan 20\n         source prefix field-set bgpDC2\n         destination prefix field-set bgpDC1\n         !\n         packet type\n            vxlan decap exclude\n         !\n         actions\n            count\n            redirect next-hop 10.10.255.101 vrf FUSION\n      !\n      match FW-to-local-DC ipv4\n         dot1q vlan 20\n         source prefix field-set VLANALL\n         destination prefix field-set bgpDC2\n         !\n         packet type\n            vxlan decap exclude\n         !\n         actions\n            count\n      !\n      match FW-unclassified-DC ipv4\n         source prefix field-set VLANALL\n         destination prefix field-set VLANALL\n         !\n         packet type\n            vxlan decap exclude\n         !\n         actions\n            count\n            drop\n      !\n      match VAS1-to-VAS2-bypass ipv4\n         source prefix field-set bgpVAS1\n         destination prefix field-set bgpVAS2\n         !\n         actions\n            count\n      !\n      match VAS2-to-VAS1-bypass ipv4\n         source prefix field-set bgpVAS2\n         destination prefix field-set bgpVAS1\n         !\n         actions\n            count\n      !\n      match VAS-ingress-to-DC ipv4\n         dot1q vlan 13\n         source prefix field-set bgpVAS2\n         destination prefix field-set VLANALL\n         !\n         packet type\n            vxlan decap exclude\n         !\n         actions\n            count\n            redirect next-hop 192.168.111.2 vrf FUSION\n      !\n      match VAS1-to-DC-decap-FW ipv4\n         source prefix field-set bgpVAS1\n         destination prefix field-set VLANALL\n         !\n         packet type\n            vxlan decap\n         !\n         actions\n            count\n            redirect next-hop 192.168.111.2 vrf FUSION\n      !\n      match DC-to-VAS1-decap-FW ipv4\n         source prefix field-set VLANALL\n         destination prefix field-set bgpVAS1\n         !\n         packet type\n            vxlan decap\n         !\n         actions\n            count\n            redirect next-hop 192.168.111.2 vrf FUSION\n      !\n      match VAS2-to-DC-decap-FW ipv4\n         source prefix field-set bgpVAS2\n         destination prefix field-set VLANALL\n         !\n         packet type\n            vxlan decap\n         !\n         actions\n            count\n            redirect next-hop 192.168.111.2 vrf FUSION\n      !\n      match DC-to-VAS2-decap-FW ipv4\n         source prefix field-set VLANALL\n         destination prefix field-set bgpVAS2\n         !\n         packet type\n            vxlan decap\n         !\n         actions\n            count\n            redirect next-hop 192.168.111.2 vrf FUSION\n      !\n      match FW-VAS1-to-local-DC ipv4\n         dot1q vlan 20\n         source prefix field-set bgpVAS1\n         destination prefix field-set bgpDC2\n         !\n         packet type\n            vxlan decap exclude\n         !\n         actions\n            count\n      !\n      match FW-VAS2-to-local-DC ipv4\n         dot1q vlan 20\n         source prefix field-set bgpVAS2\n         destination prefix field-set bgpDC2\n         !\n         packet type\n            vxlan decap exclude\n         !\n         actions\n            count\n      !\n      match FW-local-VAS-to-remote-DC ipv4\n         dot1q vlan 20\n         source prefix field-set bgpVAS2\n         destination prefix field-set bgpDC1\n         !\n         packet type\n            vxlan decap exclude\n         !\n         actions\n            count\n            redirect next-hop 10.10.255.101 vrf FUSION\n      !\n      match FW-local-DC-to-remote-VAS ipv4\n         dot1q vlan 20\n         source prefix field-set bgpDC2\n         destination prefix field-set bgpVAS1\n         !\n         packet type\n            vxlan decap exclude\n         !\n         actions\n            count\n            redirect next-hop 10.10.255.101 vrf FUSION\n      !\n      match FW-DC-to-local-VAS ipv4\n         dot1q vlan 20\n         source prefix field-set VLANALL\n         destination prefix field-set bgpVAS2\n         !\n         packet type\n            vxlan decap exclude\n         !\n         actions\n            count\n      !\n      match VAS1-to-DC-unclassified ipv4\n         source prefix field-set bgpVAS1\n         destination prefix field-set VLANALL\n         !\n         packet type\n            vxlan decap exclude\n         !\n         actions\n            count\n            drop\n      !\n      match DC-to-VAS1-unclassified ipv4\n         source prefix field-set VLANALL\n         destination prefix field-set bgpVAS1\n         !\n         packet type\n            vxlan decap exclude\n         !\n         actions\n            count\n            drop\n      !\n      match VAS2-to-DC-unclassified ipv4\n         source prefix field-set bgpVAS2\n         destination prefix field-set VLANALL\n         !\n         packet type\n            vxlan decap exclude\n         !\n         actions\n            count\n            drop\n      !\n      match DC-to-VAS2-unclassified ipv4\n         source prefix field-set VLANALL\n         destination prefix field-set bgpVAS2\n         !\n         packet type\n            vxlan decap exclude\n         !\n         actions\n            count\n            drop\n      !\n      match ipv4-all-default ipv4\n      !\n      match ipv6-all-default ipv6",
+      "route_output": "{\"vrfs\": {\"default\": {\"routingDisabled\": false, \"allRoutesProgrammedHardware\": true, \"allRoutesProgrammedKernel\": true, \"defaultRouteState\": \"notSet\", \"routes\": {\"1.1.1.173/32\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"10.175.176.0\", \"interface\": \"Ethernet2\"}]}, \"1.1.1.174/32\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"10.174.176.0\", \"interface\": \"Ethernet1\"}]}, \"1.1.1.175/32\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"10.175.176.0\", \"interface\": \"Ethernet2\"}]}, \"1.1.1.176/32\": {\"hardwareProgrammed\": true, \"routeType\": \"connected\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"routeAction\": \"forward\", \"vias\": [{\"interface\": \"Loopback0\"}], \"directlyConnected\": true}, \"10.173.175.0/31\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"10.175.176.0\", \"interface\": \"Ethernet2\"}]}, \"10.174.176.0/31\": {\"hardwareProgrammed\": true, \"routeType\": \"connected\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"routeAction\": \"forward\", \"vias\": [{\"interface\": \"Ethernet1\"}], \"directlyConnected\": true}, \"10.175.176.0/31\": {\"hardwareProgrammed\": true, \"routeType\": \"connected\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"routeAction\": \"forward\", \"vias\": [{\"interface\": \"Ethernet2\"}], \"directlyConnected\": true}}}, \"FUSION\": {\"routingDisabled\": false, \"allRoutesProgrammedHardware\": true, \"allRoutesProgrammedKernel\": true, \"defaultRouteState\": \"reachable\", \"routes\": {\"0.0.0.0/0\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"10.20.1.1\", \"interface\": \"Vlan11\"}]}, \"10.10.1.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.175\", \"vni\": 10000, \"routerMac\": \"50:00:00:4f:98:8f\", \"localInterface\": \"Vxlan1\"}]}, \"10.10.2.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.175\", \"vni\": 10000, \"routerMac\": \"50:00:00:4f:98:8f\", \"localInterface\": \"Vxlan1\"}]}, \"10.10.3.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.175\", \"vni\": 10000, \"routerMac\": \"50:00:00:4f:98:8f\", \"localInterface\": \"Vxlan1\"}]}, \"10.10.255.101/32\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.175\", \"vni\": 10000, \"routerMac\": \"50:00:00:4f:98:8f\", \"localInterface\": \"Vxlan1\"}]}, \"10.10.255.102/32\": {\"hardwareProgrammed\": true, \"routeType\": \"connected\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"routeAction\": \"forward\", \"vias\": [{\"interface\": \"Loopback100\"}], \"directlyConnected\": true}, \"10.20.1.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"connected\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"routeAction\": \"forward\", \"vias\": [{\"interface\": \"Vlan11\"}], \"directlyConnected\": true}, \"10.20.2.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"connected\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"routeAction\": \"forward\", \"vias\": [{\"interface\": \"Vlan12\"}], \"directlyConnected\": true}, \"10.20.3.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"connected\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"routeAction\": \"forward\", \"vias\": [{\"interface\": \"Vlan13\"}], \"directlyConnected\": true}, \"10.100.101.111/32\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.173\", \"vni\": 10000, \"routerMac\": \"50:00:00:26:60:4b\", \"localInterface\": \"Vxlan1\"}]}, \"10.100.101.211/32\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.174\", \"vni\": 10000, \"routerMac\": \"50:00:00:49:c7:60\", \"localInterface\": \"Vxlan1\"}]}, \"10.100.101.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.174\", \"vni\": 10000, \"routerMac\": \"50:00:00:49:c7:60\", \"localInterface\": \"Vxlan1\"}]}, \"10.200.123.112/32\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.173\", \"vni\": 10000, \"routerMac\": \"50:00:00:26:60:4b\", \"localInterface\": \"Vxlan1\"}]}, \"10.200.123.212/32\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.174\", \"vni\": 10000, \"routerMac\": \"50:00:00:49:c7:60\", \"localInterface\": \"Vxlan1\"}]}, \"10.200.123.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.174\", \"vni\": 10000, \"routerMac\": \"50:00:00:49:c7:60\", \"localInterface\": \"Vxlan1\"}]}, \"10.250.2.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.175\", \"vni\": 10000, \"routerMac\": \"50:00:00:4f:98:8f\", \"localInterface\": \"Vxlan1\"}]}, \"10.250.3.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.175\", \"vni\": 10000, \"routerMac\": \"50:00:00:4f:98:8f\", \"localInterface\": \"Vxlan1\"}]}, \"10.250.12.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"static\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 1, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"10.20.2.1\", \"interface\": \"Vlan12\"}]}, \"10.250.13.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"10.20.3.1\", \"interface\": \"Vlan13\"}]}, \"192.168.111.0/29\": {\"hardwareProgrammed\": true, \"routeType\": \"connected\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"routeAction\": \"forward\", \"vias\": [{\"interface\": \"Vlan20\"}], \"directlyConnected\": true}, \"198.51.100.22/32\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"10.20.1.1\", \"interface\": \"Vlan11\"}]}, \"203.0.113.11/32\": {\"hardwareProgrammed\": true, \"routeType\": \"eBGP\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 20, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"\", \"vtepAddr\": \"1.1.1.175\", \"vni\": 10000, \"routerMac\": \"50:00:00:4f:98:8f\", \"localInterface\": \"Vxlan1\"}]}}}, \"mgt\": {\"routingDisabled\": true, \"allRoutesProgrammedHardware\": true, \"allRoutesProgrammedKernel\": true, \"defaultRouteState\": \"reachable\", \"routes\": {\"0.0.0.0/0\": {\"hardwareProgrammed\": true, \"routeType\": \"static\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"preference\": 1, \"metric\": 0, \"routeAction\": \"forward\", \"directlyConnected\": false, \"vias\": [{\"nexthopAddr\": \"172.16.250.1\", \"interface\": \"Management1\"}]}, \"172.16.250.0/24\": {\"hardwareProgrammed\": true, \"routeType\": \"connected\", \"routeLeaked\": false, \"kernelProgrammed\": true, \"routeAction\": \"forward\", \"vias\": [{\"interface\": \"Management1\"}], \"directlyConnected\": true}}}}}",
+      "fieldsets": "Traffic policy IPv4 prefix field set: EXTRANET\nSource: static\n\nPrefix count: 1\nException prefix count: 0\nPrefix               Exception Prefixes\n-------------------  ----------------------------------------------------------\n10.250.12.0/24       \nUsed in policies: pSDN-OWEN\nTraffic policy IPv4 prefix field set: INTERNET\nSource: static\n\nPrefix count: 31\nException prefix count: 0\nPrefix               Exception Prefixes\n-------------------  ----------------------------------------------------------\n0.0.0.0/5            \n8.0.0.0/7            \n11.0.0.0/8           \n12.0.0.0/6           \n16.0.0.0/4           \n32.0.0.0/3           \n64.0.0.0/2           \n128.0.0.0/3          \n160.0.0.0/5          \n168.0.0.0/6          \n172.0.0.0/12         \n172.32.0.0/11        \n172.64.0.0/10        \n172.128.0.0/9        \n173.0.0.0/8          \n174.0.0.0/7          \n176.0.0.0/4          \n192.0.0.0/9          \n192.128.0.0/11       \n192.160.0.0/13       \n192.169.0.0/16       \n192.170.0.0/15       \n192.172.0.0/14       \n192.176.0.0/12       \n192.192.0.0/10       \n193.0.0.0/8          \n194.0.0.0/7          \n196.0.0.0/6          \n200.0.0.0/5          \n208.0.0.0/4          \n224.0.0.0/3          \nUsed in policies: pSDN-OWEN\nTraffic policy IPv4 prefix field set: VLANALL\nSource: static\n\nPrefix count: 2\nException prefix count: 0\nPrefix               Exception Prefixes\n-------------------  ----------------------------------------------------------\n10.100.101.0/24      \n10.200.123.0/24      \nUsed in policies: pSDN-OWEN\nTraffic policy IPv4 prefix field set: bgpDC1\nSource: BGP\n\nPrefix count: 0\nException prefix count: 0\nPrefix               Exception Prefixes\n-------------------  ----------------------------------------------------------\nUsed in policies: pSDN-OWEN\nTraffic policy IPv4 prefix field set: bgpDC2\nSource: BGP\n\nPrefix count: 0\nException prefix count: 0\nPrefix               Exception Prefixes\n-------------------  ----------------------------------------------------------\nUsed in policies: pSDN-OWEN\nTraffic policy IPv4 prefix field set: bgpVAS1\nSource: BGP\n\nPrefix count: 1\nException prefix count: 0\nPrefix               Exception Prefixes\n-------------------  ----------------------------------------------------------\n10.250.3.0/24        \nUsed in policies: pSDN-OWEN\nTraffic policy IPv4 prefix field set: bgpVAS2\nSource: BGP\n\nPrefix count: 1\nException prefix count: 0\nPrefix               Exception Prefixes\n-------------------  ----------------------------------------------------------\n10.250.13.0/24       \nUsed in policies: pSDN-OWEN"
+    }
+  },
+  "links": [
+    {
+      "from": "p1-host",
+      "to": "p1-leaf",
+      "local_interface": "Ethernet1",
+      "remote_interface": "Ethernet2",
+      "status": "connected"
+    },
+    {
+      "from": "p1-leaf",
+      "to": "p1-svc",
+      "local_interface": "Ethernet1",
+      "remote_interface": "Ethernet1",
+      "status": "connected"
+    },
+    {
+      "from": "p1-svc",
+      "to": "p2-svc",
+      "local_interface": "Ethernet2",
+      "remote_interface": "Ethernet2",
+      "status": "connected"
+    },
+    {
+      "from": "p2-host",
+      "to": "p2-leaf",
+      "local_interface": "Ethernet1",
+      "remote_interface": "Ethernet2",
+      "status": "connected"
+    },
+    {
+      "from": "p2-leaf",
+      "to": "p2-svc",
+      "local_interface": "Ethernet1",
+      "remote_interface": "Ethernet1",
+      "status": "connected"
+    },
+    {
+      "from": "PA-172",
+      "to": "p2-svc",
+      "local_interface": "Ethernet1/1",
+      "remote_interface": "Ethernet3",
+      "status": "connected"
+    },
+    {
+      "from": "PA-171",
+      "to": "p1-svc",
+      "local_interface": "Ethernet1/1",
+      "remote_interface": "Ethernet3",
+      "status": "connected"
+    }
+  ]
+}

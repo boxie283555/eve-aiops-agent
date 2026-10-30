@@ -7,6 +7,7 @@ from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 from functools import partial
 from netmiko.utilities import get_structured_data_textfsm
+from .forwarding import eos_forwarding
 from .routing import eos_interfaces, panos_interfaces, parse_routes, command_ok, eos_route_table
 from .model import interface_name
 from typing import Any, Callable
@@ -137,6 +138,7 @@ class DeviceResult:
     resources: DeviceResourceUsage = field(default_factory=DeviceResourceUsage)
     firewall_metrics: dict[str, float] = field(default_factory=dict)
     routes: list[dict[str, Any]] = field(default_factory=list)
+    forwarding: dict[str, Any] | None = None
     collected_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     dataset_status: dict[str, bool] = field(default_factory=dict)
 
@@ -249,6 +251,16 @@ class Collector:
                     if structured is not None:
                         structured_outputs[key] = structured
 
+            # Optional lab enrichment reuses this scheduled SSH session. A failure
+            # remains local to policy evidence and must not fail metrics collection.
+            if (device.site == "lab" and device.platform == "arista_eos"
+                    and "source bgp" in outputs.get("running_config", "")
+                    and "traffic-policies" in outputs.get("running_config", "")):
+                outputs["policy_fieldsets"] = self._safe_command(
+                    partial(connection.send_command_timing, last_read=1),
+                    "show traffic-policy field-set ipv4 prefix",
+                )
+
             interfaces = panos_interfaces(outputs.get("interface", "")) if device.platform == "paloalto_panos" else parse_ip_interface_brief(outputs.get("ip_interface_brief", ""))
             interface_counters = parse_show_interface(outputs.get("interface", ""))
             snmp_sample = self._collect_snmp_sample(device)
@@ -322,6 +334,8 @@ class Collector:
                 nve=parse_nve_peers(outputs.get("nve_peers", "")),
                 interfaces=interface_payload,
                 routes=routes,
+                forwarding=eos_forwarding(outputs.get("running_config", ""), outputs.get("policy_fieldsets", ""))
+                if device.platform == "arista_eos" else None,
                 dataset_status=dataset_status,
                 mac_table=parse_mac_address_table(outputs.get("mac_address_table", "")),
                 arp_table=parse_panos_arp(outputs.get("arp", "")) if device.platform == "paloalto_panos" else parse_ip_arp(outputs.get("arp", "")),

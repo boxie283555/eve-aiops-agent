@@ -68,6 +68,8 @@ def eos_interfaces(brief: str, detail: str, config: str) -> dict[str, dict[str, 
             if m:
                 current = row(m[1])
                 current["vrf"] = "default"
+                if re.fullmatch(r"Vlan\d+", current["name"]):
+                    current["vlan"] = current["name"][4:]
                 continue
             if line and not line[0].isspace():
                 current = None
@@ -87,7 +89,19 @@ def eos_interfaces(brief: str, detail: str, config: str) -> dict[str, dict[str, 
             m = re.match(r"\s+description (.+)", line)
             if m:
                 current["description"] = m[1]
-            m = re.match(r"\s+ip address (\S+)", line)
+            m = re.match(r"\s+switchport mode (access|trunk)", line)
+            if m:
+                current["switchport_mode"] = m[1]
+            m = re.match(r"\s+switchport (access vlan|trunk native vlan|trunk allowed vlan) (.+)", line)
+            if m:
+                current[{"access vlan": "access_vlan", "trunk native vlan": "native_vlan", "trunk allowed vlan": "allowed_vlans"}[m[1]]] = m[2].strip()
+            m = re.match(r"\s+vxlan source-interface (\S+)", line)
+            if m:
+                current["vxlan_source"] = interface_name(m[1])
+            m = re.match(r"\s+vxlan vrf (\S+) vni (\d+)", line)
+            if m:
+                current.setdefault("vrf_vnis", {})[m[1]] = int(m[2])
+            m = re.match(r"\s+ip address (?:virtual )?(\S+)", line)
             if m:
                 try:
                     address = str(ip_interface(m[1]))
@@ -221,8 +235,11 @@ def parse_routes(output: str, platform: str) -> list[dict[str, Any]]:
                         vrf,
                         prefix,
                         hop.get("nexthopAddr"),
-                        hop.get("interface"),
+                        hop.get("interface") or hop.get("localInterface"),
                         route.get("routeType", "unknown"),
+                        vtep=hop.get("vtepAddr"),
+                        vni=hop.get("vni"),
+                        router_mac=hop.get("routerMac"),
                         preference=route.get("preference"),
                         metric=route.get("metric"),
                         action=route.get("routeAction", "forward"),

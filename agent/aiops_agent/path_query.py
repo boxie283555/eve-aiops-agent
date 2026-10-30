@@ -6,6 +6,7 @@ from collections import deque
 from ipaddress import ip_address, ip_network, ip_interface
 
 from .model import interface_name, mac_address
+from .forwarding import vlan_allowed, evaluate_policy
 from .topology import fresh
 
 
@@ -19,11 +20,12 @@ def find_path(
     src_vrf="all",
     dst_vrf="all",
     mode="auto",
+    site="all",
 ):
-    devices = {d["id"]: d for d in snapshot.devices}
-    interfaces = {i["id"]: i for i in snapshot.interfaces}
+    devices = {d["id"]: d for d in snapshot.devices if site == "all" or d.get("site") == site}
+    interfaces = {i["id"]: i for i in snapshot.interfaces if i["device_id"] in devices}
     by_name = {
-        (i["device_id"], interface_name(i["name"])): i for i in snapshot.interfaces
+        (i["device_id"], interface_name(i["name"])): i for i in interfaces.values()
     }
 
     def named(value):
@@ -109,6 +111,7 @@ def find_path(
         "observed_at": snapshot.observed_at,
         "warnings": [],
         "schema_version": snapshot.schema_version,
+        "site": site,
     }
 
     def finish(status, warning=None):
@@ -216,8 +219,16 @@ def find_path(
             return set()
         seen.add(iid)
         i = interfaces.get(iid, {})
+        if not i or not fresh(i) or i.get("oper_up") is False:
+            return set()
         if i.get("kind") == "physical":
             return {iid}
+        if i.get("name", "").startswith("Vlan") and i.get("vlan"):
+            out = set()
+            for port in interfaces.values():
+                if port["device_id"] == i["device_id"] and vlan_allowed(port, i["vlan"]):
+                    out.update(physical_members(port["id"], seen.copy()))
+            return out
         if i.get("parent_id"):
             return physical_members(i["parent_id"], seen)
         out = set()
@@ -284,7 +295,7 @@ def find_path(
             "Source VRF is unknown; collect interface VRF membership or select a scoped endpoint.",
         )
     base["warnings"].append(
-        "RIB-based forwarding candidates; firewall policy, NAT, PBR and actual ECMP hashing are not verified."
+        "Configured forwarding candidates using RIB, VLAN, VXLAN and supported EOS traffic policies; firewall security/NAT, ASIC installation, packet delivery and actual ECMP hashing are not verified."
     )
 
     def lookup(did, vid, address, seen=None):
@@ -333,18 +344,94 @@ def find_path(
                         "interface_id": h["interface_id"],
                         "next_hop": h.get("next_hop") or r["next_hop"],
                         "recursive_routes": [h["id"], *h.get("recursive_routes", [])],
+                        "vtep": h.get("vtep"), "vni": h.get("vni"),
                     }
                 )
         return out, None
 
+    def adjacent(did, route, next_ip):
+        outgoing = physical_members(route.get("interface_id"))
+        egress = interfaces.get(route.get("interface_id"), {})
+        neighbors = []
+        for edge in adjacency.get(did, []):
+            if edge["local_interface_id"] not in outgoing:
+                continue
+            for e in snapshot.endpoints:
+                if (e.get("kind") != "owned" or e.get("device_id") != edge["to_id"]
+                        or e.get("ip") != next_ip or not fresh(e)):
+                    continue
+                if edge["remote_interface_id"] not in physical_members(e.get("interface_id")):
+                    continue
+                if egress.get("vlan") and e.get("vlan") and str(egress["vlan"]) != str(e["vlan"]):
+                    continue
+                neighbors.append((edge, e))
+        return neighbors
+
+    def tunnel_paths(did, route):
+        """Walk the VTEP's default-VRF RIB, never an arbitrary topology shortcut."""
+        local = interfaces.get(route.get("interface_id"), {})
+        if str(local.get("vrf_vnis", {}).get(route["vrf"])) != str(route.get("vni")):
+            return [], "VXLAN egress VRF/VNI mapping is missing"
+        owners = []
+        for vx in interfaces.values():
+            if not vx.get("vxlan_source") or not fresh(vx) or vx.get("oper_up") is False:
+                continue
+            src_iface = by_name.get((vx["device_id"], vx["vxlan_source"]), {})
+            if not fresh(src_iface) or src_iface.get("oper_up") is False:
+                continue
+            if not any(str(ip_interface(a).ip) == route["vtep"] for a in src_iface.get("addresses", [])):
+                continue
+            for vrf_name, vni in vx.get("vrf_vnis", {}).items():
+                if str(vni) == str(route.get("vni")):
+                    vids = [v["id"] for v in snapshot.vrfs if v["device_id"] == vx["device_id"] and v["name"] == vrf_name]
+                    owners.extend((vx, vid) for vid in vids)
+        if len(owners) != 1:
+            return [], "Remote VTEP/VNI has missing or ambiguous ownership"
+        remote, remote_vid = owners[0]
+        todo = deque([(did, [], set())])
+        complete = []
+        attempts = 0
+        while todo and attempts < 64:
+            node, hops, visited = todo.popleft()
+            attempts += 1
+            if node == remote["device_id"]:
+                complete.append((remote, remote_vid, hops))
+                continue
+            if node in visited:
+                return [], "VXLAN underlay routing loop"
+            vids = [v["id"] for v in snapshot.vrfs if v["device_id"] == node and v["name"] == "default"]
+            if len(vids) != 1:
+                return [], "VXLAN underlay VRF is missing"
+            rib, error = lookup(node, vids[0], ip_address(route["vtep"]))
+            if error:
+                return [], "VXLAN underlay: " + error
+            for r in rib:
+                if r.get("vtep") or r.get("action") in {"drop", "discard", "reject"}:
+                    return [], "Unsupported or discarded VXLAN underlay route"
+                neighbors = adjacent(node, r, r.get("next_hop") or route["vtep"])
+                if not neighbors:
+                    return [], "VXLAN underlay next-hop physical adjacency is unconfirmed"
+                if len({(e["device_id"], e["vrf_id"], e["interface_id"]) for _, e in neighbors}) > 1:
+                    return [], "VXLAN underlay next-hop ownership is ambiguous"
+                for edge, e in neighbors:
+                    if e.get("vrf") != "default":
+                        return [], "VXLAN underlay next-hop VRF mismatch"
+                    todo.append((e["device_id"], hops + [step({**edge, "role": "underlay",
+                        "route_id": r["id"], "prefix": r["prefix"], "next_hop": r.get("next_hop"),
+                        "vtep": route["vtep"], "vni": route["vni"]}, "physical")], visited | {node}))
+        if todo:
+            return [], "VXLAN underlay expansion limit reached"
+        return complete, None
+
     # Every ECMP branch is kept, with bounded expansion and explicit truncation.
-    queue = deque([(source["device_id"], start_vrf, [], set())])
+    queue = deque([(source["device_id"], start_vrf, [], set(), (None, None, False))])
     paths = []
     expansions = 0
     while queue and expansions < 64:
-        did, vid, path, seen = queue.popleft()
+        did, vid, path, seen, context = queue.popleft()
+        state = (did, vid, *context)
         expansions += 1
-        if (did, vid) in seen or len(path) > 64:
+        if state in seen or len(path) > 96:
             paths.append(
                 {
                     "status": "incomplete",
@@ -362,7 +449,30 @@ def find_path(
                 }
             )
             continue
-        routes, error = lookup(did, vid, addr)
+        vrf_name = next((v["name"] for v in snapshot.vrfs if v["id"] == vid), "unknown")
+        policy, error = evaluate_policy(devices[did].get("forwarding"), vrf_name,
+            source.get("ip"), destination_ip, context[1], context[2]) if context[0] else (None, None)
+        if error:
+            paths.append({"status": "incomplete", "path": path, "reason": error})
+            continue
+        lookup_addr = addr
+        lookup_vid = vid
+        if policy:
+            path = path + [step({**policy, "device": devices[did]["name"], "device_id": did,
+                "vrf": vrf_name, "observed_at": devices[did].get("last_success_at"),
+                "label": policy["policy"] + "/" + policy["name"]}, "traffic_policy")]
+            if policy["action"] == "drop":
+                paths.append({"status": "blocked", "path": path,
+                    "reason": f"Configured traffic-policy {devices[did]['name']} {policy['policy']}/{policy['name']} drops this flow"})
+                continue
+            if policy["action"] == "redirect":
+                try:
+                    lookup_addr = ip_address(policy["next_hop"])
+                except ValueError:
+                    paths.append({"status": "incomplete", "path": path, "reason": "Invalid policy redirect address"})
+                    continue
+                lookup_vid = next((v["id"] for v in snapshot.vrfs if v["device_id"] == did and v["name"] == policy["vrf"]), None)
+        routes, error = lookup(did, lookup_vid, lookup_addr)
         if error:
             paths.append({"status": "incomplete", "path": path, "reason": error})
             continue
@@ -372,7 +482,9 @@ def find_path(
                     "device": devices[did]["name"],
                     "device_id": did,
                     "vrf": route["vrf"],
-                    "vrf_id": vid,
+                    "vrf_id": lookup_vid,
+                    "lookup_ip": str(lookup_addr),
+                    "vtep": route.get("vtep"), "vni": route.get("vni"),
                     "prefix": route["prefix"],
                     "next_hop": route.get("next_hop"),
                     "interface": route["interface"],
@@ -429,7 +541,19 @@ def find_path(
                     }
                 )
                 continue
-            next_ip = route.get("next_hop") or destination_ip
+            if route.get("vtep"):
+                tunnels, error = tunnel_paths(did, route)
+                if error:
+                    paths.append({"status": "incomplete", "path": branch, "reason": error})
+                for remote, remote_vid, underlay in tunnels:
+                    encap = step({"device": devices[did]["name"], "interface": route["interface"],
+                        "vtep": route["vtep"], "vni": route["vni"], "vrf": route["vrf"]}, "vxlan_encap")
+                    decap = step({"device": remote["device"], "interface": remote["name"],
+                        "vtep": route["vtep"], "vni": route["vni"]}, "vxlan_decap")
+                    queue.append((remote["device_id"], remote_vid, branch + [encap, *underlay, decap],
+                        seen | {state}, (remote["id"], None, True)))
+                continue
+            next_ip = route.get("next_hop") or str(lookup_addr)
             try:
                 ip_address(next_ip)
             except ValueError:
@@ -442,32 +566,7 @@ def find_path(
                 )
                 continue
             outgoing = physical_members(route.get("interface_id"))
-            neighbors = []
-            for edge in adjacency.get(did, []):
-                if edge["local_interface_id"] not in outgoing:
-                    continue
-                remote = interfaces.get(edge["remote_interface_id"], {})
-                # An address must be owned by the remote interface (or its logical child), not merely appear in remote ARP.
-                for e in snapshot.endpoints:
-                    if (
-                        e.get("kind") != "owned"
-                        or e.get("device_id") != edge["to_id"]
-                        or e.get("ip") != next_ip
-                        or not fresh(e)
-                    ):
-                        continue
-                    if edge["remote_interface_id"] not in physical_members(
-                        e.get("interface_id")
-                    ):
-                        continue
-                    # Subinterface tags must agree when a tag is present at both ends.
-                    if (
-                        egress.get("vlan")
-                        and e.get("vlan")
-                        and str(egress["vlan"]) != str(e["vlan"])
-                    ):
-                        continue
-                    neighbors.append((edge, e))
+            neighbors = adjacent(did, route, next_ip)
             if neighbors:
                 if (
                     len(
@@ -492,7 +591,8 @@ def find_path(
                             e["device_id"],
                             e["vrf_id"],
                             branch + [step(edge, "physical")],
-                            seen | {(did, vid)},
+                            seen | {state},
+                            (edge["remote_interface_id"], e.get("vlan"), False),
                         )
                     )
                 continue
@@ -574,6 +674,7 @@ def find_path(
         "ok"
         if paths and all(p["status"] == "ok" for p in paths)
         else (
+            "blocked" if paths and all(p["status"] == "blocked" for p in paths) else
             "ambiguous"
             if any(p["status"] == "ambiguous" for p in paths)
             else "incomplete"
