@@ -1,0 +1,4020 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "title": "语言 / Language",
+      "type": "dashboards",
+      "tags": [
+        "aiops-report-language"
+      ],
+      "asDropdown": true,
+      "includeVars": true,
+      "keepTime": true,
+      "targetBlank": false
+    },
+    {
+      "title": "Operations dashboard ↗",
+      "type": "link",
+      "url": "/d/eve-aiops-overview/ai-networking-ops",
+      "includeVars": true,
+      "keepTime": true,
+      "targetBlank": true,
+      "icon": "dashboard",
+      "tags": []
+    },
+    {
+      "title": "Physical topology ↗",
+      "type": "link",
+      "url": "http://192.168.20.169:8080/topology",
+      "targetBlank": true,
+      "icon": "external link",
+      "tags": []
+    }
+  ],
+  "panels": [
+    {
+      "id": 1,
+      "title": "Network operations report",
+      "type": "text",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 4
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "### Findings first. Evidence below.\nUse **语言 / Language** at the top to switch languages. The summary follows the device and time selections. Cards show the latest observations at the selected end time; charts cover the selected period. Reachability is not a business SLA."
+      }
+    },
+    {
+      "id": 2,
+      "title": "Reachable devices",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 6,
+        "h": 4
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": [],
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(sum(aiops_device_up{device=~\"$device\"})) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Unreachable devices",
+      "type": "stat",
+      "gridPos": {
+        "x": 6,
+        "y": 4,
+        "w": 6,
+        "h": 4
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": [],
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 1,
+                "color": "orange"
+              },
+              {
+                "value": 1,
+                "color": "red"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(count(aiops_device_up{device=~\"$device\"}) - sum(aiops_device_up{device=~\"$device\"})) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Latest collection success",
+      "type": "stat",
+      "gridPos": {
+        "x": 12,
+        "y": 4,
+        "w": 6,
+        "h": 4
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": [],
+          "unit": "percent",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "red"
+              },
+              {
+                "value": 90,
+                "color": "orange"
+              },
+              {
+                "value": 100,
+                "color": "green"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(100 * sum(aiops_collect_success{device=~\"$device\"}) / count(aiops_collect_success{device=~\"$device\"})) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Inventory sync age · global",
+      "type": "stat",
+      "gridPos": {
+        "x": 18,
+        "y": 4,
+        "w": 6,
+        "h": 4
+      },
+      "description": "Global, independent of device selection. Review after 5 minutes; red after 15.",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": [],
+          "unit": "s",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 300,
+                "color": "orange"
+              },
+              {
+                "value": 900,
+                "color": "red"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(time() - (aiops_nautobot_sync_last_success_timestamp_seconds > 0)) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Executive summary · calculated from observations",
+      "type": "table",
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 24,
+        "h": 11
+      },
+      "description": "Rows have different units and must not be added. No data does not prove a feature is unconfigured or healthy.",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": [],
+          "custom": {
+            "minWidth": 75
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Observed"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 125
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "-1": {
+                        "text": "No data",
+                        "color": "gray"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Review"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 125
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "-1": {
+                        "text": "No data",
+                        "color": "gray"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Area"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 185
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Review"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "value": null,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1,
+                      "color": "orange"
+                    },
+                    {
+                      "value": 1,
+                      "color": "red"
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(label_replace((label_replace(((count(aiops_device_up{device=~\"$device\"})) or on() (0 * count(aiops_device_up{device=~\"$device\"}) - 1)), \"topic\", \"Device reachability\", \"\", \"\")), \"meaning\", \"Devices; review unreachable endpoints\", \"\", \"\") or label_replace((label_replace(((count(aiops_collect_success{device=~\"$device\"})) or on() (0 * count(aiops_device_up{device=~\"$device\"}) - 1)), \"topic\", \"Device collection\", \"\", \"\")), \"meaning\", \"Devices; failures reduce coverage below\", \"\", \"\") or label_replace((label_replace(((count((aiops_device_cpu_utilization_percent{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)))) or on() (0 * count(aiops_device_up{device=~\"$device\"}) - 1)), \"topic\", \"CPU\", \"\", \"\")), \"meaning\", \"Devices with usage ≥ 80%\", \"\", \"\") or label_replace((label_replace(((count((aiops_device_memory_utilization_percent{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)))) or on() (0 * count(aiops_device_up{device=~\"$device\"}) - 1)), \"topic\", \"Memory\", \"\", \"\")), \"meaning\", \"Devices with usage ≥ 80%\", \"\", \"\") or label_replace((label_replace(((count(min by(device,neighbor,vrf) ((aiops_bgp_neighbor_up{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1))))) or on() (0 * count(aiops_device_up{device=~\"$device\"}) - 1)), \"topic\", \"BGP\", \"\", \"\")), \"meaning\", \"Neighbor observations; review non-established states\", \"\", \"\") or label_replace((label_replace(((count(min by(device,neighbor) ((aiops_ospf_neighbor_up{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1))))) or on() (0 * count(aiops_device_up{device=~\"$device\"}) - 1)), \"topic\", \"OSPF\", \"\", \"\")), \"meaning\", \"Neighbor observations; no data is not healthy\", \"\", \"\") or label_replace((label_replace(((count(min by(device,peer) ((aiops_nve_peer_up{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1))))) or on() (0 * count(aiops_device_up{device=~\"$device\"}) - 1)), \"topic\", \"VXLAN\", \"\", \"\")), \"meaning\", \"Peer observations, not physical link counts\", \"\", \"\") or label_replace((label_replace(((count(count by(device,component_type,name) ((aiops_hardware_component_status{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1))))) or on() (0 * count(aiops_device_up{device=~\"$device\"}) - 1)), \"topic\", \"Hardware components\", \"\", \"\")), \"meaning\", \"Components with explicit adverse labels; confirm manually\", \"\", \"\") or label_replace((label_replace(((count((aiops_interface_oper_up{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)))) or on() (0 * count(aiops_device_up{device=~\"$device\"}) - 1)), \"topic\", \"Interfaces\", \"\", \"\")), \"meaning\", \"Admin-up / oper-down; may include unused ports\", \"\", \"\")) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(label_replace(((sum(1 - aiops_device_up{device=~\"$device\"})) or on() (0 * count(aiops_device_up{device=~\"$device\"}) - 1)), \"topic\", \"Device reachability\", \"\", \"\") or label_replace(((sum(1 - aiops_collect_success{device=~\"$device\"})) or on() (0 * count(aiops_device_up{device=~\"$device\"}) - 1)), \"topic\", \"Device collection\", \"\", \"\") or label_replace(((sum((aiops_device_cpu_utilization_percent{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)) >= bool 80)) or on() (0 * count(aiops_device_up{device=~\"$device\"}) - 1)), \"topic\", \"CPU\", \"\", \"\") or label_replace(((sum((aiops_device_memory_utilization_percent{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)) >= bool 80)) or on() (0 * count(aiops_device_up{device=~\"$device\"}) - 1)), \"topic\", \"Memory\", \"\", \"\") or label_replace(((sum(1 - (min by(device,neighbor,vrf) ((aiops_bgp_neighbor_up{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)))))) or on() (0 * count(aiops_device_up{device=~\"$device\"}) - 1)), \"topic\", \"BGP\", \"\", \"\") or label_replace(((sum(1 - (min by(device,neighbor) ((aiops_ospf_neighbor_up{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)))))) or on() (0 * count(aiops_device_up{device=~\"$device\"}) - 1)), \"topic\", \"OSPF\", \"\", \"\") or label_replace(((sum(1 - (min by(device,peer) ((aiops_nve_peer_up{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)))))) or on() (0 * count(aiops_device_up{device=~\"$device\"}) - 1)), \"topic\", \"VXLAN\", \"\", \"\") or label_replace(((count(count by(device,component_type,name) ((aiops_hardware_component_status{device=~\"$device\",status=~\"(?i:fail|failed|down|error|fault|not_ok|offline|power_loss)\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)))) or on() (0 * count((aiops_hardware_component_status{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1))))) or on() (0 * count(aiops_device_up{device=~\"$device\"}) - 1)), \"topic\", \"Hardware components\", \"\", \"\") or label_replace(((sum(((aiops_interface_admin_up{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)) == bool 1) * on(device,interface) ((aiops_interface_oper_up{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)) == bool 0))) or on() (0 * count(aiops_device_up{device=~\"$device\"}) - 1)), \"topic\", \"Interfaces\", \"\", \"\")) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "B",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "exclude": {
+              "names": [
+                "Time"
+              ]
+            }
+          }
+        },
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "topic",
+            "mode": "outerTabular"
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "topic",
+                "meaning",
+                "Value #A",
+                "Value #B"
+              ]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "topic": "Area",
+              "meaning": "Interpretation",
+              "Value #A": "Observed",
+              "Value #B": "Review"
+            },
+            "indexByName": {
+              "topic": 0,
+              "meaning": 1,
+              "Value #A": 2,
+              "Value #B": 3
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Device reachability trend",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 19,
+        "w": 12,
+        "h": 8
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "unit": "short",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "spanNulls": false,
+            "showPoints": "never",
+            "axisPlacement": "auto",
+            "axisBorderShow": false,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(sum(aiops_device_up{device=~\"$device\"})) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "Reachable",
+          "instant": false,
+          "range": true,
+          "format": "time_series"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(sum(1 - aiops_device_up{device=~\"$device\"})) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "B",
+          "legendFormat": "Unreachable",
+          "instant": false,
+          "range": true,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Software Version Share",
+      "type": "bargauge",
+      "gridPos": {
+        "x": 12,
+        "y": 19,
+        "w": 12,
+        "h": 8
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": [],
+          "unit": "suffix: devices",
+          "decimals": 0,
+          "min": 0,
+          "displayName": "${__field.labels.version}",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": false,
+        "valueMode": "color",
+        "namePlacement": "top",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "sizing": "auto",
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "text": {
+          "titleSize": 13,
+          "valueSize": 18
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(sort_desc(count by(version)(label_replace((aiops_device_hardware_info{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)), \"version\", \"Unknown\", \"version\", \"unknown|^$\")))) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "${__field.labels.version}",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "01 · Coverage and data confidence",
+      "type": "row",
+      "gridPos": {
+        "x": 0,
+        "y": 27,
+        "w": 24,
+        "h": 1
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 10,
+      "title": "Reporting devices by metric family",
+      "type": "table",
+      "gridPos": {
+        "x": 0,
+        "y": 28,
+        "w": 12,
+        "h": 11
+      },
+      "description": "Zero means no currently usable series, not necessarily a collection failure. Some features apply only to certain devices. Failed latest polls are excluded.",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": [],
+          "custom": {
+            "minWidth": 75
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(label_replace(((count(count by(device) ((aiops_device_cpu_utilization_percent{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1))))) or on() (0 * count(aiops_device_up{device=~\"$device\"}))), \"category\", \"CPU\", \"\", \"\") or label_replace(((count(count by(device) ((aiops_device_memory_utilization_percent{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1))))) or on() (0 * count(aiops_device_up{device=~\"$device\"}))), \"category\", \"Memory\", \"\", \"\") or label_replace(((count(count by(device) ((aiops_device_hardware_info{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1))))) or on() (0 * count(aiops_device_up{device=~\"$device\"}))), \"category\", \"Hardware / version\", \"\", \"\") or label_replace(((count(count by(device) ((aiops_device_uptime_seconds{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1))))) or on() (0 * count(aiops_device_up{device=~\"$device\"}))), \"category\", \"Uptime\", \"\", \"\") or label_replace(((count(count by(device) ((aiops_hardware_component_status{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1))))) or on() (0 * count(aiops_device_up{device=~\"$device\"}))), \"category\", \"Components\", \"\", \"\") or label_replace(((count(count by(device) ((((aiops_telemetry_asic_tcam_resource_utilization_percent{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)) or on(device,resource,region) (aiops_asic_tcam_resource_utilization_percent{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1))) >= 0) <= 100))) or on() (0 * count(aiops_device_up{device=~\"$device\"}))), \"category\", \"ASIC / TCAM\", \"\", \"\") or label_replace(((count(count by(device) (min by(device,neighbor,vrf) ((aiops_bgp_neighbor_up{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)))))) or on() (0 * count(aiops_device_up{device=~\"$device\"}))), \"category\", \"BGP\", \"\", \"\") or label_replace(((count(count by(device) (min by(device,neighbor) ((aiops_ospf_neighbor_up{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)))))) or on() (0 * count(aiops_device_up{device=~\"$device\"}))), \"category\", \"OSPF\", \"\", \"\") or label_replace(((count(count by(device) (min by(device,peer) ((aiops_nve_peer_up{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)))))) or on() (0 * count(aiops_device_up{device=~\"$device\"}))), \"category\", \"VXLAN\", \"\", \"\") or label_replace(((count(count by(device) ((aiops_route_summary_routes{device=~\"$device\",source=\"Total Routes\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1))))) or on() (0 * count(aiops_device_up{device=~\"$device\"}))), \"category\", \"Route counts\", \"\", \"\") or label_replace(((count(count by(device) ((aiops_firewall_sessions_active{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1))))) or on() (0 * count(aiops_device_up{device=~\"$device\"}))), \"category\", \"Firewalls\", \"\", \"\") or label_replace(((count(count by(device) ((aiops_interface_oper_up{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1))))) or on() (0 * count(aiops_device_up{device=~\"$device\"}))), \"category\", \"Interface state\", \"\", \"\") or label_replace(((count(count by(device) ((aiops_interface_rx_bps{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1))))) or on() (0 * count(aiops_device_up{device=~\"$device\"}))), \"category\", \"Interface traffic\", \"\", \"\") or label_replace(((count(count by(device) ((aiops_interface_input_errors{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1))))) or on() (0 * count(aiops_device_up{device=~\"$device\"}))), \"category\", \"Interface errors\", \"\", \"\")) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "exclude": {
+              "names": [
+                "Time"
+              ]
+            }
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "category",
+                "Value"
+              ]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "category": "Metric family",
+              "Value": "Reporting devices"
+            },
+            "indexByName": {
+              "category": 0,
+              "Value": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "title": "Summary methodology",
+      "type": "text",
+      "gridPos": {
+        "x": 12,
+        "y": 28,
+        "w": 12,
+        "h": 7
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "### How to read this report\n- **Review is not an incident verdict:** counts use explicit rules.\n- **Missing is not zero:** unavailable observations stay unknown; coverage zero means no usable series.\n- **Freshness:** a reachable exporter does not prove collection is advancing; check global sync age.\n- **Hardware:** unrecognized labels are data-quality findings; adverse labels need confirmation.\n- **Routes / traffic:** per device, VRF or interface; repeated observations are not global business totals.\n- **History:** trends describe observed samples, not a business SLA."
+      }
+    },
+    {
+      "id": 12,
+      "title": "Unclassified hardware labels · components",
+      "type": "stat",
+      "gridPos": {
+        "x": 12,
+        "y": 35,
+        "w": 4,
+        "h": 4
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": [],
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 1,
+                "color": "orange"
+              },
+              {
+                "value": 1,
+                "color": "red"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(count(count by(device,component_type,name) ((aiops_hardware_component_status{device=~\"$device\",status!~\"(?i:ok|present|up|online|active|normal|operational|good|fail|failed|down|error|fault|not_ok|offline|power_loss|unsupported|not_present|not_installed|no_power_supplies|unknown)\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)))) or on() (0 * count((aiops_hardware_component_status{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1))))) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "title": "Unclassified route sources · records",
+      "type": "stat",
+      "gridPos": {
+        "x": 16,
+        "y": 35,
+        "w": 4,
+        "h": 4
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": [],
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 1,
+                "color": "orange"
+              },
+              {
+                "value": 1,
+                "color": "red"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(count((aiops_route_summary_routes{device=~\"$device\",source!~\"Total Routes|connected|static \\\\(persistent\\\\)|static \\\\(non-persistent\\\\)|VXLAN Control Service|static nexthop-group|ospf|ospfv3|bgp|isis|rip|internal|attached|aggregate|dynamic policy|gribi\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1))) or on() (0 * count((aiops_route_summary_routes{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1))))) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "title": "Invalid capacity percentages · records",
+      "type": "stat",
+      "gridPos": {
+        "x": 20,
+        "y": 35,
+        "w": 4,
+        "h": 4
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": [],
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 1,
+                "color": "orange"
+              },
+              {
+                "value": 1,
+                "color": "red"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(sum((((aiops_telemetry_asic_tcam_resource_utilization_percent{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)) or on(device,resource,region) (aiops_asic_tcam_resource_utilization_percent{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1))) < bool 0) + (((aiops_telemetry_asic_tcam_resource_utilization_percent{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)) or on(device,resource,region) (aiops_asic_tcam_resource_utilization_percent{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1))) > bool 100))) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "title": "Latest sync result · global",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 39,
+        "w": 6,
+        "h": 4
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Unsuccessful",
+                  "color": "orange"
+                },
+                "1": {
+                  "text": "Successful",
+                  "color": "green"
+                }
+              }
+            }
+          ],
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(aiops_nautobot_sync_success) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "title": "Interfaces in last sync · global",
+      "type": "stat",
+      "gridPos": {
+        "x": 6,
+        "y": 39,
+        "w": 6,
+        "h": 4
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": [],
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(aiops_nautobot_sync_updated_interfaces) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "title": "Sync duration · global",
+      "type": "stat",
+      "gridPos": {
+        "x": 12,
+        "y": 39,
+        "w": 6,
+        "h": 4
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": [],
+          "unit": "s",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(aiops_nautobot_sync_duration_seconds) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "title": "Slowest device collection",
+      "type": "stat",
+      "gridPos": {
+        "x": 18,
+        "y": 39,
+        "w": 6,
+        "h": 4
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": [],
+          "unit": "s",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(max(aiops_collect_duration_seconds{device=~\"$device\"})) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "title": "02 · Assets and capacity",
+      "type": "row",
+      "gridPos": {
+        "x": 0,
+        "y": 43,
+        "w": 24,
+        "h": 1
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 20,
+      "title": "CPU usage · top 5",
+      "type": "bargauge",
+      "gridPos": {
+        "x": 0,
+        "y": 44,
+        "w": 8,
+        "h": 9
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": [],
+          "unit": "percent",
+          "decimals": 1,
+          "min": 0,
+          "displayName": "${__field.labels.device}",
+          "color": {
+            "mode": "thresholds"
+          },
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 80,
+                "color": "orange"
+              },
+              {
+                "value": 95,
+                "color": "red"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": false,
+        "valueMode": "color",
+        "namePlacement": "top",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "sizing": "auto",
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "text": {
+          "titleSize": 13,
+          "valueSize": 18
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(topk(5,(aiops_device_cpu_utilization_percent{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)))) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "${__field.labels.device}",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "title": "Memory usage · top 5",
+      "type": "bargauge",
+      "gridPos": {
+        "x": 8,
+        "y": 44,
+        "w": 8,
+        "h": 9
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": [],
+          "unit": "percent",
+          "decimals": 1,
+          "min": 0,
+          "displayName": "${__field.labels.device}",
+          "color": {
+            "mode": "thresholds"
+          },
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 80,
+                "color": "orange"
+              },
+              {
+                "value": 95,
+                "color": "red"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": false,
+        "valueMode": "color",
+        "namePlacement": "top",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "sizing": "auto",
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "text": {
+          "titleSize": 13,
+          "valueSize": 18
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(topk(5,(aiops_device_memory_utilization_percent{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)))) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "${__field.labels.device}",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 22,
+      "title": "ASIC / TCAM usage · top 5",
+      "type": "bargauge",
+      "gridPos": {
+        "x": 16,
+        "y": 44,
+        "w": 8,
+        "h": 9
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": [],
+          "unit": "percent",
+          "decimals": 1,
+          "min": 0,
+          "displayName": "${__field.labels.device} · ${__field.labels.resource} · ${__field.labels.region}",
+          "color": {
+            "mode": "thresholds"
+          },
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 80,
+                "color": "orange"
+              },
+              {
+                "value": 95,
+                "color": "red"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": false,
+        "valueMode": "color",
+        "namePlacement": "top",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "sizing": "auto",
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "text": {
+          "titleSize": 13,
+          "valueSize": 18
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(topk(5,(((aiops_telemetry_asic_tcam_resource_utilization_percent{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)) or on(device,resource,region) (aiops_asic_tcam_resource_utilization_percent{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1))) >= 0) <= 100)) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "${__field.labels.device} · ${__field.labels.resource} · ${__field.labels.region}",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 23,
+      "title": "Device inventory · unreachable first",
+      "type": "table",
+      "gridPos": {
+        "x": 0,
+        "y": 53,
+        "w": 12,
+        "h": 10
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": [],
+          "custom": {
+            "minWidth": 75
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Reachability"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "Unreachable",
+                        "color": "red"
+                      },
+                      "1": {
+                        "text": "Reachable",
+                        "color": "green"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Collection"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "Failed",
+                        "color": "red"
+                      },
+                      "1": {
+                        "text": "Successful",
+                        "color": "green"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Uptime"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "sortBy": [
+          {
+            "displayName": "Reachability",
+            "desc": false
+          },
+          {
+            "displayName": "Collection",
+            "desc": false
+          }
+        ]
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(label_replace((min by(device)(aiops_device_up{device=~\"$device\"})), \"measure\", \"reachability\", \"\", \"\") or label_replace((min by(device)(aiops_collect_success{device=~\"$device\"})), \"measure\", \"collection\", \"\", \"\") or label_replace((max by(device)((aiops_device_uptime_seconds{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)))), \"measure\", \"uptime\", \"\", \"\")) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "groupingToMatrix",
+          "options": {
+            "columnField": "measure",
+            "rowField": "device",
+            "valueField": "Value"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "device\\measure": "Device",
+              "reachability": "Reachability",
+              "collection": "Collection",
+              "uptime": "Uptime"
+            },
+            "indexByName": {
+              "device\\measure": 0,
+              "reachability": 1,
+              "collection": 2,
+              "uptime": 3
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 24,
+      "title": "Device model distribution",
+      "type": "table",
+      "gridPos": {
+        "x": 12,
+        "y": 53,
+        "w": 12,
+        "h": 10
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": [],
+          "custom": {
+            "minWidth": 75
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(sort_desc(count by(model)(label_replace((aiops_device_hardware_info{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)), \"model\", \"Unknown\", \"model\", \"(?i:sw-version.*|unknown|^$)\")))) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "exclude": {
+              "names": [
+                "Time"
+              ]
+            }
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "model",
+                "Value"
+              ]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "model": "Model",
+              "Value": "Devices"
+            },
+            "indexByName": {
+              "model": 0,
+              "Value": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 25,
+      "title": "Hardware · recognized status summary",
+      "type": "table",
+      "gridPos": {
+        "x": 0,
+        "y": 63,
+        "w": 12,
+        "h": 9
+      },
+      "description": "Raw status labels are retained for review. A component may retain multiple historical labels; this is not a physical inventory count.",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": [],
+          "custom": {
+            "minWidth": 75
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(count by(component_type,status) ((aiops_hardware_component_status{device=~\"$device\",status=~\"(?i:ok|present|up|online|active|normal|operational|good|fail|failed|down|error|fault|not_ok|offline|power_loss|unsupported|not_present|not_installed|no_power_supplies|unknown)\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)))) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "exclude": {
+              "names": [
+                "Time"
+              ]
+            }
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "component_type",
+                "status",
+                "Value"
+              ]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "component_type": "Component type",
+              "status": "Observed status label",
+              "Value": "Observations"
+            },
+            "indexByName": {
+              "component_type": 0,
+              "status": 1,
+              "Value": 2
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 26,
+      "title": "ASIC / TCAM · used / free / total",
+      "type": "table",
+      "gridPos": {
+        "x": 12,
+        "y": 63,
+        "w": 12,
+        "h": 9
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": [],
+          "custom": {
+            "minWidth": 75
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(label_replace((((aiops_telemetry_asic_tcam_resource_used_entries{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)) or on(device,resource,region) (aiops_asic_tcam_resource_used_entries{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)))), \"measure\", \"Used\", \"\", \"\") or label_replace((((aiops_telemetry_asic_tcam_resource_free_entries{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)) or on(device,resource,region) (aiops_asic_tcam_resource_free_entries{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)))), \"measure\", \"Free\", \"\", \"\") or label_replace((((aiops_telemetry_asic_tcam_resource_total_entries{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)) or on(device,resource,region) (aiops_asic_tcam_resource_total_entries{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)))), \"measure\", \"Total\", \"\", \"\")) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "exclude": {
+              "names": [
+                "Time"
+              ]
+            }
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "device",
+                "resource",
+                "region",
+                "measure",
+                "Value"
+              ]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "device": "Device",
+              "resource": "Resource",
+              "region": "Region",
+              "measure": "Measure",
+              "Value": "Entries"
+            },
+            "indexByName": {
+              "device": 0,
+              "resource": 1,
+              "region": 2,
+              "measure": 3,
+              "Value": 4
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 54,
+      "title": "Memory capacity · total / free",
+      "type": "table",
+      "gridPos": {
+        "x": 0,
+        "y": 72,
+        "w": 12,
+        "h": 10
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": [],
+          "custom": {
+            "minWidth": 75
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Free"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(max by(device)((aiops_device_memory_total_bytes{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)))) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(max by(device)((aiops_device_memory_free_bytes{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)))) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "B",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "exclude": {
+              "names": [
+                "Time"
+              ]
+            }
+          }
+        },
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "device",
+            "mode": "outerTabular"
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "device",
+                "Value #A",
+                "Value #B"
+              ]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "device": "Device",
+              "Value #A": "Total",
+              "Value #B": "Free"
+            },
+            "indexByName": {
+              "device": 0,
+              "Value #A": 1,
+              "Value #B": 2
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 55,
+      "title": "Routes by recognized source",
+      "type": "table",
+      "gridPos": {
+        "x": 12,
+        "y": 72,
+        "w": 12,
+        "h": 10
+      },
+      "description": "Devices may contain the same prefix; category sums are not global unique routes. Unrecognized sources are excluded and counted as data-quality findings.",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": [],
+          "custom": {
+            "minWidth": 75
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(sum by(source) (aiops_route_summary_routes{device=~\"$device\",source=~\"Total Routes|connected|static \\\\(persistent\\\\)|static \\\\(non-persistent\\\\)|VXLAN Control Service|static nexthop-group|ospf|ospfv3|bgp|isis|rip|internal|attached|aggregate|dynamic policy|gribi\",source!=\"Total Routes\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1))) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "exclude": {
+              "names": [
+                "Time"
+              ]
+            }
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "source",
+                "Value"
+              ]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "source": "Route source",
+              "Value": "Observed entries across devices"
+            },
+            "indexByName": {
+              "source": 0,
+              "Value": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 27,
+      "title": "03 · Routing and network peers",
+      "type": "row",
+      "gridPos": {
+        "x": 0,
+        "y": 82,
+        "w": 24,
+        "h": 1
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 28,
+      "title": "BGP neighbor state",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 83,
+        "w": 12,
+        "h": 8
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "unit": "short",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "spanNulls": false,
+            "showPoints": "never",
+            "axisPlacement": "auto",
+            "axisBorderShow": false,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(sum(min by(device,neighbor,vrf) ((aiops_bgp_neighbor_up{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1))))) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "Established",
+          "instant": false,
+          "range": true,
+          "format": "time_series"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(sum(1 - (min by(device,neighbor,vrf) ((aiops_bgp_neighbor_up{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)))))) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "B",
+          "legendFormat": "Not established",
+          "instant": false,
+          "range": true,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 29,
+      "title": "VXLAN peer state",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 83,
+        "w": 12,
+        "h": 8
+      },
+      "description": "Deduplicated per device and peer; these are not physical topology links.",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "unit": "short",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "spanNulls": false,
+            "showPoints": "never",
+            "axisPlacement": "auto",
+            "axisBorderShow": false,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(sum(min by(device,peer) ((aiops_nve_peer_up{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1))))) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "Up",
+          "instant": false,
+          "range": true,
+          "format": "time_series"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(sum(1 - (min by(device,peer) ((aiops_nve_peer_up{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)))))) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "B",
+          "legendFormat": "Down",
+          "instant": false,
+          "range": true,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 30,
+      "title": "Route scale · top 8 device / VRF tables",
+      "type": "bargauge",
+      "gridPos": {
+        "x": 0,
+        "y": 91,
+        "w": 12,
+        "h": 10
+      },
+      "description": "Uses explicit Total Routes observations; categories are not added to totals.",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": [],
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "displayName": "${__field.labels.device} · ${__field.labels.vrf}",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": false,
+        "valueMode": "color",
+        "namePlacement": "top",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "sizing": "auto",
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "text": {
+          "titleSize": 13,
+          "valueSize": 18
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(topk(8,(aiops_route_summary_routes{device=~\"$device\",source=\"Total Routes\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)))) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "${__field.labels.device} · ${__field.labels.vrf}",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 31,
+      "title": "BGP route exchange summary",
+      "type": "table",
+      "gridPos": {
+        "x": 12,
+        "y": 91,
+        "w": 12,
+        "h": 10
+      },
+      "description": "Routes may appear at multiple peers or address families; this is not a global unique-route count.",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": [],
+          "custom": {
+            "minWidth": 75
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(sum by(direction,afi_safi) (label_replace(((aiops_bgp_routes_received{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1))), \"direction\", \"Received\", \"\", \"\") or label_replace(((aiops_bgp_routes_accepted{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1))), \"direction\", \"Accepted\", \"\", \"\") or label_replace(((aiops_bgp_routes_advertised{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1))), \"direction\", \"Advertised\", \"\", \"\"))) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "exclude": {
+              "names": [
+                "Time"
+              ]
+            }
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "afi_safi",
+                "direction",
+                "Value"
+              ]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "afi_safi": "Address family",
+              "direction": "Direction",
+              "Value": "Observed routes / NLRI"
+            },
+            "indexByName": {
+              "afi_safi": 0,
+              "direction": 1,
+              "Value": 2
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 32,
+      "title": "OSPF neighbor state",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 101,
+        "w": 12,
+        "h": 8
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "unit": "short",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "spanNulls": false,
+            "showPoints": "never",
+            "axisPlacement": "auto",
+            "axisBorderShow": false,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(sum(min by(device,neighbor) ((aiops_ospf_neighbor_up{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1))))) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "Up",
+          "instant": false,
+          "range": true,
+          "format": "time_series"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(sum(1 - (min by(device,neighbor) ((aiops_ospf_neighbor_up{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)))))) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "B",
+          "legendFormat": "Review",
+          "instant": false,
+          "range": true,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 33,
+      "title": "BGP message counters · cumulative",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 101,
+        "w": 12,
+        "h": 8
+      },
+      "description": "Raw cumulative device counters may reset on restart; no data means currently unavailable.",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "unit": "short",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "spanNulls": false,
+            "showPoints": "never",
+            "axisPlacement": "auto",
+            "axisBorderShow": false,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(sum((aiops_bgp_messages_received{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)))) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "Received",
+          "instant": false,
+          "range": true,
+          "format": "time_series"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(sum((aiops_bgp_messages_sent{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)))) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "B",
+          "legendFormat": "Sent",
+          "instant": false,
+          "range": true,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 34,
+      "title": "04 · Firewall operations",
+      "type": "row",
+      "gridPos": {
+        "x": 0,
+        "y": 109,
+        "w": 24,
+        "h": 1
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 35,
+      "title": "Reporting firewalls",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 110,
+        "w": 6,
+        "h": 4
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": [],
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(count(count by(device) ((aiops_firewall_sessions_active{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1))))) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 36,
+      "title": "Active sessions · observed sum",
+      "type": "stat",
+      "gridPos": {
+        "x": 6,
+        "y": 110,
+        "w": 6,
+        "h": 4
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": [],
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(sum((aiops_firewall_sessions_active{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)))) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 37,
+      "title": "Highest session setup rate",
+      "type": "stat",
+      "gridPos": {
+        "x": 12,
+        "y": 110,
+        "w": 6,
+        "h": 4
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": [],
+          "unit": "ops",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(max((aiops_firewall_sessions_per_second{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)))) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 38,
+      "title": "Highest single-device throughput",
+      "type": "stat",
+      "gridPos": {
+        "x": 18,
+        "y": 110,
+        "w": 6,
+        "h": 4
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": [],
+          "unit": "bps",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(max((aiops_firewall_throughput_bps{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)))) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 39,
+      "title": "Firewall active sessions",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 114,
+        "w": 12,
+        "h": 8
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "unit": "short",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "spanNulls": false,
+            "showPoints": "never",
+            "axisPlacement": "auto",
+            "axisBorderShow": false,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "((aiops_firewall_sessions_active{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1))) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "{{device}}",
+          "instant": false,
+          "range": true,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 40,
+      "title": "Firewall throughput",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 114,
+        "w": 12,
+        "h": 8
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "unit": "bps",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "spanNulls": false,
+            "showPoints": "never",
+            "axisPlacement": "auto",
+            "axisBorderShow": false,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "((aiops_firewall_throughput_bps{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1))) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "{{device}}",
+          "instant": false,
+          "range": true,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 41,
+      "title": "New sessions per second",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 122,
+        "w": 12,
+        "h": 8
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "unit": "short",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "spanNulls": false,
+            "showPoints": "never",
+            "axisPlacement": "auto",
+            "axisBorderShow": false,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "((aiops_firewall_sessions_per_second{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1))) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "{{device}}",
+          "instant": false,
+          "range": true,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 42,
+      "title": "Firewall interpretation",
+      "type": "text",
+      "gridPos": {
+        "x": 12,
+        "y": 122,
+        "w": 12,
+        "h": 8
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "### Current collection coverage\nActive sessions, session setup rate, throughput, plus CPU and memory in the resource section above.\n\nSession totals add device observations; HA or serial paths may observe the same business flow. Throughput is per device to avoid double counting.\n\nThese metrics describe load and capacity. They do **not** establish security incidents, policy hit rates, or threat-detection outcomes."
+      }
+    },
+    {
+      "id": 43,
+      "title": "05 · Interface state, traffic and quality",
+      "type": "row",
+      "gridPos": {
+        "x": 0,
+        "y": 130,
+        "w": 24,
+        "h": 1
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 44,
+      "title": "Observed interfaces",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 131,
+        "w": 8,
+        "h": 4
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": [],
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(count((aiops_interface_oper_up{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)))) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 45,
+      "title": "Operational interfaces",
+      "type": "stat",
+      "gridPos": {
+        "x": 8,
+        "y": 131,
+        "w": 8,
+        "h": 4
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": [],
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(sum((aiops_interface_oper_up{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)))) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 46,
+      "title": "Admin-up / oper-down · review",
+      "type": "stat",
+      "gridPos": {
+        "x": 16,
+        "y": 131,
+        "w": 8,
+        "h": 4
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": [],
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(sum(((aiops_interface_admin_up{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)) == bool 1) * on(device,interface) ((aiops_interface_oper_up{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)) == bool 0))) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 47,
+      "title": "Receive traffic · top 8 interfaces",
+      "type": "bargauge",
+      "gridPos": {
+        "x": 0,
+        "y": 135,
+        "w": 12,
+        "h": 10
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": [],
+          "unit": "bps",
+          "decimals": 0,
+          "min": 0,
+          "displayName": "${__field.labels.device} · ${__field.labels.interface}",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": false,
+        "valueMode": "color",
+        "namePlacement": "top",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "sizing": "auto",
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "text": {
+          "titleSize": 13,
+          "valueSize": 18
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(topk(8,(aiops_interface_rx_bps{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)))) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "${__field.labels.device} · ${__field.labels.interface}",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 48,
+      "title": "Transmit traffic · top 8 interfaces",
+      "type": "bargauge",
+      "gridPos": {
+        "x": 12,
+        "y": 135,
+        "w": 12,
+        "h": 10
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": [],
+          "unit": "bps",
+          "decimals": 0,
+          "min": 0,
+          "displayName": "${__field.labels.device} · ${__field.labels.interface}",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": false,
+        "valueMode": "color",
+        "namePlacement": "top",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "sizing": "auto",
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "text": {
+          "titleSize": 13,
+          "valueSize": 18
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(topk(8,(aiops_interface_tx_bps{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)))) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "${__field.labels.device} · ${__field.labels.interface}",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 49,
+      "title": "Highest individual interface traffic",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 145,
+        "w": 12,
+        "h": 8
+      },
+      "description": "Maximum at each sample; the interface may change. Not total network throughput.",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "unit": "bps",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "spanNulls": false,
+            "showPoints": "never",
+            "axisPlacement": "auto",
+            "axisBorderShow": false,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(max((aiops_interface_rx_bps{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)))) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "Maximum RX interface",
+          "instant": false,
+          "range": true,
+          "format": "time_series"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(max((aiops_interface_tx_bps{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)))) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "B",
+          "legendFormat": "Maximum TX interface",
+          "instant": false,
+          "range": true,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 50,
+      "title": "Admin-up / oper-down interfaces",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 145,
+        "w": 12,
+        "h": 8
+      },
+      "description": "May include unused or unplugged ports; do not equate directly with business outages.",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "unit": "short",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "spanNulls": false,
+            "showPoints": "never",
+            "axisPlacement": "auto",
+            "axisBorderShow": false,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(sum(((aiops_interface_admin_up{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)) == bool 1) * on(device,interface) ((aiops_interface_oper_up{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)) == bool 0))) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "Interfaces to review",
+          "instant": false,
+          "range": true,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 51,
+      "title": "Interface quality · interfaces with nonzero counters",
+      "type": "table",
+      "gridPos": {
+        "x": 0,
+        "y": 153,
+        "w": 12,
+        "h": 10
+      },
+      "description": "Cumulative values may be historical, not new errors in the selected period. Counter families must not be added.",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": [],
+          "custom": {
+            "minWidth": 75
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Interfaces"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "-1": {
+                        "text": "No data",
+                        "color": "gray"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(label_replace(((sum((aiops_interface_input_errors{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)) > bool 0)) or on() (0 * count(aiops_device_up{device=~\"$device\"}) - 1)), \"counter\", \"Input errors\", \"\", \"\") or label_replace(((sum((aiops_interface_crc_errors{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)) > bool 0)) or on() (0 * count(aiops_device_up{device=~\"$device\"}) - 1)), \"counter\", \"CRC errors\", \"\", \"\") or label_replace(((sum((aiops_interface_alignment_errors{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)) > bool 0)) or on() (0 * count(aiops_device_up{device=~\"$device\"}) - 1)), \"counter\", \"Alignment errors\", \"\", \"\") or label_replace(((sum((aiops_interface_symbol_errors{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)) > bool 0)) or on() (0 * count(aiops_device_up{device=~\"$device\"}) - 1)), \"counter\", \"Symbol errors\", \"\", \"\") or label_replace(((sum((aiops_interface_input_discards{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)) > bool 0)) or on() (0 * count(aiops_device_up{device=~\"$device\"}) - 1)), \"counter\", \"Input discards\", \"\", \"\") or label_replace(((sum((aiops_interface_output_errors{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)) > bool 0)) or on() (0 * count(aiops_device_up{device=~\"$device\"}) - 1)), \"counter\", \"Output errors\", \"\", \"\") or label_replace(((sum((aiops_interface_collisions{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)) > bool 0)) or on() (0 * count(aiops_device_up{device=~\"$device\"}) - 1)), \"counter\", \"Collisions\", \"\", \"\") or label_replace(((sum((aiops_interface_late_collisions{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)) > bool 0)) or on() (0 * count(aiops_device_up{device=~\"$device\"}) - 1)), \"counter\", \"Late collisions\", \"\", \"\") or label_replace(((sum((aiops_interface_deferred{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)) > bool 0)) or on() (0 * count(aiops_device_up{device=~\"$device\"}) - 1)), \"counter\", \"Deferred transmissions\", \"\", \"\") or label_replace(((sum((aiops_interface_output_discards{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1)) > bool 0)) or on() (0 * count(aiops_device_up{device=~\"$device\"}) - 1)), \"counter\", \"Output discards\", \"\", \"\")) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "exclude": {
+              "names": [
+                "Time"
+              ]
+            }
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "counter",
+                "Value"
+              ]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "counter": "Counter",
+              "Value": "Interfaces"
+            },
+            "indexByName": {
+              "counter": 0,
+              "Value": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 52,
+      "title": "Interface quality · top 20 cumulative counters",
+      "type": "table",
+      "gridPos": {
+        "x": 12,
+        "y": 153,
+        "w": 12,
+        "h": 10
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": [],
+          "custom": {
+            "minWidth": 75
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(topk(20, label_replace(((aiops_interface_input_errors{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1))), \"counter\", \"Input errors\", \"\", \"\") or label_replace(((aiops_interface_crc_errors{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1))), \"counter\", \"CRC errors\", \"\", \"\") or label_replace(((aiops_interface_alignment_errors{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1))), \"counter\", \"Alignment errors\", \"\", \"\") or label_replace(((aiops_interface_symbol_errors{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1))), \"counter\", \"Symbol errors\", \"\", \"\") or label_replace(((aiops_interface_input_discards{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1))), \"counter\", \"Input discards\", \"\", \"\") or label_replace(((aiops_interface_output_errors{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1))), \"counter\", \"Output errors\", \"\", \"\") or label_replace(((aiops_interface_collisions{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1))), \"counter\", \"Collisions\", \"\", \"\") or label_replace(((aiops_interface_late_collisions{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1))), \"counter\", \"Late collisions\", \"\", \"\") or label_replace(((aiops_interface_deferred{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1))), \"counter\", \"Deferred transmissions\", \"\", \"\") or label_replace(((aiops_interface_output_discards{device=~\"$device\"} and on(device) (aiops_collect_success{device=~\"$device\"} == 1))), \"counter\", \"Output discards\", \"\", \"\"))) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "exclude": {
+              "names": [
+                "Time"
+              ]
+            }
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "device",
+                "interface",
+                "counter",
+                "Value"
+              ]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "device": "Device",
+              "interface": "Interface",
+              "counter": "Counter",
+              "Value": "Cumulative"
+            },
+            "indexByName": {
+              "device": 0,
+              "interface": 1,
+              "counter": 2,
+              "Value": 3
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 53,
+      "title": "Report limits and drill-down",
+      "type": "text",
+      "gridPos": {
+        "x": 0,
+        "y": 163,
+        "w": 24,
+        "h": 4
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**Missing data is not healthy; unrecognized states do not establish health.** CPU / memory / hardware capacity thresholds of 80% and 95% are presentation guides. Interfaces, routes and peers may be observed at multiple devices; they do not add up to unique links, business traffic or an SLA. Use the operations and physical-topology links for detailed investigation."
+      }
+    }
+  ],
+  "refresh": "1m",
+  "schemaVersion": 40,
+  "tags": [
+    "aiops",
+    "report",
+    "aiops-report-language"
+  ],
+  "templating": {
+    "list": [
+      {
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "Prometheus"
+        },
+        "definition": "label_values(aiops_device_up, device)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Device scope",
+        "multi": true,
+        "name": "device",
+        "options": [],
+        "query": {
+          "query": "label_values(aiops_device_up, device)",
+          "refId": "PrometheusVariableQueryEditor-Device"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "English · Network Operations Report",
+  "uid": "eve-aiops-report-en",
+  "version": 2,
+  "weekStart": ""
+}
