@@ -101,4 +101,4 @@ PYTHONPATH=agent python -m unittest discover -s agent/tests -v
 
 两次 lab 内定向 ping 各 3/3 成功；`show port-channel 1 detailed` 显示 Ethernet3 为唯一 Active / LACP / Rx,Tx 成员。两台 PA 的重复 MAC/IP 依靠站点、设备、VLAN 和接口层级区分。上述两条物理线缆登记为 Nautobot `Connected`，由现有后台拓扑构建读取；MAC 老化不删除人工确认的布线记录。来源为 Nautobot 设计确认，不冒充 LLDP 自动发现。今后改线时需更新 Nautobot cable。
 
-写入前的接口记录、线缆清单和请求保存在 Agent 数据卷 `/app/data/lab-pa-cables-20261030-before.json`。本次无需重启采集器或 Grafana。拓扑页面继续手动刷新，布局保存方式不变。确认物理线缆并不代表已验证防火墙策略或完整的三层转发路径。
+写入前的接口记录、线缆清单和请求保存在 Agent 数据卷 `/app/data/lab-pa-cables-20261030-before.json`。Nautobot cable 的设备 UUID 已修正为先映射设备名再交给快照构建器，避免已登记线缆被忽略；为加载此修复仅更新 Agent，Grafana 无需重启。拓扑页面继续手动刷新，布局保存方式不变。确认物理线缆并不代表已验证防火墙策略或完整的三层转发路径。

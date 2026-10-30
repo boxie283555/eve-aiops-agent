@@ -151,8 +151,8 @@ class NautobotClient:
             a, b = cable.get("termination_a") or {}, cable.get("termination_b") or {}
             a_device, a_int = interface_names.get(a.get("id"), (None, None))
             b_device, b_int = interface_names.get(b.get("id"), (None, None))
-            if a_device and b_device:
-                normalized_links.append({"from": a_device, "to": b_device, "local_interface": a_int,
+            if a_device in device_names and b_device in device_names:
+                normalized_links.append({"from": device_names[a_device], "to": device_names[b_device], "local_interface": a_int,
                     "remote_interface": b_int, "type": "physical", "source": "nautobot",
                     "confidence": 1.0, "status": self._related_name(cable.get("status"))})
         return {"devices": normalized_devices, "interfaces": normalized_interfaces,
