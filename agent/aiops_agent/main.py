@@ -22,6 +22,7 @@ from .health import network_health, prometheus_health
 from .health_view import HEALTH_PAGE
 from .nautobot import NautobotClient, NautobotError
 from .metrics import NAUTOBOT_SYNC_SUCCESS, NAUTOBOT_SYNC_LAST_SUCCESS, NAUTOBOT_SYNC_DURATION, NAUTOBOT_SYNC_UPDATED
+from .panos_traffic import refresh_traffic, STORE as PA_TRAFFIC, INTERVAL as PA_TRAFFIC_INTERVAL, overlay_interfaces
 from .panos_evidence import attach_policy, refresh_policy, policy_status, verify_flow
 from .path_visualization import PATH_GRAPH_STYLE, PATH_GRAPH_SCRIPT
 from .parser import normalize_mac
@@ -103,6 +104,15 @@ async def _pa_policy_once() -> None:
     await asyncio.to_thread(refresh_policy, settings)
 
 
+async def _pa_traffic_once() -> None:
+    await asyncio.to_thread(refresh_traffic, settings)
+
+
+@app.get("/api/pa/interface-traffic")
+def pa_interface_traffic() -> dict:
+    return PA_TRAFFIC.snapshot()
+
+
 async def _snapshot_once() -> None:
     await asyncio.to_thread(collect_and_snapshot, settings, collector)
 
@@ -144,6 +154,8 @@ async def startup() -> None:
         replace_existing=True,
     )
     scheduler.add_job(_pa_policy_once, "interval", seconds=300, id="collect_pa_policy",
+                      replace_existing=True, max_instances=1, next_run_time=datetime.now())
+    scheduler.add_job(_pa_traffic_once, "interval", seconds=PA_TRAFFIC_INTERVAL, id="collect_pa_traffic",
                       replace_existing=True, max_instances=1, next_run_time=datetime.now())
     scheduler.start()
 
@@ -201,7 +213,7 @@ def structured_state() -> dict[str, object]:
                 "routes": result.routes,
                 "collected_at": result.collected_at,
                 "dataset_status": result.dataset_status,
-                "interfaces": result.interfaces,
+                "interfaces": overlay_interfaces(result.device, result.interfaces),
                 "mac_table": [asdict(entry) for entry in result.mac_table],
                 "arp_table": [asdict(entry) for entry in result.arp_table],
                 "lldp_neighbors": [asdict(neighbor) for neighbor in result.lldp_neighbors],

@@ -1,6 +1,17 @@
 from __future__ import annotations
 
-from prometheus_client import Gauge, Counter
+from prometheus_client import Gauge, Counter, REGISTRY
+from .panos_traffic import add_rates, TrafficCollector
+
+
+class InterfaceRateGauge(Gauge):
+    def collect(self):
+        for metric in super().collect():
+            add_rates(metric, "rx" if metric.name.endswith("rx_bps") else "tx")
+            yield metric
+
+
+REGISTRY.register(TrafficCollector())
 
 NAUTOBOT_SYNC_SUCCESS = Gauge("aiops_nautobot_sync_success", "Whether the last interface sync completed successfully.")
 NAUTOBOT_SYNC_LAST_SUCCESS = Gauge("aiops_nautobot_sync_last_success_timestamp_seconds", "Unix time of last successful interface sync.")
@@ -44,13 +55,13 @@ INTERFACE_OPER_UP = Gauge(
     ["device", "interface"],
 )
 
-INTERFACE_RX_BPS = Gauge(
+INTERFACE_RX_BPS = InterfaceRateGauge(
     "aiops_interface_rx_bps",
     "Interface receive traffic in bits per second.",
     ["device", "interface"],
 )
 
-INTERFACE_TX_BPS = Gauge(
+INTERFACE_TX_BPS = InterfaceRateGauge(
     "aiops_interface_tx_bps",
     "Interface transmit traffic in bits per second.",
     ["device", "interface"],

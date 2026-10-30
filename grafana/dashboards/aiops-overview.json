@@ -3967,6 +3967,133 @@
         }
       ],
       "type": "table"
+    },
+    {
+      "id": 9200,
+      "type": "row",
+      "title": "Palo Alto · 防火墙接口流量 / Firewall Interface Traffic",
+      "gridPos": {
+        "x": 0,
+        "y": 202,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 4,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "mappings": [],
+          "unit": "bps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 203,
+        "w": 12,
+        "h": 10
+      },
+      "id": 9201,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "aiops_pa_interface_rx_bps{device=~\"$device\",interface=~\"$interface\"} and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "legendFormat": "{{device}} · {{interface}} · {{layer}}",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "title": "Palo Alto · 接口接收流量 / Interface RX",
+      "type": "timeseries",
+      "description": "每 60 秒采样接口字节计数，按相邻样本计算 bit/s。首次采集需两个样本；失败或超过 180 秒无数据时留空。hardware 为物理/聚合口，logical 为子接口；不同层可能重复观察同一流量，不应相加。目前覆盖 Nautobot lab 中的 PA。"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 4,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "mappings": [],
+          "unit": "bps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 203,
+        "w": 12,
+        "h": 10
+      },
+      "id": 9202,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "aiops_pa_interface_tx_bps{device=~\"$device\",interface=~\"$interface\"} and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "legendFormat": "{{device}} · {{interface}} · {{layer}}",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "title": "Palo Alto · 接口发送流量 / Interface TX",
+      "type": "timeseries",
+      "description": "每 60 秒采样接口字节计数，按相邻样本计算 bit/s。首次采集需两个样本；失败或超过 180 秒无数据时留空。hardware 为物理/聚合口，logical 为子接口；不同层可能重复观察同一流量，不应相加。目前覆盖 Nautobot lab 中的 PA。"
     }
   ],
   "refresh": "30s",

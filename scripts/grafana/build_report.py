@@ -183,7 +183,7 @@ def build(lang):
     trend(tr('防火墙吞吐','Firewall throughput'),[('{{device}}',metric('aiops_firewall_throughput_bps'))],12,102,unit='bps')
     trend(tr('每秒新建会话','New sessions per second'),[('{{device}}',metric('aiops_firewall_sessions_per_second'))],0,110)
     p=panel(tr('防火墙总结说明','Firewall interpretation'),'text',12,110,12,8)
-    p['options']={'mode':'markdown','content':tr('### 当前采集覆盖\n活跃会话、会话建立速率、吞吐，以及前面资源区的 CPU / 内存。\n\n会话总数是各设备观察之和；HA 或串联路径可能重复观察同一业务。吞吐按设备展示，避免相加导致重复计算。\n\n这些指标用于容量和负载汇报，**不代表安全事件、策略命中率或威胁检测结论**。','### Current collection coverage\nActive sessions, session setup rate, throughput, plus CPU and memory in the resource section above.\n\nSession totals add device observations; HA or serial paths may observe the same business flow. Throughput is per device to avoid double counting.\n\nThese metrics describe load and capacity. They do **not** establish security incidents, policy hit rates, or threat-detection outcomes.')}
+    p['options']={'mode':'markdown','content':tr('### 当前采集覆盖\n活跃会话、会话建立速率、吞吐、页面末尾的接口收发流量，以及前面资源区的 CPU / 内存。\n\n会话总数是各设备观察之和；HA 或串联路径可能重复观察同一业务。吞吐按设备展示，避免相加导致重复计算。\n\n这些指标用于容量和负载汇报，**不代表安全事件、策略命中率或威胁检测结论**。','### Current collection coverage\nActive sessions, session setup rate, throughput, per-interface RX/TX at the end of this report, plus CPU and memory in the resource section above.\n\nSession totals add device observations; HA or serial paths may observe the same business flow. Throughput is per device to avoid double counting.\n\nThese metrics describe load and capacity. They do **not** establish security incidents, policy hit rates, or threat-detection outcomes.')}
 
     row(tr('05 · 接口状态、流量与质量','05 · Interface state, traffic and quality'),118)
     stat(tr('已监测接口','Observed interfaces'),'count('+interfaces+')',0,119,w=8)
@@ -239,6 +239,16 @@ def build(lang):
         '**100 is the maximum.** Collection 40%, confirmed links 20%, CPU/memory 20%, peers 10%, hardware 10%. Missing/stale evidence earns no points; it is not a fault. Excluded checks redistribute weights. Devices have equal weight.\n\n[Open health scoring details ↗](http://192.168.20.169:8080/health?lang=en)\n\nCurrent observations; excludes latency/loss, application probes and packet delivery.'),8,7)
     p['gridPos'].update(x=12,w=12)
     for idx,p in enumerate(panels[health_start:]):p['id']=9001+idx
+    # Keep PA byte-derived traffic independent from the slow CLI collection gate.
+    end_y = max(p['gridPos']['y'] + p['gridPos']['h'] for p in panels)
+    pa_desc = tr('每 60 秒采样；接收/发送方向以防火墙接口为准。物理口、聚合口与子接口分别展示，不能相加。首次需两个样本；采集失败或超过 180 秒未更新时留空。当前覆盖 lab PA。',
+                 'Sampled every 60 seconds, from the firewall interface perspective. Physical, aggregate and logical interfaces overlap; do not add them. Two samples required initially. Failed or expired (180 seconds) observations are absent. Covers lab PA devices.')
+    for i, direction in enumerate(('rx', 'tx')):
+        p = trend(tr('Palo Alto · 防火墙接口' + ('接收流量' if i == 0 else '发送流量'),
+                     'Palo Alto · Firewall interface ' + direction.upper()),
+                  [('{{device}} · {{interface}} · {{layer}}', raw('aiops_pa_interface_' + direction + '_bps'))],
+                  12*i, end_y, h=10, unit='bps', desc=pa_desc)
+        p['id'] = 9201+i
     panels.sort(key=lambda p:(p['gridPos']['y'],p['gridPos']['x']))
     variables=json.loads((ROOT/'grafana/dashboards/aiops-overview.json').read_text())['templating']['list']
     variable=next(v for v in variables if v['name']=='device')

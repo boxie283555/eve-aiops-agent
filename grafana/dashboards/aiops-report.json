@@ -3717,7 +3717,7 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "### 当前采集覆盖\n活跃会话、会话建立速率、吞吐，以及前面资源区的 CPU / 内存。\n\n会话总数是各设备观察之和；HA 或串联路径可能重复观察同一业务。吞吐按设备展示，避免相加导致重复计算。\n\n这些指标用于容量和负载汇报，**不代表安全事件、策略命中率或威胁检测结论**。"
+        "content": "### 当前采集覆盖\n活跃会话、会话建立速率、吞吐、页面末尾的接口收发流量，以及前面资源区的 CPU / 内存。\n\n会话总数是各设备观察之和；HA 或串联路径可能重复观察同一业务。吞吐按设备展示，避免相加导致重复计算。\n\n这些指标用于容量和负载汇报，**不代表安全事件、策略命中率或威胁检测结论**。"
       }
     },
     {
@@ -4425,6 +4425,154 @@
         "mode": "markdown",
         "content": "**数据缺失不等于正常；未识别状态不做健康结论。** CPU / 内存 / 硬件容量 80% 提醒、95% 标红，仅为展示参考线。接口、路由和邻居由多台设备重复观察，不能相加推导业务流量、唯一链路或 SLA。需要配置、拓扑、路径或单接口细节时，使用顶部完整运维视图和物理拓扑入口。"
       }
+    },
+    {
+      "id": 9201,
+      "title": "Palo Alto · 防火墙接口接收流量",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 178,
+        "w": 12,
+        "h": 10
+      },
+      "description": "每 60 秒采样；接收/发送方向以防火墙接口为准。物理口、聚合口与子接口分别展示，不能相加。首次需两个样本；采集失败或超过 180 秒未更新时留空。当前覆盖 lab PA。",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "unit": "bps",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "spanNulls": false,
+            "showPoints": "never",
+            "axisPlacement": "auto",
+            "axisBorderShow": false,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(aiops_pa_interface_rx_bps{device=~\"$device\"}) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "{{device}} · {{interface}} · {{layer}}",
+          "instant": false,
+          "range": true,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 9202,
+      "title": "Palo Alto · 防火墙接口发送流量",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 178,
+        "w": 12,
+        "h": 10
+      },
+      "description": "每 60 秒采样；接收/发送方向以防火墙接口为准。物理口、聚合口与子接口分别展示，不能相加。首次需两个样本；采集失败或超过 180 秒未更新时留空。当前覆盖 lab PA。",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "unit": "bps",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "spanNulls": false,
+            "showPoints": "never",
+            "axisPlacement": "auto",
+            "axisBorderShow": false,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(aiops_pa_interface_tx_bps{device=~\"$device\"}) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "{{device}} · {{interface}} · {{layer}}",
+          "instant": false,
+          "range": true,
+          "format": "time_series"
+        }
+      ]
     }
   ],
   "refresh": "1m",

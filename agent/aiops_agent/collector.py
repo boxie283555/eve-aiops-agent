@@ -535,9 +535,9 @@ class Collector:
                 metrics.INTERFACE_ADMIN_UP.labels(result.device.name, name).set(1 if iface["admin_up"] else 0)
             if iface["oper_up"] is not None:
                 metrics.INTERFACE_OPER_UP.labels(result.device.name, name).set(1 if iface["oper_up"] else 0)
-            if iface["rx_bps"] is not None:
+            if iface["rx_bps"] is not None and not (result.device.platform == "paloalto_panos" and result.device.site == "lab"):
                 metrics.INTERFACE_RX_BPS.labels(result.device.name, name).set(float(iface["rx_bps"]))
-            if iface["tx_bps"] is not None:
+            if iface["tx_bps"] is not None and not (result.device.platform == "paloalto_panos" and result.device.site == "lab"):
                 metrics.INTERFACE_TX_BPS.labels(result.device.name, name).set(float(iface["tx_bps"]))
             self._set_optional_interface_metric(metrics.INTERFACE_INPUT_ERRORS, result.device.name, name, iface["input_errors"])
             self._set_optional_interface_metric(metrics.INTERFACE_CRC_ERRORS, result.device.name, name, iface["crc_errors"])
