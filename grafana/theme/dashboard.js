@@ -7,7 +7,7 @@
     const path = window.location.pathname;
     if (path === current) return;
     current = path;
-    const active = /\/(?:d|d-solo)\/eve-aiops-overview(?:\/|$)/.test(path);
+    const active = /\/(?:d|d-solo)\/eve-aiops-overview(?:-en)?(?:\/|$)/.test(path);
     if (active) document.body.dataset.aiopsDashboard = 'eve-aiops-overview';
     else delete document.body.dataset.aiopsDashboard;
   };

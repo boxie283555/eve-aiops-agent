@@ -1,0 +1,4591 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "title": "语言 / Language",
+      "type": "dashboards",
+      "tags": [
+        "aiops-ops-language"
+      ],
+      "asDropdown": true,
+      "includeVars": true,
+      "keepTime": true,
+      "targetBlank": false
+    },
+    {
+      "title": "Interface traffic details ↗",
+      "type": "link",
+      "url": "http://192.168.20.169:8080/mrtg",
+      "targetBlank": true
+    },
+    {
+      "title": "Operations report ↗",
+      "type": "link",
+      "url": "/d/eve-aiops-report-en/report",
+      "includeVars": true,
+      "keepTime": true,
+      "targetBlank": false
+    }
+  ],
+  "panels": [
+    {
+      "id": 9001,
+      "title": "Network health points · 100",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "description": "Rule-based score, not an SLA. Missing evidence earns no points. Read evidence coverage and unassessed points together; open Health details for the reasons.",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": [],
+          "unit": "short",
+          "decimals": 1,
+          "color": {
+            "mode": "thresholds"
+          },
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "red"
+              },
+              {
+                "value": 60,
+                "color": "orange"
+              },
+              {
+                "value": 80,
+                "color": "yellow"
+              },
+              {
+                "value": 90,
+                "color": "green"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(avg(aiops_health_score{device=~\"$device\"}) and on() (sum(aiops_health_coverage_percent{device=~\"$device\"}) > 0)) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 9002,
+      "title": "Scoring evidence coverage",
+      "type": "stat",
+      "gridPos": {
+        "x": 6,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "description": "Rule-based score, not an SLA. Missing evidence earns no points. Read evidence coverage and unassessed points together; open Health details for the reasons.",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": [],
+          "unit": "percent",
+          "decimals": 1,
+          "color": {
+            "mode": "thresholds"
+          },
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "red"
+              },
+              {
+                "value": 60,
+                "color": "orange"
+              },
+              {
+                "value": 80,
+                "color": "yellow"
+              },
+              {
+                "value": 90,
+                "color": "green"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(avg(aiops_health_coverage_percent{device=~\"$device\"})) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 9003,
+      "title": "Observed health deductions",
+      "type": "stat",
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "description": "Rule-based score, not an SLA. Missing evidence earns no points. Read evidence coverage and unassessed points together; open Health details for the reasons.",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": [],
+          "unit": "short",
+          "decimals": 1,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(avg(aiops_health_deduction_points{device=~\"$device\"})) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 9004,
+      "title": "Unassessed health points",
+      "type": "stat",
+      "gridPos": {
+        "x": 18,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "description": "Rule-based score, not an SLA. Missing evidence earns no points. Read evidence coverage and unassessed points together; open Health details for the reasons.",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": [],
+          "unit": "short",
+          "decimals": 1,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(avg(aiops_health_unassessed_points{device=~\"$device\"})) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 9005,
+      "title": "Device health points",
+      "type": "table",
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 12,
+        "h": 7
+      },
+      "description": "Rule-based score, not an SLA. Missing evidence earns no points. Read evidence coverage and unassessed points together; open Health details for the reasons.",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": [],
+          "custom": {
+            "minWidth": 75
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Health points"
+            },
+            "properties": [
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "max",
+                "value": 100
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Coverage"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "max",
+                "value": 100
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "sortBy": [
+          {
+            "displayName": "Health points",
+            "desc": false
+          }
+        ]
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(aiops_health_score{device=~\"$device\"}) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(aiops_health_coverage_percent{device=~\"$device\"}) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "refId": "B",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "exclude": {
+              "names": [
+                "Time"
+              ]
+            }
+          }
+        },
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "device",
+            "mode": "outerTabular"
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "device",
+                "Value #A",
+                "Value #B"
+              ]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "device": "Device",
+              "Value #A": "Health points",
+              "Value #B": "Coverage"
+            },
+            "indexByName": {
+              "device": 0,
+              "Value #A": 1,
+              "Value #B": 2
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 9006,
+      "title": "Health scoring details and scope",
+      "type": "text",
+      "gridPos": {
+        "x": 12,
+        "y": 4,
+        "w": 12,
+        "h": 7
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**100 is the maximum.** Collection 40%, confirmed links 20%, CPU/memory 20%, peers 10%, hardware 10%. Missing or stale evidence earns no points; it is not a fault. Excluded weights are redistributed; devices have equal weight.\n\n[Open health details ↗](http://192.168.20.169:8080/health?lang=en)\n\nExcludes latency/loss, application probes and packet delivery."
+      }
+    },
+    {
+      "id": 9300,
+      "type": "row",
+      "title": "Q3 · Configuration and drift",
+      "gridPos": {
+        "x": 0,
+        "y": 11,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 9301,
+      "type": "stat",
+      "title": "Open unowned drift",
+      "gridPos": {
+        "x": 0,
+        "y": 12,
+        "w": 6,
+        "h": 4
+      },
+      "description": "Unresolved drift records from real observations with no matching preregistered change. This counts records, not failed devices. Unowned does not prove a change was unauthorized.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum(aiops_config_drift_records{device=~\"$device\",origin=\"observed\",status=\"open\",unowned=\"true\"})) and on() (aiops_config_history_available == 1) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "decimals": 0,
+          "noValue": "No backup / data",
+          "color": {
+            "mode": "thresholds",
+            "fixedColor": "blue"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal"
+      },
+      "links": [
+        {
+          "title": "View drift records",
+          "url": "http://192.168.20.169:8080/config/drift?unowned=true",
+          "targetBlank": true
+        }
+      ]
+    },
+    {
+      "id": 9302,
+      "type": "stat",
+      "title": "Open exercise drift",
+      "gridPos": {
+        "x": 6,
+        "y": 12,
+        "w": 6,
+        "h": 4
+      },
+      "description": "Unresolved simulated drift records with no matching preregistered change. Counted separately from real observations.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum(aiops_config_drift_records{device=~\"$device\",origin=\"exercise\",status=\"open\",unowned=\"true\"})) and on() (aiops_config_history_available == 1) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "decimals": 0,
+          "noValue": "No backup / data",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal"
+      },
+      "links": [
+        {
+          "title": "View drift records",
+          "url": "http://192.168.20.169:8080/config/drift?unowned=true",
+          "targetBlank": true
+        }
+      ]
+    },
+    {
+      "id": 9303,
+      "type": "stat",
+      "title": "Exercise drift history",
+      "gridPos": {
+        "x": 12,
+        "y": 12,
+        "w": 6,
+        "h": 4
+      },
+      "description": "All unowned exercise records, including resolved records and rollbacks. Three changes plus three rollbacks produce six records; these do not count toward real drift acceptance.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum(aiops_config_drift_records{device=~\"$device\",origin=\"exercise\",unowned=\"true\"})) and on() (aiops_config_history_available == 1) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "decimals": 0,
+          "noValue": "No backup / data",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal"
+      },
+      "links": [
+        {
+          "title": "View drift records",
+          "url": "http://192.168.20.169:8080/config/drift?unowned=true",
+          "targetBlank": true
+        }
+      ]
+    },
+    {
+      "id": 9304,
+      "type": "stat",
+      "title": "Latest backup failures",
+      "gridPos": {
+        "x": 18,
+        "y": 12,
+        "w": 6,
+        "h": 4
+      },
+      "description": "Number of devices whose latest configuration backup attempt failed, not the number of failed attempts. An unchanged configuration is a successful backup. Devices never attempted are excluded.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum(1-aiops_config_backup_success{device=~\"$device\"})) and on() (aiops_config_history_available == 1) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "decimals": 0,
+          "noValue": "No backup / data",
+          "color": {
+            "mode": "thresholds",
+            "fixedColor": "blue"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal"
+      },
+      "links": [
+        {
+          "title": "View drift records",
+          "url": "http://192.168.20.169:8080/config/drift?unowned=true",
+          "targetBlank": true
+        }
+      ]
+    },
+    {
+      "id": 9305,
+      "type": "text",
+      "title": "Metric definitions and scope",
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 24,
+        "h": 6
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**Open unowned drift**: unresolved real-observation records without a matching preregistered change. **Open exercise drift**: simulated records under the same conditions.\n\n**Exercise history** includes resolved records and rollbacks: 3 changes + 3 rollbacks = 6 records. **Backup failures** counts devices whose latest attempt failed; unchanged configurations are successful backups.\n\nCovers lab devices with backup attempts; the current default interval is 15 minutes. Unowned does not prove unauthorized activity. Missing data is not zero. Cards show state at the selected end time; history is not the number of new records within the selected range."
+      }
+    },
+    {
+      "id": 104,
+      "type": "row",
+      "title": "Software Version Share",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 22,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "noValue": "No data"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Software version"
+            },
+            "properties": [
+              {
+                "id": "custom.minWidth",
+                "value": 220
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Devices"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "custom.width",
+                "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Share"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              },
+              {
+                "id": "custom.width",
+                "value": 85
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 23,
+        "w": 12,
+        "h": 9
+      },
+      "id": 18,
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "displayName": "Devices",
+            "desc": true
+          }
+        ],
+        "footer": {
+          "show": false
+        }
+      },
+      "pluginVersion": "11.3.0",
+      "targets": [
+        {
+          "expr": "count by (version) ((aiops_device_hardware_info{device=~\"$device\"} and on(device) max by(device) (aiops_device_classification_info{manufacturer=~\"$manufacturer\",device_type=~\"$device_type\",hardware_group=~\"$hardware_group\"} @ end())))",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        },
+        {
+          "expr": "100 * (count by (version) ((aiops_device_hardware_info{device=~\"$device\"} and on(device) max by(device) (aiops_device_classification_info{manufacturer=~\"$manufacturer\",device_type=~\"$device_type\",hardware_group=~\"$hardware_group\"} @ end())))) / scalar(count((aiops_device_hardware_info{device=~\"$device\"} and on(device) max by(device) (aiops_device_classification_info{manufacturer=~\"$manufacturer\",device_type=~\"$device_type\",hardware_group=~\"$hardware_group\"} @ end()))))",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "refId": "B"
+        }
+      ],
+      "title": "Software Version Share · $hardware_group",
+      "type": "table",
+      "description": "Grouped by manufacturer → device type (Switch / Firewall); device names and models remain visible. Use manufacturer, device type and device filters. Missing data is not zero or healthy. Historical curves use inventory classification at the selected end time.",
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "version",
+            "mode": "outerTabular"
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "version",
+                "Value #A",
+                "Value #B"
+              ]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "indexByName": {
+              "version": 0,
+              "Value #A": 1,
+              "Value #B": 2
+            },
+            "renameByName": {
+              "version": "Software version",
+              "Value #A": "Devices",
+              "Value #B": "Share"
+            }
+          }
+        }
+      ],
+      "repeat": "hardware_group",
+      "repeatDirection": "h",
+      "maxPerRow": 2
+    },
+    {
+      "id": 200,
+      "type": "row",
+      "title": "Device Uptime",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 32,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "cellOptions": {
+              "type": "auto"
+            }
+          },
+          "mappings": [],
+          "noValue": "No data"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Uptime"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "custom.width",
+                "value": 160
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 33,
+        "w": 12,
+        "h": 9
+      },
+      "id": 19,
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "displayName": "Device",
+            "desc": false
+          }
+        ],
+        "footer": {
+          "show": false
+        }
+      },
+      "pluginVersion": "11.3.0",
+      "targets": [
+        {
+          "expr": "(aiops_device_uptime_seconds{device=~\"$device\"}) and on(device) max by(device) (aiops_device_classification_info{manufacturer=~\"$manufacturer\",device_type=~\"$device_type\",hardware_group=~\"$hardware_group\"} @ end())",
+          "legendFormat": "{{device}}",
+          "refId": "A",
+          "format": "table",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Device Uptime · $hardware_group",
+      "type": "table",
+      "repeat": "hardware_group",
+      "repeatDirection": "h",
+      "maxPerRow": 2,
+      "description": "Grouped by manufacturer → device type (Switch / Firewall); device names and models remain visible. Use manufacturer, device type and device filters. Missing data is not zero or healthy. Historical curves use inventory classification at the selected end time.",
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "device",
+                "Value"
+              ]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "indexByName": {
+              "device": 0,
+              "Value": 1
+            },
+            "renameByName": {
+              "device": "Device",
+              "Value": "Uptime"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 201,
+      "type": "row",
+      "title": "CPU Utilization",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 42,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 4,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "percent",
+          "noValue": "No data"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 43,
+        "w": 12,
+        "h": 8
+      },
+      "id": 20,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "(aiops_device_cpu_utilization_percent{device=~\"$device\"}) and on(device) max by(device) (aiops_device_classification_info{manufacturer=~\"$manufacturer\",device_type=~\"$device_type\",hardware_group=~\"$hardware_group\"} @ end())",
+          "legendFormat": "{{device}}",
+          "refId": "A"
+        }
+      ],
+      "title": "CPU Utilization · $hardware_group",
+      "type": "timeseries",
+      "repeat": "hardware_group",
+      "repeatDirection": "h",
+      "maxPerRow": 2,
+      "description": "Grouped by manufacturer → device type (Switch / Firewall); device names and models remain visible. Use manufacturer, device type and device filters. Missing data is not zero or healthy. Historical curves use inventory classification at the selected end time."
+    },
+    {
+      "id": 202,
+      "type": "row",
+      "title": "Memory Utilization",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 51,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 4,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "percent",
+          "noValue": "No data"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 52,
+        "w": 12,
+        "h": 8
+      },
+      "id": 21,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "(aiops_device_memory_utilization_percent{device=~\"$device\"}) and on(device) max by(device) (aiops_device_classification_info{manufacturer=~\"$manufacturer\",device_type=~\"$device_type\",hardware_group=~\"$hardware_group\"} @ end())",
+          "legendFormat": "{{device}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Memory Utilization · $hardware_group",
+      "type": "timeseries",
+      "repeat": "hardware_group",
+      "repeatDirection": "h",
+      "maxPerRow": 2,
+      "description": "Grouped by manufacturer → device type (Switch / Firewall); device names and models remain visible. Use manufacturer, device type and device filters. Missing data is not zero or healthy. Historical curves use inventory classification at the selected end time."
+    },
+    {
+      "id": 203,
+      "type": "row",
+      "title": "Device Version and Inventory",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 60,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "unit": "none",
+          "noValue": "No data"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 61,
+        "w": 24,
+        "h": 8
+      },
+      "id": 16,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "pluginVersion": "11.3.0",
+      "targets": [
+        {
+          "expr": "(aiops_device_hardware_info{device=~\"$device\"}) and on(device) max by(device) (aiops_device_classification_info{manufacturer=~\"$manufacturer\",device_type=~\"$device_type\",hardware_group=~\"$hardware_group\"} @ end())",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "{{device}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Device Version and Inventory · $hardware_group",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Value": true,
+              "__name__": true,
+              "job": true,
+              "instance": true
+            },
+            "renameByName": {
+              "architecture": "Architecture",
+              "device": "Device",
+              "host": "Host",
+              "hw_version": "HW Version",
+              "model": "Model",
+              "serial": "Serial",
+              "version": "Software version"
+            }
+          }
+        }
+      ],
+      "type": "table",
+      "repeat": "hardware_group",
+      "repeatDirection": "h",
+      "maxPerRow": 1,
+      "description": "Grouped by manufacturer → device type (Switch / Firewall); device names and models remain visible. Use manufacturer, device type and device filters. Missing data is not zero or healthy. Historical curves use inventory classification at the selected end time."
+    },
+    {
+      "id": 204,
+      "type": "row",
+      "title": "Power and Module Status",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 69,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none",
+          "noValue": "No data"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Health"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "color": "red",
+                        "text": "critical"
+                      },
+                      "1": {
+                        "color": "green",
+                        "text": "ok"
+                      },
+                      "0.5": {
+                        "color": "yellow",
+                        "text": "warning"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 0.5
+                    },
+                    {
+                      "color": "green",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Model"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "not_applicable": {
+                        "text": "N/A (not installed)"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Serial"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "not_applicable": {
+                        "text": "N/A (not installed)"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 70,
+        "w": 24,
+        "h": 9
+      },
+      "id": 17,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "pluginVersion": "11.3.0",
+      "targets": [
+        {
+          "expr": "(aiops_hardware_component_status{device=~\"$device\"}) and on(device) max by(device) (aiops_device_classification_info{manufacturer=~\"$manufacturer\",device_type=~\"$device_type\",hardware_group=~\"$hardware_group\"} @ end())",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "{{device}} {{component_type}} {{name}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Power and Module Status · $hardware_group",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "job": true,
+              "instance": true
+            },
+            "renameByName": {
+              "Value": "Health",
+              "component_type": "Type",
+              "device": "Device",
+              "model": "Model",
+              "name": "Name",
+              "serial": "Serial",
+              "status": "Status"
+            }
+          }
+        }
+      ],
+      "type": "table",
+      "repeat": "hardware_group",
+      "repeatDirection": "h",
+      "maxPerRow": 1,
+      "description": "Grouped by manufacturer → device type (Switch / Firewall); device names and models remain visible. Use manufacturer, device type and device filters. Missing data is not zero or healthy. Historical curves use inventory classification at the selected end time."
+    },
+    {
+      "id": 106,
+      "type": "row",
+      "title": "TCAM Utilization",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 79,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 4,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "percent",
+          "noValue": "No data"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 80,
+        "w": 12,
+        "h": 8
+      },
+      "id": 25,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "((label_replace(aiops_telemetry_asic_tcam_resource_utilization_percent{device=~\"$device\"}, \"collection_source\", \"telemetry\", \"__name__\", \".*\")) or on(device, resource, region) (label_replace(aiops_asic_tcam_resource_utilization_percent{device=~\"$device\"}, \"collection_source\", \"cli\", \"__name__\", \".*\"))) and on(device) max by(device) (aiops_device_classification_info{manufacturer=~\"$manufacturer\",device_type=~\"$device_type\",hardware_group=~\"$hardware_group\"} @ end())",
+          "legendFormat": "{{device}} {{resource}} {{region}} {{collection_source}}",
+          "refId": "A"
+        }
+      ],
+      "title": "TCAM Utilization · $hardware_group",
+      "type": "timeseries",
+      "repeat": "hardware_group",
+      "repeatDirection": "h",
+      "maxPerRow": 2,
+      "description": "Grouped by manufacturer → device type (Switch / Firewall); device names and models remain visible. Use manufacturer, device type and device filters. Missing data is not zero or healthy. Historical curves use inventory classification at the selected end time."
+    },
+    {
+      "id": 205,
+      "type": "row",
+      "title": "TCAM Resource Details",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 88,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "none",
+          "noValue": "No data"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 70
+                    },
+                    {
+                      "color": "red",
+                      "value": 90
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Device"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "auto"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Resource"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "auto"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 89,
+        "w": 24,
+        "h": 9
+      },
+      "id": 26,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "pluginVersion": "11.3.0",
+      "targets": [
+        {
+          "expr": "(label_replace(((label_replace(aiops_telemetry_asic_tcam_resource_used_entries{device=~\"$device\"}, \"collection_source\", \"telemetry\", \"__name__\", \".*\")) or on(device, resource, region) (label_replace(aiops_asic_tcam_resource_used_entries{device=~\"$device\"}, \"collection_source\", \"cli\", \"__name__\", \".*\"))), \"metric\", \"used\", \"__name__\", \".*\") or label_replace(((label_replace(aiops_telemetry_asic_tcam_resource_free_entries{device=~\"$device\"}, \"collection_source\", \"telemetry\", \"__name__\", \".*\")) or on(device, resource, region) (label_replace(aiops_asic_tcam_resource_free_entries{device=~\"$device\"}, \"collection_source\", \"cli\", \"__name__\", \".*\"))), \"metric\", \"free\", \"__name__\", \".*\") or label_replace(((label_replace(aiops_telemetry_asic_tcam_resource_total_entries{device=~\"$device\"}, \"collection_source\", \"telemetry\", \"__name__\", \".*\")) or on(device, resource, region) (label_replace(aiops_asic_tcam_resource_total_entries{device=~\"$device\"}, \"collection_source\", \"cli\", \"__name__\", \".*\"))), \"metric\", \"total\", \"__name__\", \".*\") or label_replace(((label_replace(aiops_telemetry_asic_tcam_resource_utilization_percent{device=~\"$device\"}, \"collection_source\", \"telemetry\", \"__name__\", \".*\")) or on(device, resource, region) (label_replace(aiops_asic_tcam_resource_utilization_percent{device=~\"$device\"}, \"collection_source\", \"cli\", \"__name__\", \".*\"))), \"metric\", \"utilization_percent\", \"__name__\", \".*\")) and on(device) max by(device) (aiops_device_classification_info{manufacturer=~\"$manufacturer\",device_type=~\"$device_type\",hardware_group=~\"$hardware_group\"} @ end())",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "{{device}} {{resource}} {{metric}}",
+          "refId": "A"
+        }
+      ],
+      "title": "TCAM Resource Details · $hardware_group",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "job": true,
+              "instance": true
+            },
+            "renameByName": {
+              "Value": "Value",
+              "collection_source": "Source",
+              "device": "Device",
+              "metric": "Metric",
+              "region": "Region",
+              "resource": "Resource"
+            }
+          }
+        }
+      ],
+      "type": "table",
+      "repeat": "hardware_group",
+      "repeatDirection": "h",
+      "maxPerRow": 1,
+      "description": "Grouped by manufacturer → device type (Switch / Firewall); device names and models remain visible. Use manufacturer, device type and device filters. Missing data is not zero or healthy. Historical curves use inventory classification at the selected end time."
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 98
+      },
+      "id": 100,
+      "panels": [],
+      "title": "Device Health",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 0,
+        "y": 99
+      },
+      "id": 1,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value_and_name",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.3.0",
+      "targets": [
+        {
+          "expr": "(count(aiops_device_up{device=~\"$device\"}) - sum(aiops_device_up{device=~\"$device\"})) or vector(0)",
+          "legendFormat": "device down",
+          "refId": "A"
+        }
+      ],
+      "title": "Device Down",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 3
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 12,
+        "y": 99
+      },
+      "id": 2,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value_and_name",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.3.0",
+      "targets": [
+        {
+          "expr": "(count(aiops_collect_success{device=~\"$device\"}) - sum(aiops_collect_success{device=~\"$device\"})) or vector(0)",
+          "legendFormat": "collect failed",
+          "refId": "A"
+        }
+      ],
+      "title": "Collection Failures",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 104
+      },
+      "id": 107,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sort": {
+          "col": 0,
+          "desc": false
+        }
+      },
+      "pluginVersion": "11.3.0",
+      "targets": [
+        {
+          "expr": "aiops_device_up{device=~\"$device\"} == 0",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Devices Down",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Value": true,
+              "__name__": true,
+              "job": true,
+              "instance": true
+            },
+            "indexByName": {
+              "device": 0,
+              "host": 1,
+              "role": 2,
+              "site": 3
+            },
+            "renameByName": {
+              "device": "Device",
+              "host": "Host",
+              "role": "Role",
+              "site": "Site"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "id": 110,
+      "type": "row",
+      "title": "Firewall",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 110,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "No data",
+          "mappings": [],
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 111,
+        "w": 8,
+        "h": 4
+      },
+      "id": 27,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value_and_name",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.3.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(aiops_firewall_sessions_active{device=~\"$device\"} and on(device) (group by(device) (aiops_firewall_sessions_active{device=~\"$device\"} or aiops_firewall_sessions_per_second{device=~\"$device\"} or aiops_firewall_throughput_bps{device=~\"$device\"})) and on(device) (aiops_collect_success{device=~\"$device\"} == 1)) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "legendFormat": "{{device}}",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Firewall Active Sessions",
+      "type": "stat",
+      "description": "Latest successful observation per firewall. Reported zero is a value; missing collection stays empty. Respects device selection, not interface selection."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "suffix: sessions/s",
+          "decimals": 0,
+          "noValue": "No data",
+          "mappings": [],
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 111,
+        "w": 8,
+        "h": 4
+      },
+      "id": 28,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value_and_name",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.3.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(aiops_firewall_sessions_per_second{device=~\"$device\"} and on(device) (group by(device) (aiops_firewall_sessions_active{device=~\"$device\"} or aiops_firewall_sessions_per_second{device=~\"$device\"} or aiops_firewall_throughput_bps{device=~\"$device\"})) and on(device) (aiops_collect_success{device=~\"$device\"} == 1)) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "legendFormat": "{{device}}",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Firewall Session Setup Rate",
+      "type": "stat",
+      "description": "Latest successful observation per firewall. Reported zero is a value; missing collection stays empty. Respects device selection, not interface selection."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bps",
+          "decimals": 0,
+          "noValue": "No data",
+          "mappings": [],
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 111,
+        "w": 8,
+        "h": 4
+      },
+      "id": 29,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value_and_name",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.3.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(aiops_firewall_throughput_bps{device=~\"$device\"} and on(device) (group by(device) (aiops_firewall_sessions_active{device=~\"$device\"} or aiops_firewall_sessions_per_second{device=~\"$device\"} or aiops_firewall_throughput_bps{device=~\"$device\"})) and on(device) (aiops_collect_success{device=~\"$device\"} == 1)) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "legendFormat": "{{device}}",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Firewall Throughput",
+      "type": "stat",
+      "description": "Latest successful observation per firewall. Reported zero is a value; missing collection stays empty. Respects device selection, not interface selection."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 4,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "short",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 115,
+        "w": 8,
+        "h": 8
+      },
+      "id": 30,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(aiops_firewall_sessions_active{device=~\"$device\"} and on(device) (group by(device) (aiops_firewall_sessions_active{device=~\"$device\"} or aiops_firewall_sessions_per_second{device=~\"$device\"} or aiops_firewall_throughput_bps{device=~\"$device\"})) and on(device) (aiops_collect_success{device=~\"$device\"} == 1)) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "legendFormat": "{{device}}",
+          "refId": "A",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "title": "Firewall Active Sessions Trend",
+      "type": "timeseries",
+      "description": "Per-firewall observations with gaps on failed collection. Respects device selection. Do not sum throughput across devices that may observe the same traffic."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 4,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "suffix: sessions/s",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 115,
+        "w": 8,
+        "h": 8
+      },
+      "id": 31,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(aiops_firewall_sessions_per_second{device=~\"$device\"} and on(device) (group by(device) (aiops_firewall_sessions_active{device=~\"$device\"} or aiops_firewall_sessions_per_second{device=~\"$device\"} or aiops_firewall_throughput_bps{device=~\"$device\"})) and on(device) (aiops_collect_success{device=~\"$device\"} == 1)) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "legendFormat": "{{device}}",
+          "refId": "A",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "title": "Firewall Session Setup Rate Trend",
+      "type": "timeseries",
+      "description": "Per-firewall observations with gaps on failed collection. Respects device selection. Do not sum throughput across devices that may observe the same traffic."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 4,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "bps",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 115,
+        "w": 8,
+        "h": 8
+      },
+      "id": 32,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(aiops_firewall_throughput_bps{device=~\"$device\"} and on(device) (group by(device) (aiops_firewall_sessions_active{device=~\"$device\"} or aiops_firewall_sessions_per_second{device=~\"$device\"} or aiops_firewall_throughput_bps{device=~\"$device\"})) and on(device) (aiops_collect_success{device=~\"$device\"} == 1)) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "legendFormat": "{{device}}",
+          "refId": "A",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "title": "Firewall Throughput Trend",
+      "type": "timeseries",
+      "description": "Per-firewall observations with gaps on failed collection. Respects device selection. Do not sum throughput across devices that may observe the same traffic."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 4,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "percent",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "max": 100
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 123,
+        "w": 8,
+        "h": 8
+      },
+      "id": 33,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(aiops_device_cpu_utilization_percent{device=~\"$device\"} and on(device) (group by(device) (aiops_firewall_sessions_active{device=~\"$device\"} or aiops_firewall_sessions_per_second{device=~\"$device\"} or aiops_firewall_throughput_bps{device=~\"$device\"})) and on(device) (aiops_collect_success{device=~\"$device\"} == 1)) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "legendFormat": "{{device}}",
+          "refId": "A",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "title": "Firewall CPU Utilization",
+      "type": "timeseries",
+      "description": "Per-firewall observations with gaps on failure. PAN-OS CPU and memory reflect the management plane, not dataplane utilization."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 4,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "percent",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "max": 100
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 123,
+        "w": 8,
+        "h": 8
+      },
+      "id": 34,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(aiops_device_memory_utilization_percent{device=~\"$device\"} and on(device) (group by(device) (aiops_firewall_sessions_active{device=~\"$device\"} or aiops_firewall_sessions_per_second{device=~\"$device\"} or aiops_firewall_throughput_bps{device=~\"$device\"})) and on(device) (aiops_collect_success{device=~\"$device\"} == 1)) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "legendFormat": "{{device}}",
+          "refId": "A",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "title": "Firewall Memory Utilization",
+      "type": "timeseries",
+      "description": "Per-firewall observations with gaps on failure. PAN-OS CPU and memory reflect the management plane, not dataplane utilization."
+    },
+    {
+      "id": 35,
+      "type": "table",
+      "title": "Firewall Collection Status",
+      "gridPos": {
+        "x": 16,
+        "y": 123,
+        "w": 8,
+        "h": 8
+      },
+      "description": "Shows reachability and collection even when firewall metrics are unavailable. Missing data is not healthy.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": [],
+          "custom": {
+            "minWidth": 70
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Reachability"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "Unreachable",
+                        "color": "red"
+                      },
+                      "1": {
+                        "text": "Reachable",
+                        "color": "green"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Collection"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "Failed",
+                        "color": "red"
+                      },
+                      "1": {
+                        "text": "Successful",
+                        "color": "green"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "md",
+        "sortBy": [
+          {
+            "displayName": "Collection",
+            "desc": false
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(min by(device) (aiops_device_up{device=~\"$device\"} and on(device) (group by(device) (aiops_firewall_sessions_active{device=~\"$device\"} or aiops_firewall_sessions_per_second{device=~\"$device\"} or aiops_firewall_throughput_bps{device=~\"$device\"})))) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "(min by(device) (aiops_collect_success{device=~\"$device\"} and on(device) (group by(device) (aiops_firewall_sessions_active{device=~\"$device\"} or aiops_firewall_sessions_per_second{device=~\"$device\"} or aiops_firewall_throughput_bps{device=~\"$device\"})))) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "refId": "B"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "device",
+            "mode": "outerTabular"
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "device",
+                "Value #A",
+                "Value #B"
+              ]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "device": "Firewall",
+              "Value #A": "Reachability",
+              "Value #B": "Collection"
+            },
+            "indexByName": {
+              "device": 0,
+              "Value #A": 1,
+              "Value #B": 2
+            }
+          }
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 131
+      },
+      "id": 102,
+      "panels": [],
+      "title": "OSPF Underlay",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "yellow",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 8,
+        "x": 0,
+        "y": 132
+      },
+      "id": 5,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value_and_name",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.3.0",
+      "targets": [
+        {
+          "expr": "sum(aiops_ospf_neighbor_up{device=~\"$device\"}) or vector(0)",
+          "legendFormat": "OSPF full",
+          "refId": "A"
+        }
+      ],
+      "title": "Underlay OSPF",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Up"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "color": "red",
+                        "text": "down"
+                      },
+                      "1": {
+                        "color": "green",
+                        "text": "up"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "green",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 16,
+        "x": 8,
+        "y": 132
+      },
+      "id": 11,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "pluginVersion": "11.3.0",
+      "targets": [
+        {
+          "expr": "aiops_ospf_neighbor_up{device=~\"$device\"}",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "{{device}} {{neighbor}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Underlay OSPF Neighbors",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "job": true,
+              "instance": true
+            },
+            "indexByName": {
+              "Value": 3,
+              "device": 0,
+              "neighbor": 1,
+              "state": 2
+            },
+            "renameByName": {
+              "Value": "Up",
+              "device": "Device",
+              "neighbor": "Neighbor",
+              "state": "State"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 140
+      },
+      "id": 22,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "pluginVersion": "11.3.0",
+      "targets": [
+        {
+          "expr": "aiops_route_summary_routes{device=~\"$device\"}",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "{{device}} {{vrf}} {{source}}",
+          "refId": "A"
+        }
+      ],
+      "title": "IP Route Summary by VRF and Source",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "job": true,
+              "instance": true
+            },
+            "renameByName": {
+              "Value": "Routes",
+              "device": "Device",
+              "vrf": "VRF",
+              "source": "Route Source"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 4,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "mappings": [],
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 148
+      },
+      "id": 23,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "aiops_route_summary_routes{device=~\"$device\",source=~\"connected|ospf|bgp|static.*|Total Routes\"}",
+          "legendFormat": "{{device}} {{vrf}} {{source}}",
+          "refId": "A"
+        }
+      ],
+      "title": "IP Route Summary Trend",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 156
+      },
+      "id": 105,
+      "panels": [],
+      "title": "Overlay VXLAN",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "yellow",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 8,
+        "x": 0,
+        "y": 157
+      },
+      "id": 6,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value_and_name",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.3.0",
+      "targets": [
+        {
+          "expr": "sum(aiops_nve_peer_up{device=~\"$device\"}) or vector(0)",
+          "legendFormat": "VXLAN peers",
+          "refId": "A"
+        }
+      ],
+      "title": "Overlay VXLAN",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Up"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "color": "red",
+                        "text": "down"
+                      },
+                      "1": {
+                        "color": "green",
+                        "text": "up"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "green",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 16,
+        "x": 8,
+        "y": 157
+      },
+      "id": 12,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "pluginVersion": "11.3.0",
+      "targets": [
+        {
+          "expr": "aiops_nve_peer_up{device=~\"$device\"}",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "{{device}} {{peer}} {{peer_hostname}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Overlay VXLAN Peers",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "job": true,
+              "instance": true
+            },
+            "indexByName": {
+              "device": 0,
+              "peer": 1,
+              "peer_hostname": 2,
+              "state": 3,
+              "Value": 4
+            },
+            "renameByName": {
+              "Value": "Up",
+              "device": "Device",
+              "peer": "Peer IP",
+              "state": "State",
+              "peer_hostname": "Peer Hostname"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 165
+      },
+      "id": 103,
+      "panels": [],
+      "title": "BGP",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 0,
+        "y": 166
+      },
+      "id": 4,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value_and_name",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.3.0",
+      "targets": [
+        {
+          "expr": "sum(aiops_bgp_neighbor_down{device=~\"$device\"}) or vector(0)",
+          "legendFormat": "BGP down",
+          "refId": "A"
+        }
+      ],
+      "title": "BGP Problems",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "State"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "color": "red",
+                        "text": "down"
+                      },
+                      "1": {
+                        "color": "green",
+                        "text": "up"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "green",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 18,
+        "x": 6,
+        "y": 166
+      },
+      "id": 13,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "pluginVersion": "11.3.0",
+      "targets": [
+        {
+          "expr": "aiops_bgp_neighbor_up{device=~\"$device\"}",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "{{device}} {{neighbor}}",
+          "refId": "A"
+        },
+        {
+          "expr": "aiops_bgp_neighbor_down{device=~\"$device\"}",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "{{device}} {{neighbor}}",
+          "refId": "B"
+        }
+      ],
+      "title": "BGP Neighbors",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "job": true,
+              "instance": true
+            },
+            "renameByName": {
+              "Value": "State",
+              "device": "Device",
+              "neighbor": "Neighbor",
+              "state": "BGP State",
+              "vrf": "VRF"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 16,
+        "x": 0,
+        "y": 174
+      },
+      "id": 14,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "pluginVersion": "11.3.0",
+      "targets": [
+        {
+          "expr": "aiops_bgp_routes_received{device=~\"$device\"}",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "{{device}} {{neighbor}} received",
+          "refId": "A"
+        },
+        {
+          "expr": "aiops_bgp_routes_accepted{device=~\"$device\"}",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "{{device}} {{neighbor}} accepted",
+          "refId": "B"
+        },
+        {
+          "expr": "aiops_bgp_routes_advertised{device=~\"$device\"}",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "{{device}} {{neighbor}} advertised",
+          "refId": "C"
+        }
+      ],
+      "title": "BGP Summary Fields",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "job": true,
+              "instance": true
+            },
+            "renameByName": {
+              "Value": "Routes/NLRI",
+              "__name__": "Metric",
+              "afi_safi": "AFI/SAFI",
+              "afi_safi_state": "AFI/SAFI State",
+              "device": "Device",
+              "neighbor": "Neighbor",
+              "peer_as": "AS",
+              "session_state": "Session State",
+              "vrf": "VRF"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 4,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "mappings": [],
+          "unit": "none"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/ advertised$/"
+            },
+            "properties": [
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "dash": [
+                    10,
+                    10
+                  ],
+                  "fill": "dash"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 16,
+        "y": 174
+      },
+      "id": 15,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "aiops_bgp_routes_received{device=~\"$device\"}",
+          "legendFormat": "{{device}} {{neighbor}} received",
+          "refId": "A"
+        },
+        {
+          "expr": "aiops_bgp_routes_advertised{device=~\"$device\"}",
+          "legendFormat": "{{device}} {{neighbor}} advertised",
+          "refId": "B"
+        }
+      ],
+      "title": "BGP Routes/NLRI Received vs Advertised",
+      "type": "timeseries"
+    },
+    {
+      "id": 109,
+      "type": "row",
+      "title": "Topology and Path Query",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 183
+      }
+    },
+    {
+      "id": 108,
+      "type": "text",
+      "title": "Topology and A to B Path Query",
+      "description": "Q2 normalized topology and path lookup",
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 184
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**Q2 topology tools**\n\n- [Interactive physical topology](http://192.168.20.169:8080/topology)\n- [A to B path query](http://192.168.20.169:8080/tools)\n- [Topology JSON API](http://192.168.20.169:8080/api/topology)\n- [Topology anomalies](http://192.168.20.169:8080/api/topology/anomalies)"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "targets": []
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 189
+      },
+      "id": 101,
+      "panels": [],
+      "title": "Interface View",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 24,
+        "x": 0,
+        "y": 190
+      },
+      "id": 3,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value_and_name",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.3.0",
+      "targets": [
+        {
+          "expr": "sum((aiops_interface_admin_up{device=~\"$device\",interface=~\"$interface\"} == 1) and on(device, interface) (aiops_interface_oper_up{device=~\"$device\",interface=~\"$interface\"} == 0)) or vector(0)",
+          "legendFormat": "admin up / oper down",
+          "refId": "A"
+        }
+      ],
+      "title": "Interface Problems",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 4,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "mappings": [],
+          "unit": "bps"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/ tx$/"
+            },
+            "properties": [
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "dash": [
+                    10,
+                    10
+                  ],
+                  "fill": "dash"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 16,
+        "x": 0,
+        "y": 194
+      },
+      "id": 7,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "aiops_interface_rx_bps{device=~\"$device\",interface=~\"$interface\"}",
+          "legendFormat": "{{device}} {{interface}} rx",
+          "refId": "A"
+        },
+        {
+          "expr": "aiops_interface_tx_bps{device=~\"$device\",interface=~\"$interface\"}",
+          "legendFormat": "{{device}} {{interface}} tx",
+          "refId": "B"
+        }
+      ],
+      "title": "Interface Traffic",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Oper"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "color": "yellow",
+                        "text": "down"
+                      },
+                      "1": {
+                        "color": "green",
+                        "text": "up"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "yellow",
+                      "value": null
+                    },
+                    {
+                      "color": "green",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 8,
+        "x": 16,
+        "y": 194
+      },
+      "id": 8,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "pluginVersion": "11.3.0",
+      "targets": [
+        {
+          "expr": "aiops_interface_oper_up{device=~\"$device\",interface=~\"$interface\"}",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "{{device}} {{interface}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Interface Operational State",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "job": true,
+              "instance": true
+            },
+            "indexByName": {
+              "Value": 2,
+              "device": 0,
+              "interface": 1
+            },
+            "renameByName": {
+              "Value": "Oper",
+              "device": "Device",
+              "interface": "Interface"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/(Input Errors|CRC|Alignment|Symbol|Input Discards|Output Errors|Collisions|Late Collisions|Deferred|Output Discards)/"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 1
+                    },
+                    {
+                      "color": "red",
+                      "value": 10
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 204
+      },
+      "id": 24,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "pluginVersion": "11.3.0",
+      "targets": [
+        {
+          "expr": "aiops_interface_input_errors{device=~\"$device\",interface=~\"$interface\"}",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "input errors",
+          "refId": "A"
+        },
+        {
+          "expr": "aiops_interface_crc_errors{device=~\"$device\",interface=~\"$interface\"}",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "crc",
+          "refId": "B"
+        },
+        {
+          "expr": "aiops_interface_alignment_errors{device=~\"$device\",interface=~\"$interface\"}",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "alignment",
+          "refId": "C"
+        },
+        {
+          "expr": "aiops_interface_symbol_errors{device=~\"$device\",interface=~\"$interface\"}",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "symbol",
+          "refId": "D"
+        },
+        {
+          "expr": "aiops_interface_input_discards{device=~\"$device\",interface=~\"$interface\"}",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "input discards",
+          "refId": "E"
+        },
+        {
+          "expr": "aiops_interface_output_errors{device=~\"$device\",interface=~\"$interface\"}",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "output errors",
+          "refId": "F"
+        },
+        {
+          "expr": "aiops_interface_collisions{device=~\"$device\",interface=~\"$interface\"}",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "collisions",
+          "refId": "G"
+        },
+        {
+          "expr": "aiops_interface_late_collisions{device=~\"$device\",interface=~\"$interface\"}",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "late collisions",
+          "refId": "H"
+        },
+        {
+          "expr": "aiops_interface_deferred{device=~\"$device\",interface=~\"$interface\"}",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "deferred",
+          "refId": "I"
+        },
+        {
+          "expr": "aiops_interface_output_discards{device=~\"$device\",interface=~\"$interface\"}",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "output discards",
+          "refId": "J"
+        }
+      ],
+      "repeat": "device",
+      "repeatDirection": "v",
+      "title": "Interface Errors and Discards - $device",
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "interface",
+            "mode": "outer"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Time 1": true,
+              "Time 2": true,
+              "Time 3": true,
+              "Time 4": true,
+              "Time 5": true,
+              "Time 6": true,
+              "Time 7": true,
+              "Time 8": true,
+              "Time 9": true,
+              "__name__": true,
+              "__name__ 1": true,
+              "__name__ 2": true,
+              "__name__ 3": true,
+              "__name__ 4": true,
+              "__name__ 5": true,
+              "__name__ 6": true,
+              "__name__ 7": true,
+              "__name__ 8": true,
+              "__name__ 9": true,
+              "device 1": true,
+              "device 2": true,
+              "device 3": true,
+              "device 4": true,
+              "device 5": true,
+              "device 6": true,
+              "device 7": true,
+              "device 8": true,
+              "device 9": true,
+              "interface 1": true,
+              "interface 2": true,
+              "interface 3": true,
+              "interface 4": true,
+              "interface 5": true,
+              "interface 6": true,
+              "interface 7": true,
+              "interface 8": true,
+              "interface 9": true,
+              "job": true,
+              "job 1": true,
+              "job 2": true,
+              "job 3": true,
+              "job 4": true,
+              "job 5": true,
+              "job 6": true,
+              "job 7": true,
+              "job 8": true,
+              "job 9": true,
+              "instance": true,
+              "instance 1": true,
+              "instance 2": true,
+              "instance 3": true,
+              "instance 4": true,
+              "instance 5": true,
+              "instance 6": true,
+              "instance 7": true,
+              "instance 8": true,
+              "instance 9": true
+            },
+            "indexByName": {
+              "device": 0,
+              "interface": 1,
+              "Value #A": 2,
+              "Value #B": 3,
+              "Value #C": 4,
+              "Value #D": 5,
+              "Value #E": 6,
+              "Value #F": 7,
+              "Value #G": 8,
+              "Value #H": 9,
+              "Value #I": 10,
+              "Value #J": 11
+            },
+            "renameByName": {
+              "device": "Device",
+              "interface": "Interface",
+              "Value #A": "Input Errors",
+              "Value #B": "CRC",
+              "Value #C": "Alignment",
+              "Value #D": "Symbol",
+              "Value #E": "Input Discards",
+              "Value #F": "Output Errors",
+              "Value #G": "Collisions",
+              "Value #H": "Late Collisions",
+              "Value #I": "Deferred",
+              "Value #J": "Output Discards"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "id": 9200,
+      "type": "row",
+      "title": "Palo Alto · Firewall Interface Traffic",
+      "gridPos": {
+        "x": 0,
+        "y": 213,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 4,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "mappings": [],
+          "unit": "bps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 214,
+        "w": 12,
+        "h": 10
+      },
+      "id": 9201,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "aiops_pa_interface_rx_bps{device=~\"$device\",interface=~\"$interface\"} and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "legendFormat": "{{device}} · {{interface}} · {{layer}}",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "title": "Palo Alto · Interface RX",
+      "type": "timeseries",
+      "description": "Samples byte counters every 60 seconds and calculates bit/s from consecutive samples. Requires two initial samples; failed or expired (180 seconds) observations are absent. Hardware means physical/aggregate ports; logical means subinterfaces. Layers overlap and must not be added. Covers lab PA devices."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 4,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "mappings": [],
+          "unit": "bps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 214,
+        "w": 12,
+        "h": 10
+      },
+      "id": 9202,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "aiops_pa_interface_tx_bps{device=~\"$device\",interface=~\"$interface\"} and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "legendFormat": "{{device}} · {{interface}} · {{layer}}",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "title": "Palo Alto · Interface TX",
+      "type": "timeseries",
+      "description": "Samples byte counters every 60 seconds and calculates bit/s from consecutive samples. Requires two initial samples; failed or expired (180 seconds) observations are absent. Hardware means physical/aggregate ports; logical means subinterfaces. Layers overlap and must not be added. Covers lab PA devices."
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 40,
+  "tags": [
+    "eve",
+    "aiops",
+    "arista",
+    "hardware-classification",
+    "aiops-ops-language"
+  ],
+  "templating": {
+    "list": [
+      {
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "Prometheus"
+        },
+        "definition": "label_values(aiops_device_classification_info, manufacturer)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Manufacturer",
+        "multi": true,
+        "name": "manufacturer",
+        "options": [],
+        "query": {
+          "query": "label_values(aiops_device_classification_info, manufacturer)",
+          "refId": "PrometheusVariableQueryEditor-manufacturer"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "Prometheus"
+        },
+        "definition": "label_values(aiops_device_classification_info{manufacturer=~\"$manufacturer\"}, device_type)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Device type",
+        "multi": true,
+        "name": "device_type",
+        "options": [],
+        "query": {
+          "query": "label_values(aiops_device_classification_info{manufacturer=~\"$manufacturer\"}, device_type)",
+          "refId": "PrometheusVariableQueryEditor-device_type"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allValue": null,
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "Prometheus"
+        },
+        "definition": "label_values(aiops_device_classification_info{manufacturer=~\"$manufacturer\",device_type=~\"$device_type\"}, device)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Device",
+        "multi": true,
+        "name": "device",
+        "options": [],
+        "query": {
+          "query": "label_values(aiops_device_classification_info{manufacturer=~\"$manufacturer\",device_type=~\"$device_type\"}, device)",
+          "refId": "PrometheusVariableQueryEditor-Device"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "Prometheus"
+        },
+        "definition": "label_values(aiops_interface_oper_up{device=~\"$device\"}, interface)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Interface",
+        "multi": true,
+        "name": "interface",
+        "options": [],
+        "query": {
+          "query": "label_values(aiops_interface_oper_up{device=~\"$device\"}, interface)",
+          "refId": "PrometheusVariableQueryEditor-Interface"
+        },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allValue": null,
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "Prometheus"
+        },
+        "definition": "label_values(aiops_device_classification_info{manufacturer=~\"$manufacturer\",device_type=~\"$device_type\",device=~\"$device\"}, hardware_group)",
+        "hide": 2,
+        "includeAll": true,
+        "label": "Hardware group",
+        "multi": true,
+        "name": "hardware_group",
+        "options": [],
+        "query": {
+          "query": "label_values(aiops_device_classification_info{manufacturer=~\"$manufacturer\",device_type=~\"$device_type\",device=~\"$device\"}, hardware_group)",
+          "refId": "PrometheusVariableQueryEditor-hardware_group"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": true,
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "English · Network Operations Overview",
+  "uid": "eve-aiops-overview-en",
+  "version": 14,
+  "weekStart": ""
+}

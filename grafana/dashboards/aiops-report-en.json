@@ -21,7 +21,7 @@
     {
       "title": "Operations dashboard ↗",
       "type": "link",
-      "url": "/d/eve-aiops-overview/ai-networking-ops",
+      "url": "/d/eve-aiops-overview-en/ai-networking-ops",
       "includeVars": true,
       "keepTime": true,
       "targetBlank": true,
@@ -543,7 +543,7 @@
         "w": 6,
         "h": 4
       },
-      "description": "Covers lab devices with backup attempts. Open means unresolved; unowned means no matching preregistered change for the observation window. Exercises never count as real drift acceptance.",
+      "description": "Unresolved drift records from real observations with no matching preregistered change. This counts records, not failed devices. Unowned does not prove a change was unauthorized.",
       "datasource": {
         "type": "prometheus",
         "uid": "Prometheus"
@@ -614,7 +614,7 @@
         "w": 6,
         "h": 4
       },
-      "description": "Covers lab devices with backup attempts. Open means unresolved; unowned means no matching preregistered change for the observation window. Exercises never count as real drift acceptance.",
+      "description": "Unresolved simulated drift records with no matching preregistered change. Counted separately from real observations.",
       "datasource": {
         "type": "prometheus",
         "uid": "Prometheus"
@@ -685,7 +685,7 @@
         "w": 6,
         "h": 4
       },
-      "description": "Covers lab devices with backup attempts. Open means unresolved; unowned means no matching preregistered change for the observation window. Exercises never count as real drift acceptance.",
+      "description": "All unowned exercise records, including resolved records and rollbacks. Three changes plus three rollbacks produce six records; these do not count toward real drift acceptance.",
       "datasource": {
         "type": "prometheus",
         "uid": "Prometheus"
@@ -756,7 +756,7 @@
         "w": 6,
         "h": 4
       },
-      "description": "Covers lab devices with backup attempts. Open means unresolved; unowned means no matching preregistered change for the observation window. Exercises never count as real drift acceptance.",
+      "description": "Number of devices whose latest configuration backup attempt failed, not the number of failed attempts. An unchanged configuration is a successful backup. Devices never attempted are excluded.",
       "datasource": {
         "type": "prometheus",
         "uid": "Prometheus"
@@ -818,12 +818,27 @@
       ]
     },
     {
+      "id": 9305,
+      "type": "text",
+      "title": "Metric definitions and scope",
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 24,
+        "h": 6
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**Open unowned drift**: unresolved real-observation records without a matching preregistered change. **Open exercise drift**: simulated records under the same conditions.\n\n**Exercise history** includes resolved records and rollbacks: 3 changes + 3 rollbacks = 6 records. **Backup failures** counts devices whose latest attempt failed; unchanged configurations are successful backups.\n\nCovers lab devices with backup attempts; the current default interval is 15 minutes. Unowned does not prove unauthorized activity. Missing data is not zero. Cards show state at the selected end time; history is not the number of new records within the selected range."
+      }
+    },
+    {
       "id": 2,
       "title": "Reachable devices",
       "type": "stat",
       "gridPos": {
         "x": 0,
-        "y": 20,
+        "y": 26,
         "w": 6,
         "h": 4
       },
@@ -881,7 +896,7 @@
       "type": "stat",
       "gridPos": {
         "x": 6,
-        "y": 20,
+        "y": 26,
         "w": 6,
         "h": 4
       },
@@ -955,7 +970,7 @@
       "type": "stat",
       "gridPos": {
         "x": 12,
-        "y": 20,
+        "y": 26,
         "w": 6,
         "h": 4
       },
@@ -1029,7 +1044,7 @@
       "type": "stat",
       "gridPos": {
         "x": 18,
-        "y": 20,
+        "y": 26,
         "w": 6,
         "h": 4
       },
@@ -1103,7 +1118,7 @@
       "type": "table",
       "gridPos": {
         "x": 0,
-        "y": 24,
+        "y": 30,
         "w": 24,
         "h": 11
       },
@@ -1324,7 +1339,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 35,
+        "y": 41,
         "w": 12,
         "h": 8
       },
@@ -1410,7 +1425,7 @@
       "type": "bargauge",
       "gridPos": {
         "x": 12,
-        "y": 35,
+        "y": 41,
         "w": 12,
         "h": 8
       },
@@ -1476,7 +1491,7 @@
       "type": "row",
       "gridPos": {
         "x": 0,
-        "y": 43,
+        "y": 49,
         "w": 24,
         "h": 1
       },
@@ -1498,7 +1513,7 @@
       "type": "table",
       "gridPos": {
         "x": 0,
-        "y": 44,
+        "y": 50,
         "w": 12,
         "h": 11
       },
@@ -1581,7 +1596,7 @@
       "type": "text",
       "gridPos": {
         "x": 12,
-        "y": 44,
+        "y": 50,
         "w": 12,
         "h": 7
       },
@@ -1604,7 +1619,7 @@
       "type": "stat",
       "gridPos": {
         "x": 12,
-        "y": 51,
+        "y": 57,
         "w": 4,
         "h": 4
       },
@@ -1678,7 +1693,7 @@
       "type": "stat",
       "gridPos": {
         "x": 16,
-        "y": 51,
+        "y": 57,
         "w": 4,
         "h": 4
       },
@@ -1752,7 +1767,7 @@
       "type": "stat",
       "gridPos": {
         "x": 20,
-        "y": 51,
+        "y": 57,
         "w": 4,
         "h": 4
       },
@@ -1826,7 +1841,7 @@
       "type": "stat",
       "gridPos": {
         "x": 0,
-        "y": 55,
+        "y": 61,
         "w": 6,
         "h": 4
       },
@@ -1898,7 +1913,7 @@
       "type": "stat",
       "gridPos": {
         "x": 6,
-        "y": 55,
+        "y": 61,
         "w": 6,
         "h": 4
       },
@@ -1956,7 +1971,7 @@
       "type": "stat",
       "gridPos": {
         "x": 12,
-        "y": 55,
+        "y": 61,
         "w": 6,
         "h": 4
       },
@@ -2014,7 +2029,7 @@
       "type": "stat",
       "gridPos": {
         "x": 18,
-        "y": 55,
+        "y": 61,
         "w": 6,
         "h": 4
       },
@@ -2072,7 +2087,7 @@
       "type": "row",
       "gridPos": {
         "x": 0,
-        "y": 59,
+        "y": 65,
         "w": 24,
         "h": 1
       },
@@ -2094,7 +2109,7 @@
       "type": "bargauge",
       "gridPos": {
         "x": 0,
-        "y": 60,
+        "y": 66,
         "w": 8,
         "h": 9
       },
@@ -2177,7 +2192,7 @@
       "type": "bargauge",
       "gridPos": {
         "x": 8,
-        "y": 60,
+        "y": 66,
         "w": 8,
         "h": 9
       },
@@ -2260,7 +2275,7 @@
       "type": "bargauge",
       "gridPos": {
         "x": 16,
-        "y": 60,
+        "y": 66,
         "w": 8,
         "h": 9
       },
@@ -2343,7 +2358,7 @@
       "type": "table",
       "gridPos": {
         "x": 0,
-        "y": 69,
+        "y": 75,
         "w": 12,
         "h": 10
       },
@@ -2524,7 +2539,7 @@
       "type": "table",
       "gridPos": {
         "x": 12,
-        "y": 69,
+        "y": 75,
         "w": 12,
         "h": 10
       },
@@ -2607,7 +2622,7 @@
       "type": "table",
       "gridPos": {
         "x": 0,
-        "y": 79,
+        "y": 85,
         "w": 12,
         "h": 9
       },
@@ -2693,7 +2708,7 @@
       "type": "table",
       "gridPos": {
         "x": 12,
-        "y": 79,
+        "y": 85,
         "w": 12,
         "h": 9
       },
@@ -2785,7 +2800,7 @@
       "type": "table",
       "gridPos": {
         "x": 0,
-        "y": 88,
+        "y": 94,
         "w": 12,
         "h": 10
       },
@@ -2923,7 +2938,7 @@
       "type": "table",
       "gridPos": {
         "x": 12,
-        "y": 88,
+        "y": 94,
         "w": 12,
         "h": 10
       },
@@ -3006,7 +3021,7 @@
       "type": "row",
       "gridPos": {
         "x": 0,
-        "y": 98,
+        "y": 104,
         "w": 24,
         "h": 1
       },
@@ -3028,7 +3043,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 99,
+        "y": 105,
         "w": 12,
         "h": 8
       },
@@ -3114,7 +3129,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 99,
+        "y": 105,
         "w": 12,
         "h": 8
       },
@@ -3200,7 +3215,7 @@
       "type": "bargauge",
       "gridPos": {
         "x": 0,
-        "y": 107,
+        "y": 113,
         "w": 12,
         "h": 10
       },
@@ -3266,7 +3281,7 @@
       "type": "table",
       "gridPos": {
         "x": 12,
-        "y": 107,
+        "y": 113,
         "w": 12,
         "h": 10
       },
@@ -3352,7 +3367,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 117,
+        "y": 123,
         "w": 12,
         "h": 8
       },
@@ -3438,7 +3453,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 117,
+        "y": 123,
         "w": 12,
         "h": 8
       },
@@ -3524,7 +3539,7 @@
       "type": "row",
       "gridPos": {
         "x": 0,
-        "y": 125,
+        "y": 131,
         "w": 24,
         "h": 1
       },
@@ -3546,7 +3561,7 @@
       "type": "stat",
       "gridPos": {
         "x": 0,
-        "y": 126,
+        "y": 132,
         "w": 6,
         "h": 4
       },
@@ -3604,7 +3619,7 @@
       "type": "stat",
       "gridPos": {
         "x": 6,
-        "y": 126,
+        "y": 132,
         "w": 6,
         "h": 4
       },
@@ -3662,7 +3677,7 @@
       "type": "stat",
       "gridPos": {
         "x": 12,
-        "y": 126,
+        "y": 132,
         "w": 6,
         "h": 4
       },
@@ -3720,7 +3735,7 @@
       "type": "stat",
       "gridPos": {
         "x": 18,
-        "y": 126,
+        "y": 132,
         "w": 6,
         "h": 4
       },
@@ -3778,7 +3793,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 130,
+        "y": 136,
         "w": 12,
         "h": 8
       },
@@ -3852,7 +3867,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 130,
+        "y": 136,
         "w": 12,
         "h": 8
       },
@@ -3926,7 +3941,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 138,
+        "y": 144,
         "w": 12,
         "h": 8
       },
@@ -4000,7 +4015,7 @@
       "type": "text",
       "gridPos": {
         "x": 12,
-        "y": 138,
+        "y": 144,
         "w": 12,
         "h": 8
       },
@@ -4023,7 +4038,7 @@
       "type": "row",
       "gridPos": {
         "x": 0,
-        "y": 146,
+        "y": 152,
         "w": 24,
         "h": 1
       },
@@ -4045,7 +4060,7 @@
       "type": "stat",
       "gridPos": {
         "x": 0,
-        "y": 147,
+        "y": 153,
         "w": 8,
         "h": 4
       },
@@ -4103,7 +4118,7 @@
       "type": "stat",
       "gridPos": {
         "x": 8,
-        "y": 147,
+        "y": 153,
         "w": 8,
         "h": 4
       },
@@ -4161,7 +4176,7 @@
       "type": "stat",
       "gridPos": {
         "x": 16,
-        "y": 147,
+        "y": 153,
         "w": 8,
         "h": 4
       },
@@ -4219,7 +4234,7 @@
       "type": "bargauge",
       "gridPos": {
         "x": 0,
-        "y": 151,
+        "y": 157,
         "w": 12,
         "h": 10
       },
@@ -4285,7 +4300,7 @@
       "type": "bargauge",
       "gridPos": {
         "x": 12,
-        "y": 151,
+        "y": 157,
         "w": 12,
         "h": 10
       },
@@ -4351,7 +4366,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 161,
+        "y": 167,
         "w": 12,
         "h": 8
       },
@@ -4437,7 +4452,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 161,
+        "y": 167,
         "w": 12,
         "h": 8
       },
@@ -4511,7 +4526,7 @@
       "type": "table",
       "gridPos": {
         "x": 0,
-        "y": 169,
+        "y": 175,
         "w": 12,
         "h": 10
       },
@@ -4617,7 +4632,7 @@
       "type": "table",
       "gridPos": {
         "x": 12,
-        "y": 169,
+        "y": 175,
         "w": 12,
         "h": 10
       },
@@ -4706,7 +4721,7 @@
       "type": "text",
       "gridPos": {
         "x": 0,
-        "y": 179,
+        "y": 185,
         "w": 24,
         "h": 4
       },
@@ -4729,7 +4744,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 183,
+        "y": 189,
         "w": 12,
         "h": 10
       },
@@ -4803,7 +4818,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 183,
+        "y": 189,
         "w": 12,
         "h": 10
       },
