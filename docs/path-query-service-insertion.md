@@ -6,6 +6,14 @@ The tools page defaults to lab when available. The API defaults to all sites for
 compatibility; duplicate address owners require site/device/VRF selection.
 Site limits both endpoint resolution and transit devices.
 
+Each result branch has a device path diagram. Numbered arrows show traversal
+order; repeated visits to the same device remain separate nodes. Input/output
+physical interfaces can be hidden with the Interfaces checkbox. Click or focus
+and press Enter on a device to inspect that visit's evidence. The complete
+route/policy list is available under All evidence. Incomplete or blocked branches
+end at the last observed device; the destination is never added speculatively.
+The diagram scrolls horizontally on small screens and refreshes only on query.
+
 Routed mode evaluates collected forwarding evidence:
 
 - SVI VLAN membership resolves explicit access/trunk ports and aggregate members.

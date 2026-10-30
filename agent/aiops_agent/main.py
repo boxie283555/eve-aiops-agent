@@ -18,6 +18,7 @@ from .collector import Collector
 from .inventory import load_inventory
 from .nautobot import NautobotClient, NautobotError
 from .metrics import NAUTOBOT_SYNC_SUCCESS, NAUTOBOT_SYNC_LAST_SUCCESS, NAUTOBOT_SYNC_DURATION, NAUTOBOT_SYNC_UPDATED
+from .path_visualization import PATH_GRAPH_STYLE, PATH_GRAPH_SCRIPT
 from .parser import normalize_mac
 from .settings import load_settings
 from .snapshots import collect_and_snapshot, compare_latest
@@ -261,6 +262,7 @@ def tools_view() -> str:
 <!doctype html>
 <html>
 <head>
+  <meta charset="utf-8">
   <title>AI Networking OPS Tools</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
@@ -351,6 +353,9 @@ def tools_view() -> str:
         </div>
       </div>
       <div class="actions"><select id="pathMode"><option value="auto">Auto</option><option value="routed">Route lookup</option><option value="physical">Physical connectivity</option></select><button type="button" onclick="lookupPath()">Trace Path</button></div>
+    </section>
+    <section class="path-results">
+      <h2>设备路径图 / Device Path</h2>
       <div id="pathResult" class="result"><div class="message">Waiting for query...</div></div>
       <div class="actions"><button type="button" onclick="showRoutes()">Show routes for source device / VRF</button></div>
       <div id="routesResult" class="result"></div>
@@ -494,25 +499,17 @@ def tools_view() -> str:
         + tableSection("CLF Matches", payload.clf_matches || [], ["device", "vlan", "mac", "port", "site", "location_type"]);
     }
 
-    function deviceSequence(steps) {
-      const nodes = [];
-      for (const s of steps) {
-        for (const name of (s.type === "physical" ? [s.from, s.to] : [s.device])) {
-          if (name && nodes[nodes.length - 1] !== name) nodes.push(name);
-        }
-      }
-      return nodes;
-    }
-
     function pathHtml(payload) {
+      pathGraphs = [];
       const candidates = payload.status === "ambiguous"
         ? tableSection("Source candidates — select device and VRF above", payload.source_candidates || [], ["device", "vrf", "interface", "ip", "mac", "vlan"])
           + tableSection("Destination candidates", payload.destination_candidates || [], ["device", "vrf", "interface", "ip", "mac", "vlan"]) : "";
       const branches = payload.paths || [];
-      const paths = branches.map((branch, i) => '<h3>Path ' + (i+1) + ' · ' + escapeHtml(branch.status) + '</h3>'
-        + '<div class="message">' + escapeHtml(deviceSequence(branch.path || []).join(" → ")) + '</div>'
-        + '<div class="path">' + (branch.path || []).map(stepHtml).join("") + '</div>'
-        + (branch.reason ? '<div class="message">' + escapeHtml(branch.reason) + '</div>' : '')).join("");
+      const paths = branches.map((branch, i) => '<article class="path-branch"><div class="path-branch-header"><h3>Path ' + (i+1) + ' · ' + escapeHtml(branch.status) + '</h3>'
+        + '<label><input class="path-port-toggle" type="checkbox" checked>接口 / Interfaces</label></div>'
+        + pathGraphHtml(branch, i, payload)
+        + (branch.reason ? '<div class="message">' + escapeHtml(branch.reason) + '</div>' : '')
+        + '<details class="path-evidence"><summary>完整计算明细 / All evidence (' + (branch.path || []).length + ')</summary><div class="path">' + (branch.path || []).map(stepHtml).join("") + '</div></details></article>').join("");
       return '<div class="summary">' + pill(payload.status || "unavailable", payload.status === "ok" ? "good" : "warn")
         + pill(payload.mode || "auto") + pill("Site: " + (payload.site || "all")) + '</div>'
         + endpointSummary("Source", payload.source || {}) + endpointSummary("Destination", payload.destination || {})
@@ -564,7 +561,7 @@ def tools_view() -> str:
   </script>
 </body>
 </html>
-"""
+""".replace("</style>", PATH_GRAPH_STYLE + "</style>", 1).replace("<script>", "<script>" + PATH_GRAPH_SCRIPT, 1)
 
 
 @app.get("/topology", response_class=HTMLResponse)
