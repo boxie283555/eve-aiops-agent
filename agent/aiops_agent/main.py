@@ -17,7 +17,9 @@ from fastapi.responses import HTMLResponse, PlainTextResponse
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from .collector import Collector
-from .inventory import load_inventory
+from .inventory import load_inventory, inventory_status
+from .health import network_health, prometheus_health
+from .health_view import HEALTH_PAGE
 from .nautobot import NautobotClient, NautobotError
 from .metrics import NAUTOBOT_SYNC_SUCCESS, NAUTOBOT_SYNC_LAST_SUCCESS, NAUTOBOT_SYNC_DURATION, NAUTOBOT_SYNC_UPDATED
 from .panos_evidence import attach_policy, refresh_policy, policy_status, verify_flow
@@ -29,6 +31,7 @@ from .topology import build_snapshot, find_path, load_layout, load_snapshot, sav
 
 settings = load_settings()
 devices = load_inventory()
+active_inventory_status = inventory_status()
 collector = Collector(settings, devices)
 scheduler = AsyncIOScheduler(timezone="Asia/Shanghai")
 interface_sync_task: asyncio.Task[None] | None = None
@@ -157,7 +160,24 @@ def healthz() -> str:
 
 @app.get("/metrics")
 def prometheus_metrics() -> Response:
-    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+    return Response(generate_latest() + prometheus_health(health_score()), media_type=CONTENT_TYPE_LATEST)
+
+
+@app.get("/api/inventory/status")
+def active_inventory() -> dict:
+    return {**active_inventory_status, "device_count": len(collector.devices),
+            "refresh_policy": "Loaded at Agent startup; restart Agent after inventory changes"}
+
+
+@app.get("/api/health/score")
+def health_score(site: str = "all") -> dict:
+    return network_health(list(collector.devices), dict(collector.latest_results), load_snapshot(), site,
+                          ttl=int(os.getenv("AIOPS_TOPOLOGY_TTL_SECONDS", "600")))
+
+
+@app.get("/health", response_class=HTMLResponse)
+def health_page() -> str:
+    return HEALTH_PAGE
 
 
 @app.get("/state")

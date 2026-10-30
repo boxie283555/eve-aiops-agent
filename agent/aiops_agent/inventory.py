@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timezone
 import os
 from pathlib import Path
 from typing import Any
@@ -9,6 +10,13 @@ import yaml
 
 from .settings import load_project_config
 from .nautobot import NautobotClient, NautobotError
+
+_last_load_status: dict[str, Any] = {}
+
+
+def inventory_status() -> dict[str, Any]:
+    """Metadata only: never expose inventory credentials or response payloads."""
+    return dict(_last_load_status)
 
 
 @dataclass(frozen=True)
@@ -57,19 +65,29 @@ def device_classification(device: Device) -> tuple[str, str]:
 
 
 def load_inventory(path: str = "/app/inventory/devices.yml") -> list[Device]:
+    global _last_load_status
     project_config = load_project_config()
     nautobot = project_config.get("nautobot", {})
     nautobot_url = os.getenv("NAUTOBOT_URL") or nautobot.get("url")
     nautobot_token = os.getenv("NAUTOBOT_TOKEN") or nautobot.get("token")
-    inventory_source = os.getenv("AIOPS_INVENTORY_SOURCE") or nautobot.get("inventory_source", "yaml")
+    inventory_source = (os.getenv("AIOPS_INVENTORY_SOURCE")
+                        or project_config.get("inventory", {}).get("source")
+                        or nautobot.get("inventory_source", "yaml"))
+    if inventory_source not in {"yaml", "nautobot"}:
+        raise ValueError("Unknown inventory source")
+    effective_source = inventory_source
+    fallback = nautobot.get("fallback_to_yaml", False) is True
     raw: dict[str, Any]
-    if inventory_source == "nautobot" and nautobot_url and nautobot_token:
+    if inventory_source == "nautobot":
+        if not nautobot_url or not nautobot_token:
+            raise NautobotError("Nautobot inventory requires URL and token; YAML was not loaded")
         try:
             raw = {"devices": NautobotClient(nautobot_url, nautobot_token).devices()}
         except NautobotError:
-            if nautobot.get("fallback_to_yaml", True) is False:
+            if not fallback:
                 raise
             raw = _load_yaml_inventory(path, project_config)
+            effective_source = "yaml_fallback"
     elif project_config.get("inventory"):
         raw = project_config["inventory"]
     else:
@@ -101,6 +119,12 @@ def load_inventory(path: str = "/app/inventory/devices.yml") -> list[Device]:
                 ),
             )
         )
+    _last_load_status = {"configured_source": inventory_source,
+                         "effective_source": effective_source,
+                         "fallback_to_yaml": fallback,
+                         "loaded_at": datetime.now(timezone.utc).isoformat(),
+                         "device_count": len(devices),
+                         "devices_with_id": sum(bool(d.id) for d in devices)}
     return devices
 
 

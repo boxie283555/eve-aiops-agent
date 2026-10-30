@@ -211,6 +211,34 @@ def build(lang):
         if existing['gridPos']['y'] >= 17:existing['gridPos']['y'] += 1
         if existing['id'] == 1:existing['gridPos']['h'] += 1
         else:existing['gridPos']['y'] += 1
+    # Health scores include every selected inventory device, including failed polls.
+    # Do not apply the collect-success filter used for optional metrics.
+    for existing in panels:
+        if existing['gridPos']['y'] >= 4:
+            existing['gridPos']['y'] += 11
+    health_start = len(panels)
+    health_desc=tr('规则评分，不是 SLA。未知项暂不计分，请同时看证据覆盖率和缺证分数；点击“健康评分明细”查看原因。',
+                   'Rule-based score, not an SLA. Unknown checks earn no points; read coverage and unassessed points together. Open Health details for reasons.')
+    for x,title,key in [(0,tr('网络健康评估分 / 100','Network health points / 100'),'score'),
+                        (6,tr('评分证据覆盖率','Scoring evidence coverage'),'coverage_percent'),
+                        (12,tr('已观察问题扣分','Observed health deductions'),'deduction_points'),
+                        (18,tr('缺证暂未获得分数','Unassessed health points'),'unassessed_points')]:
+        expr='avg('+raw('aiops_health_'+key)+')'
+        if key=='score':expr+=' and on() (sum('+raw('aiops_health_coverage_percent')+') > 0)'
+        p=stat(title,expr,x,4,unit='percent' if key=='coverage_percent' else 'short',desc=health_desc)
+        p['fieldConfig']['defaults'].update(min=0,max=100,decimals=1)
+        if key in {'score','coverage_percent'}:
+            p['fieldConfig']['defaults'].update(color={'mode':'thresholds'},thresholds={'mode':'absolute','steps':[{'value':None,'color':'red'},{'value':60,'color':'orange'},{'value':80,'color':'yellow'},{'value':90,'color':'green'}]})
+    p=table(tr('设备健康评估分','Device health points'),[raw('aiops_health_score'),raw('aiops_health_coverage_percent')],
+            'device',{'device':tr('设备','Device'),'Value #A':tr('健康分','Health points'),'Value #B':tr('覆盖率','Coverage')},0,8,12,7,desc=health_desc)
+    p['options']['sortBy']=[{'displayName':tr('健康分','Health points'),'desc':False}]
+    field(p,tr('健康分','Health points'),{'min':0,'max':100,'decimals':1})
+    field(p,tr('覆盖率','Coverage'),{'unit':'percent','min':0,'max':100,'decimals':1})
+    p=text(tr('健康评分明细与范围','Health scoring details and scope'),tr(
+        '**100 为最高。** 采集 40%、已确认链路 20%、CPU/内存 20%、协议 10%、硬件 10%。缺失或过期数据暂不计分；缺证不等于故障。排除项重新分配权重，全网按设备等权平均。\n\n[打开健康评分明细 ↗](http://192.168.20.169:8080/health)\n\n评分为当前观察，不覆盖时延/丢包、业务探测和实际转发。',
+        '**100 is the maximum.** Collection 40%, confirmed links 20%, CPU/memory 20%, peers 10%, hardware 10%. Missing/stale evidence earns no points; it is not a fault. Excluded checks redistribute weights. Devices have equal weight.\n\n[Open health scoring details ↗](http://192.168.20.169:8080/health?lang=en)\n\nCurrent observations; excludes latency/loss, application probes and packet delivery.'),8,7)
+    p['gridPos'].update(x=12,w=12)
+    for idx,p in enumerate(panels[health_start:]):p['id']=9001+idx
     panels.sort(key=lambda p:(p['gridPos']['y'],p['gridPos']['x']))
     variables=json.loads((ROOT/'grafana/dashboards/aiops-overview.json').read_text())['templating']['list']
     variable=next(v for v in variables if v['name']=='device')

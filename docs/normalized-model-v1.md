@@ -1,5 +1,7 @@
 # Q2 归一化模型 v1（schema_version 1.1）
 
+先读一页版 [模型设计摘要](normalized-model-design-v1.md)。本文保留实现细节和历史验收记录，历史计数不代表当前在线状态。
+
 ## 身份与兼容性
 
 - `device.id` 使用 Nautobot UUID；YAML 兼容模式使用名称派生 UUID。跨模式迁移时 UUID 会变，名称布局仍可读取。
@@ -47,7 +49,7 @@ PA 未提供的管理状态保留 null；子接口继承父口链路状态时标
 - routed 在每跳的设备/VRF 中做最长前缀匹配；支持递归下一跳、聚合成员、子接口 VLAN 匹配与 ECMP 分支。过期的明细路由不会降级到新鲜默认路由。
 - 下一跳必须有同一物理链路另一端的接口地址证据；缺少确认链路、端口 down、路由过期、循环或无法证明的 VLAN/overlay 中转均明确返回 incomplete/stale。
 - 所有 ECMP 分支放入 `paths`。只有一条分支时同时填充旧 `path` 字段，不默认挑第一条路径。
-- 防火墙策略、NAT、PBR、实际 ECMP 哈希及跨 VRF 泄漏尚不属于本引擎的验证范围；返回的成功结果是 RIB 支持的候选转发路径。
+- 默认 `analysis=routing` 返回配置支持的候选转发路径，已支持部分 EOS traffic-policy；`analysis=flow` 加入流量状态与部分 PA 安全策略/静态 NAT，详见 [PA 流量分析](pa-flow-analysis.md)。不声称验证通用多厂商 PBR、实际 ECMP 哈希、已有会话回程或真实报文交付。
 
 路由明细：`GET /api/routes?device=p1-svc&vrf=default`，可额外用 `prefix` 做精确前缀过滤。页面在 Source Device / Source VRF 下选择条件，点 **Show routes for source device / VRF**。
 
