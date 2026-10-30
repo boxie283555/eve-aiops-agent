@@ -458,6 +458,29 @@ def _to_float(value: str) -> float | None:
         return None
 
 
+def parse_panos_hardware(system_info: str) -> DeviceHardwareInfo:
+    """Read explicit PAN-OS system-info fields, never infer a model from a line."""
+    if re.search(
+        r"COMMAND_FAILED|Invalid (?:command|syntax|input)|Unknown command|Syntax error",
+        system_info,
+        re.IGNORECASE,
+    ):
+        return DeviceHardwareInfo()
+
+    fields = {}
+    for line in system_info.splitlines():
+        match = re.fullmatch(r"\s*([A-Za-z][A-Za-z0-9-]*)\s*:\s*(.*?)\s*", line)
+        if match:
+            fields[match.group(1).lower()] = match.group(2) or "unknown"
+    return DeviceHardwareInfo(
+        model=fields.get("model", "unknown"),
+        version=fields.get("sw-version", "unknown"),
+        serial=fields.get("serial", "unknown"),
+        architecture=fields.get("architecture", "unknown"),
+        hw_version=fields.get("hw-version", "unknown"),
+    )
+
+
 def parse_device_hardware(
     version_output: str,
     inventory_output: str = "",

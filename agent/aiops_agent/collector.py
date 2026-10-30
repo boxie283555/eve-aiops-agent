@@ -36,6 +36,7 @@ from .parser import (
     parse_panos_arp,
     parse_panos_sessions,
     parse_panos_resources,
+    parse_panos_hardware,
     parse_lldp_neighbors,
     parse_mac_address_table,
     parse_nve_peers,
@@ -54,7 +55,8 @@ TEXTFSM_COMMAND_KEYS = {"version", "inventory", "power", "module", "bgp_summary"
 COMMANDS_BY_PLATFORM = {
     "paloalto_panos": {
         "hostname": "show system info | match hostname",
-        "version": "show system info | match sw-version",
+        # The full response provides model and serial as well as sw-version.
+        "version": "show system info",
         "interface": "show interface all",
         "arp": "show arp all",
         "sessions": "show session info",
@@ -313,7 +315,8 @@ class Collector:
                 arp_table=parse_panos_arp(outputs.get("arp", "")) if device.platform == "paloalto_panos" else parse_ip_arp(outputs.get("arp", "")),
                 lldp_neighbors=parse_lldp_neighbors(outputs.get("lldp_neighbors", "")),
                 route_summary=parse_route_summary(outputs.get("route_summary", "")),
-                hardware=parse_device_hardware(
+                hardware=parse_panos_hardware(outputs.get("version", ""))
+                if device.platform == "paloalto_panos" else parse_device_hardware(
                     outputs.get("version", ""),
                     outputs.get("inventory", ""),
                     structured_outputs.get("version"),
@@ -411,15 +414,26 @@ class Collector:
             ).inc()
             return
 
-        metrics.DEVICE_HARDWARE_INFO.labels(
-            result.device.name,
-            result.device.host,
-            result.hardware.model,
-            result.hardware.version,
-            result.hardware.serial,
-            result.hardware.architecture,
-            result.hardware.hw_version,
-        ).set(1)
+        hardware_labels = {
+            "device": result.device.name,
+            "host": result.device.host,
+            "model": result.hardware.model,
+            "version": result.hardware.version,
+            "serial": result.hardware.serial,
+            "architecture": result.hardware.architecture,
+            "hw_version": result.hardware.hw_version,
+        }
+        if result.device.platform == "paloalto_panos":
+            # Info labels are identity, not counters: retain one current record
+            # per firewall after a correction or upgrade, without touching peers.
+            for family in metrics.DEVICE_HARDWARE_INFO.collect():
+                for sample in family.samples:
+                    if (sample.labels.get("device") == result.device.name
+                            and sample.labels != hardware_labels):
+                        metrics.DEVICE_HARDWARE_INFO.remove(
+                            *(sample.labels[key] for key in hardware_labels)
+                        )
+        metrics.DEVICE_HARDWARE_INFO.labels(**hardware_labels).set(1)
 
         for component in result.hardware_components:
             status_value = self._hardware_status_value(component.status)
