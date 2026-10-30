@@ -328,7 +328,10 @@ class Collector:
                 ),
                 firewall_metrics=parse_panos_sessions(outputs.get("sessions", "")) if device.platform == "paloalto_panos" else {},
                 hardware_components=[
-                    *parse_power_supplies(outputs.get("power", ""), structured_outputs.get("power")),
+                    *parse_power_supplies(
+                        outputs.get("power", ""), structured_outputs.get("power"),
+                        outputs.get("inventory", ""), structured_outputs.get("inventory"),
+                    ),
                     *parse_modules(
                         outputs.get("module", ""),
                         outputs.get("inventory", ""),
@@ -434,6 +437,22 @@ class Collector:
                             *(sample.labels[key] for key in hardware_labels)
                         )
         metrics.DEVICE_HARDWARE_INFO.labels(**hardware_labels).set(1)
+
+        # Identity/status labels describe the current observation. Retire previous
+        # label combinations only for families observed in this successful poll.
+        component_keys = ("device", "component_type", "name", "model", "serial", "status")
+        current_components = {
+            (result.device.name, c.component_type, c.name, c.model, c.serial, c.status)
+            for c in result.hardware_components
+        }
+        observed_types = {c.component_type for c in result.hardware_components}
+        for family in metrics.HARDWARE_COMPONENT_STATUS.collect():
+            for sample in family.samples:
+                if (sample.labels.get("device") == result.device.name
+                        and sample.labels.get("component_type") in observed_types):
+                    previous = tuple(sample.labels[key] for key in component_keys)
+                    if previous not in current_components:
+                        metrics.HARDWARE_COMPONENT_STATUS.remove(*previous)
 
         for component in result.hardware_components:
             status_value = self._hardware_status_value(component.status)
@@ -567,11 +586,11 @@ class Collector:
 
     def _hardware_status_value(self, status: str) -> float:
         normalized = status.lower()
-        if normalized in {"fail", "failed", "down", "error", "fault", "not_ok"}:
+        if normalized in {"fail", "failed", "down", "error", "fault", "not_ok", "power_loss", "offline", "powered_dn"}:
             return 0
-        if normalized in {"unsupported", "not_present", "not_installed", "no_power_supplies", "unknown"}:
-            return 0.5
-        return 1
+        if normalized in {"ok", "active", "ha_standby", "standby", "powered_up", "present", "up", "online", "normal", "operational", "good"}:
+            return 1
+        return 0.5
 
     def _set_optional_interface_metric(self, gauge, device: str, interface: str, value: object) -> None:
         if value is not None:

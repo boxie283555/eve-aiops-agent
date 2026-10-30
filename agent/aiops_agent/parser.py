@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import re
 from ipaddress import IPv4Interface
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
+
+from .hardware_inventory import identity, known, parse_inventory, slot_id
 
 
 @dataclass(frozen=True)
@@ -515,114 +517,120 @@ def parse_device_hardware(
     )
 
 
-def parse_power_supplies(output: str, structured: Any = None) -> list[HardwareComponent]:
-    structured_components = []
+def _component_status(value: str) -> str:
+    return re.sub(r"[ -]+", "_", value.strip().lower()).rstrip("_*") or "unknown"
+
+
+def _hardware_command_failed(output: str) -> bool:
+    return bool(re.search(r"COMMAND_FAILED|Unavailable command|Incomplete command|Invalid (?:command|input|syntax)|Unknown command|% Error", output, re.I))
+
+
+def _enrich_components(components, parts):
+    enriched = []
+    for component in components:
+        kind = "chassis" if component.name == "chassis" else component.component_type
+        model, serial = identity(parts, kind, component.name, component.model)
+        enriched.append(replace(component,
+            model=component.model if known(component.model) else model,
+            serial=component.serial if known(component.serial) else serial))
+    return enriched
+
+
+def parse_power_supplies(output: str, structured: Any = None,
+                         inventory_output: str = "", inventory_structured: Any = None) -> list[HardwareComponent]:
+    parts = parse_inventory(inventory_output, inventory_structured)
+    if "no power supplies connected" in output.lower() or any(
+        "no power supplies" in _get(r, "status", "power_supply_status").lower() for r in _records(structured)
+    ):
+        return [HardwareComponent("power", "none", "not_present", "not_applicable", "not_applicable")]
+    components = []
     for record in _records(structured):
         status = _get(record, "power_supply_status", "status")
-        if not status:
-            continue
-        structured_components.append(
-            HardwareComponent(
-                component_type="power",
-                name=_get(record, "power_supply_location", "location", "slot") or "power",
-                model=_get(record, "power_supply_pid", "pid", "model") or "unknown",
-                serial=_get(record, "serial", "sn") or "unknown",
-                status=status.replace(" ", "_").lower(),
-            )
-        )
-    if structured_components:
-        return structured_components
-
-    if "no power supplies connected" in output.lower():
-        return [HardwareComponent("power", "none", "not_present")]
-    if output.startswith("COMMAND_FAILED"):
+        if status:
+            components.append(HardwareComponent(
+                "power", slot_id(_get(record, "power_supply_location", "location", "slot") or "power"),
+                _component_status(status),
+                _get(record, "power_supply_pid", "pid", "model") or "unknown",
+                _get(record, "serial", "sn") or "unknown"))
+    if not components and not _hardware_command_failed(output):
+        models = {}
+        for line in output.splitlines():
+            fields = line.split()
+            if len(fields) < 2 or not re.fullmatch(r"(?:PSU?|PWR)?[0-9]+(?:/[0-9]+)*", fields[0], re.I):
+                continue
+            name = slot_id(fields[0])
+            if known(fields[1]) and not re.fullmatch(r"[0-9.]+[WAV]|Not|Offline", fields[1], re.I):
+                models[name] = fields[1]
+            # Status precedes uptime on EOS, and may precede wattage on NX-OS.
+            match = re.search(r"\b(Not Present|Not Installed|Not Ok|Power Loss|Powered[ -]dn|Ok|Failed|Fail|Fault|Offline|Down|Absent)\b", line, re.I)
+            if not match:
+                continue
+            absent = _component_status(match.group()) in {"not_present", "not_installed", "absent"}
+            components.append(HardwareComponent("power", name, _component_status(match.group()),
+                                                "unknown" if absent else models.get(name, "unknown")))
+    if not components:
+        for part in parts:
+            if part.kind == "power" and not any(c.name == part.slot for c in components):
+                components.append(HardwareComponent("power", part.slot, "unknown"))
+    if not components and _hardware_command_failed(output):
         return [HardwareComponent("power", "unsupported", "unsupported")]
-
-    components: list[HardwareComponent] = []
-    for line in output.splitlines():
-        fields = re.split(r"\s+", line.strip())
-        if len(fields) < 2 or fields[0].lower() in {"power", "supply", "----", "input", "output"}:
-            continue
-        if not (fields[0].isdigit() or fields[0].lower().startswith(("ps", "pwr"))):
-            continue
-        components.append(
-            HardwareComponent(
-                component_type="power",
-                name=fields[0],
-                model=fields[1] if len(fields) > 2 else "unknown",
-                status=fields[-1],
-            )
-        )
-    return components
+    return _enrich_components(components, parts)
 
 
-def parse_modules(
-    output: str,
-    inventory_output: str = "",
-    module_structured: Any = None,
-    inventory_structured: Any = None,
-) -> list[HardwareComponent]:
-    structured_components = []
+def parse_modules(output: str, inventory_output: str = "", module_structured: Any = None,
+                  inventory_structured: Any = None) -> list[HardwareComponent]:
+    parts = parse_inventory(inventory_output, inventory_structured)
+    components = []
     for record in _records(module_structured):
         module = _get(record, "module")
-        if not module:
-            continue
-        structured_components.append(
-            HardwareComponent(
-                component_type="module",
-                name=module,
-                model=_get(record, "model") or "unknown",
-                serial=_get(record, "serial_num", "serial", "sn") or "unknown",
-                status=(_get(record, "status") or "present").lower(),
-            )
-        )
-    if structured_components:
-        return structured_components
-
-    if output.startswith("COMMAND_FAILED") or "Unavailable command" in output:
-        hardware = parse_device_hardware("", inventory_output, None, inventory_structured)
-        if hardware.model != "unknown" or hardware.serial != "unknown":
-            return [
-                HardwareComponent(
-                    component_type="module",
-                    name="chassis",
-                    model=hardware.model,
-                    serial=hardware.serial,
-                    status="present",
-                )
-            ]
-        return [HardwareComponent("module", "unsupported", "unsupported")]
-
-    components: list[HardwareComponent] = []
+        if module:
+            components.append(HardwareComponent("module", slot_id(module),
+                _component_status(_get(record, "status") or "unknown"),
+                _get(record, "model") or "unknown", _get(record, "serial_num", "serial", "sn") or "unknown"))
+    if not components and not _hardware_command_failed(output):
+        section = None
+        statuses = {}
+        for line in output.splitlines():
+            text = line.strip()
+            if re.match(r"(?:Mod|Module|Slot)\s", text, re.I):
+                section = ("identity" if re.search(r"Model", text, re.I) else
+                           "status" if re.search(r"Status", text, re.I) else None)
+                serial_column = bool(re.search(r"Serial", text, re.I))
+                continue
+            fields = text.split()
+            if not fields or not re.fullmatch(r"(?:Fabric|Switchcard|Supervisor|Linecard)?[0-9]+(?:/[0-9]+)*", fields[0], re.I):
+                continue
+            if section == "identity" and len(fields) >= 4:
+                if serial_column:
+                    components.append(HardwareComponent("module", slot_id(fields[0]), "unknown", fields[-2], fields[-1]))
+                else:
+                    match = re.search(r"\s+(ok|active(?:\s+\*)?|ha-standby|powered-dn|powered-up|offline|failed|standby)\s*$", text, re.I)
+                    if match:
+                        model = text[:match.start()].split()[-1]
+                        components.append(HardwareComponent("module", fields[0], _component_status(match.group()), model))
+            elif section == "status" and len(fields) >= 2:
+                statuses[slot_id(fields[0])] = _component_status(fields[1])
+        components = [replace(c, status=statuses.get(c.name, c.status)) for c in components]
+    # Some TextFSM versions treat the MAC table heading as a Fillup status.
+    # The explicit status section is authoritative, also for structured rows.
+    statuses = {}
+    in_status = False
     for line in output.splitlines():
-        fields = re.split(r"\s+", line.strip())
-        if len(fields) < 2 or fields[0].lower() in {"module", "----", "slot"}:
+        text = line.strip()
+        if re.match(r"(?:Mod|Module|Slot)\s", text, re.I):
+            in_status = bool(re.match(r"(?:Mod|Module|Slot)\s+Status\b", text, re.I))
             continue
-        if fields[0].isdigit():
-            components.append(
-                HardwareComponent(
-                    component_type="module",
-                    name=fields[0],
-                    model=fields[1],
-                    status=fields[-1],
-                )
-            )
-
-    if components:
-        return components
-
-    hardware = parse_device_hardware("", inventory_output)
-    if hardware.model != "unknown" or hardware.serial != "unknown":
-        return [
-            HardwareComponent(
-                component_type="module",
-                name="chassis",
-                model=hardware.model,
-                serial=hardware.serial,
-                status="present",
-            )
-        ]
-    return []
+        fields = text.split()
+        if in_status and len(fields) >= 2 and re.fullmatch(r"(?:Fabric|Switchcard|Supervisor|Linecard)?[0-9]+(?:/[0-9]+)*", fields[0], re.I):
+            statuses[slot_id(fields[0])] = _component_status(fields[1])
+    components = [replace(c, status=statuses.get(c.name, "unknown" if c.status == "mac" else c.status)) for c in components]
+    if not components:
+        for part in parts:
+            if part.kind in {"module", "chassis"} and not any(c.name == part.slot for c in components):
+                components.append(HardwareComponent("module", part.slot, "present" if part.kind == "chassis" else "unknown"))
+    if not components and _hardware_command_failed(output):
+        return [HardwareComponent("module", "unsupported", "unsupported")]
+    return _enrich_components(components, parts)
 
 
 def parse_device_resources(version_output: str, processes_output: str = "") -> DeviceResourceUsage:
