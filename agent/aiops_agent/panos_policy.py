@@ -1,9 +1,9 @@
 """Conservative PAN-OS running-config evaluation for new IPv4 connections.
 
-Three-valued matches preserve first-match ordering: unknown earlier rules stop
-analysis. Security uses original addresses/ports and the post-DNAT destination
-zone. NAT selection uses the original destination zone. App-ID, dynamic pools,
-PBF and application-default require further evidence instead of guessed values.
+Three-valued matches preserve first-match ordering. Unknown security matches
+may establish an allow action only if every reachable outcome allows; the exact
+rule remains unknown. Security uses original addresses/ports and the post-DNAT
+destination zone. NAT uncertainty is never bypassed or assigned guessed values.
 """
 from __future__ import annotations
 
@@ -187,6 +187,29 @@ def select_rule(rules, flow, v, from_zone, to_zone, egress):
     return None, None
 
 
+def possible_security_outcomes(v, flow, from_zone, to_zone, egress):
+    """Conservative first-match possibilities, ending at a definite match/default.
+
+    An unknown predicate may match or miss. Its rule stays a possible outcome;
+    later rules are reachable only through its miss branch. This never selects
+    a later allow as the exact rule or reasons about unknown NAT translations.
+    """
+    outcomes = []
+    for rule in v['security']:
+        match = match_rule(rule, flow, v, from_zone, to_zone, egress)
+        if match is False:
+            continue
+        outcomes.append({key: rule[key] for key in ['name', 'action', 'source', 'destination', 'application', 'service']} |
+                        {'match': 'definite_if_reached' if match else 'possible'})
+        if match is True:
+            return outcomes
+    name = 'intrazone-default' if from_zone == to_zone else 'interzone-default'
+    outcomes.append({'name': name, 'action': v['defaults'].get(name, 'allow' if from_zone == to_zone else 'deny'),
+                     'source': ['any'], 'destination': ['any'], 'application': ['any'], 'service': ['any'],
+                     'match': 'default_if_reached'})
+    return outcomes
+
+
 def translated_address(value, original, rule, v):
     """A single address or equal-size static prefix mapping; pools stay unknown."""
     if value in v['addresses']:
@@ -283,13 +306,22 @@ def inspect_firewall(model, flow, ingress, route_lookup):
         result.update(to_zone=final_zone,original_to_zone=original_zone,egress=final_egress,
                       nat_flow=translated.data(),route_evidence=original_routes+final_routes)
         security,error=select_rule(v['security'],flow,v,fz,final_zone,final_egress)
-        if error:return fail('Security: '+error)
+        if error:
+            outcomes = possible_security_outcomes(v, flow, fz, final_zone, final_egress)
+            result['security_candidates'] = outcomes[:100]
+            result['security_candidates_truncated'] = len(outcomes) > 100
+            if outcomes and all(row['action'] == 'allow' for row in outcomes):
+                result.update(status='allow', action='allow', security_rule=None,
+                              policy_resolution='action_only', flow_after=translated.data(),
+                              reason='All possible first-match security outcomes allow; exact rule is unresolved')
+                return result
+            return fail('Security: '+error)
         if security:
             action=security['action'];rule=security['name']
         else:
             rule='intrazone-default' if fz==final_zone else 'interzone-default'
             action=v['defaults'].get(rule,'allow' if fz==final_zone else 'deny')
-        result.update(security_rule=rule,action=action,flow_after=translated.data())
+        result.update(security_rule=rule,action=action,flow_after=translated.data(),policy_resolution='exact_rule')
         if action in {'deny','drop','reset-client','reset-server','reset-both'}:
             result.update(status='blocked',reason='PA security rule '+rule+' '+action)
         elif action=='allow':

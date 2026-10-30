@@ -394,6 +394,32 @@ def find_path(
                 neighbors.append((edge, e))
         return neighbors
 
+    def unavailable_next_hop(did, route, next_ip):
+        """Explain unusable known links without using them to advance the path."""
+        outgoing = physical_members(route.get("interface_id"))
+        problems = []
+        for edge in snapshot.links:
+            if edge.get("type") != "physical" or edge.get("confirmation") != "confirmed":
+                continue
+            if edge.get("from_id") == did:
+                local, remote, peer = edge["local_interface_id"], edge["remote_interface_id"], edge["to_id"]
+            elif edge.get("to_id") == did:
+                local, remote, peer = edge["remote_interface_id"], edge["local_interface_id"], edge["from_id"]
+            else:
+                continue
+            if local not in outgoing or peer not in devices:
+                continue
+            if not any(e.get("device_id") == peer and e.get("kind") == "owned" and e.get("ip") == next_ip for e in snapshot.endpoints):
+                continue
+            iface = interfaces.get(remote, {})
+            if not fresh(iface):
+                problems.append(f"{devices[peer]['name']}:{iface.get('name', remote)} interface evidence stale/missing (last success: {iface.get('last_success_at') or 'unknown'})")
+            elif iface.get("oper_up") is False:
+                problems.append(f"{devices[peer]['name']}:{iface.get('name', remote)} interface down")
+            elif not fresh(edge):
+                problems.append(f"{devices[did]['name']} → {devices[peer]['name']} link evidence stale")
+        return "; ".join(sorted(set(problems)))
+
     def tunnel_paths(did, route):
         """Walk the VTEP's default-VRF RIB, never an arbitrary topology shortcut."""
         local = interfaces.get(route.get("interface_id"), {})
@@ -724,11 +750,13 @@ def find_path(
                         }
                     )
                     continue
+            evidence_gap = unavailable_next_hop(did, route, next_ip)
             paths.append(
                 {
                     "status": "incomplete",
                     "path": branch,
-                    "reason": "Next-hop physical adjacency is unconfirmed or requires an unresolved VLAN/overlay transit",
+                    "reason": "Next-hop evidence unavailable: " + evidence_gap if evidence_gap else
+                              "Next-hop physical adjacency is unconfirmed or requires an unresolved VLAN/overlay transit",
                 }
             )
     if queue:

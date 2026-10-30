@@ -39,11 +39,17 @@ single-address DNAT with destination-port translation. Known profiles/logging
 configuration does not change the modeled rule decision; threat-profile
 acceptance is not claimed.
 
-Unknown conditions preserve ordering. An earlier possibly matching rule stops
-evaluation; it is never skipped to reach a later allow. Definitely nonmatching
-rules may be skipped even when an unrelated predicate is unknown. Unsupported
+Unknown conditions preserve ordering. An earlier possibly matching rule is
+never skipped to select a later allow as the exact rule. Security evaluation
+enumerates possible first-match outcomes until a definite match or the zone's
+default action. If **all** possible outcomes allow, forwarding may continue with
+`policy_resolution=action_only`, `security_rule=null` and `security_candidates`.
+This proves the configured action, not the exact matching rule or App-ID. Any
+possible deny/unknown action keeps the result incomplete. NAT still requires a
+resolved match and translation; security consensus never bypasses unknown NAT.
+Definitely nonmatching rules may be skipped even when another predicate is unknown. Unsupported
 conditions include dynamic address groups/FQDN resolution, schedules/user/HIP,
-application-default without an application service database, Panorama effective
+exact application-default matching without an application service database, Panorama effective
 policy, enabled PA PBF, IPv6 PA policy, bidirectional static-NAT implicit rules,
 and NAT pools/PAT allocation. Dynamic SNAT/PAT currently stops with an explicit
 request for observed translation evidence; it is not assigned a fabricated
@@ -109,5 +115,26 @@ and exact-flow session queries returned `not_observed`; packet delivery is
 therefore not proven. The live browser displayed 10 device visits and both
 native verification buttons completed without JavaScript errors. The legacy
 routing query retained 31 evidence steps; flow analysis returned 43 steps.
-TCP/443 stopped as incomplete at the `application-default` rule, as intended.
+The initial release stopped TCP/443 at `application-default`. The follow-up
+first-match outcome fix now permits the action when all possible outcomes,
+including the collected zone default, allow. It still does not claim an exact
+application-default match.
 The local regression suite passed all 115 tests.
+
+## Unspecified protocol/ports and any-to-any rules
+
+On both lab PAs, `intrazone-SDN-default` allows source/destination `any`,
+application `any`, but service `application-default` within zone SDN. This is
+not a service-any rule. The following built-in `intrazone-default` action is
+also allow (no local override was collected). For the lab source/destination,
+all reachable security outcomes therefore allow even without protocol/ports.
+The graph continues, labels the unresolved rule, and displays the possible
+ordered rules. With TCP destination 50001 the explicit service rule remains
+an exact match. Changing the default action to deny would make the unspecified
+flow incomplete again. Neither result proves packet delivery or threat-profile
+acceptance. No firewall configuration was changed for this fix.
+
+When a known next-hop link cannot be used because its interface observations
+are stale, the result names the peer interface and its last successful
+observation. It does not traverse that stale link or call it an unconfirmed
+physical cable.

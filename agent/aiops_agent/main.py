@@ -390,6 +390,7 @@ def tools_view() -> str:
         <div><label for="flowIngress">源设备入口 / Source ingress interface</label><input id="flowIngress" placeholder="设备自身发起时留空 / Optional"></div>
       </div>
       <p class="step-meta">流量分析按新建连接计算；交换源、目的后是独立新连接，不代表已建立会话的回包。</p>
+      <p id="flowHint" class="message" hidden>未指定协议/端口时，仅在所有可能命中的安全规则都允许、且 NAT 结果明确时继续。要确定具体规则，请补充实际协议与端口。地址 any-to-any 不代表 Service 为 any。<br>Without protocol/ports, forwarding continues only if every possible security outcome allows and NAT is resolved. Supply the actual flow to identify an exact rule.</p>
       <div class="actions"><select id="pathMode"><option value="auto">Auto</option><option value="routed">Route lookup</option><option value="physical">Physical connectivity</option></select><button type="button" onclick="lookupPath()">Trace Path</button></div>
     </section>
     <section class="path-results">
@@ -423,6 +424,7 @@ def tools_view() -> str:
     function toggleFlowFields() {
       const enabled = document.getElementById("pathAnalysis").value === "flow";
       for (const id of ["flowProtocol", "flowSourcePort", "flowDestinationPort", "flowApplication", "flowIngress"]) document.getElementById(id).disabled = !enabled;
+      document.getElementById("flowHint").hidden = !enabled;
       if (enabled && document.getElementById("pathMode").value === "physical") document.getElementById("pathMode").value = "auto";
     }
 
@@ -564,6 +566,7 @@ def tools_view() -> str:
         ? tableSection("Source candidates — select device and VRF above", payload.source_candidates || [], ["device", "vrf", "interface", "ip", "mac", "vlan"])
           + tableSection("Destination candidates", payload.destination_candidates || [], ["device", "vrf", "interface", "ip", "mac", "vlan"]) : "";
       const branches = payload.paths || [];
+      const actionOnly = branches.some(b => (b.path || []).some(s => s.policy_resolution === 'action_only'));
       const paths = branches.map((branch, i) => '<article class="path-branch"><div class="path-branch-header"><h3>Path ' + (i+1) + ' · ' + escapeHtml(branch.status) + '</h3>'
         + '<label><input class="path-port-toggle" type="checkbox" checked>接口 / Interfaces</label></div>'
         + pathGraphHtml(branch, i, payload)
@@ -573,6 +576,7 @@ def tools_view() -> str:
         + pill(payload.mode || "auto") + pill(payload.analysis || "routing") + pill("Site: " + (payload.site || "all")) + '</div>'
         + endpointSummary("Source", payload.source || {}) + endpointSummary("Destination", payload.destination || {})
         + (payload.flow ? '<div class="message">新建连接 / New connection · ' + escapeHtml(flowText(payload.flow)) + '</div>' : '')
+        + (actionOnly ? '<div class="message">PA 配置推演：所有可能命中的规则均允许，因此路径继续；具体命中规则尚未确定。点击 PA 查看候选规则。此结果不等于实际流量验证。<br>All possible PA security outcomes allow; the exact rule remains unresolved. Click PA for candidate rules. Packet delivery is not verified.</div>' : '')
         + candidates + (paths || '<div class="message">No verified path available.</div>')
         + '<div class="summary">' + (payload.warnings || []).map(n => pill(n, "warn")).join("") + '</div>';
     }
@@ -593,6 +597,9 @@ def tools_view() -> str:
       let flowInfo = '';
       if (step.flow_before) flowInfo += '<div class="message">进入 / Before: ' + escapeHtml(flowText(step.flow_before)) + '</div>';
       if (step.flow_after) flowInfo += '<div class="message">' + (step.status === 'blocked' ? '候选 NAT（已拒绝） / Candidate NAT (denied): ' : '离开 / After: ') + escapeHtml(flowText(step.flow_after)) + '</div>';
+      if (step.policy_resolution === 'action_only') flowInfo += '<div class="message">动作确定为允许；具体规则未确定 / Allow action established; exact rule unresolved</div>';
+      if (step.security_candidates) flowInfo += tableSection('可能的首条匹配规则 / Possible first-match rules', step.security_candidates, ['name','source','destination','application','service','action','match'])
+        + (step.security_candidates_truncated ? '<div class="message">仅显示前 100 条；判定已检查全部候选 / First 100 shown; all candidates evaluated</div>' : '');
       if (step.type === 'firewall_policy' && step.to_zone && step.original_to_zone && step.config_digest && step.verification_flow.protocol !== 'any') {
         const check = {device_id:step.device_id, flow:step.verification_flow, ingress:step.interface, vsys:step.vsys,
           from_zone:step.from_zone, to_zone:step.to_zone, original_to_zone:step.original_to_zone, config_digest:step.config_digest};

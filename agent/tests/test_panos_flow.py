@@ -51,24 +51,52 @@ def stamp(model):
 
 
 class PolicyEvaluationTests(unittest.TestCase):
-    def test_real_lab_service_rule_and_unknown_application_default(self):
+    def test_real_lab_exact_rule_and_all_possible_rules_allow(self):
         model=parse_config(FIXTURE.read_text())
         r=inspect_firewall(model,FlowState(SRC,DST,'tcp',40000,50001),'ae1.10',lambda ip:[('ae1.10','lab-route')])
         self.assertEqual(r['status'],'allow',r)
         self.assertEqual(r['security_rule'],'vlan101-vlan123-1')
         self.assertIsNone(r['nat_rule'])
         r=inspect_firewall(model,FlowState(SRC,DST,'tcp',40000,443),'ae1.10',lambda ip:[('ae1.10','lab-route')])
-        self.assertEqual(r['status'],'incomplete')
-        self.assertIn('application-default',r['reason'])
+        self.assertEqual(r['status'],'allow')
+        self.assertEqual(r['policy_resolution'],'action_only')
+        self.assertIsNone(r['security_rule'])
+        self.assertEqual([c['name'] for c in r['security_candidates']],['intrazone-SDN-default','intrazone-default'])
+        r=inspect_firewall(model,FlowState(SRC,DST),'ae1.10',lambda ip:[('ae1.10','lab-route')])
+        self.assertEqual(r['status'],'allow')
+        self.assertEqual(len(r['security_candidates']),3)
 
     def test_first_match_deny_and_disabled_rule(self):
         self.assertEqual(inspect(config(rule(action='deny')+rule()))['status'],'blocked')
         self.assertEqual(inspect(config(rule(action='deny',extra='<disabled>yes</disabled>')+rule()))['status'],'allow')
 
     def test_unknown_earlier_rule_does_not_fall_through(self):
-        r=inspect(config(rule('unknown',port='missing-service')+rule()))
+        r=inspect(config(rule('unknown',port='missing-service',action='deny')+rule()))
         self.assertEqual(r['status'],'incomplete')
         self.assertIn('unknown',r['reason'])
+
+    def test_unknown_allow_and_definite_allow_establish_action_not_rule(self):
+        r=inspect(config(rule('unknown',port='missing-service')+rule('catchall')))
+        self.assertEqual(r['status'],'allow')
+        self.assertIsNone(r['security_rule'])
+        self.assertEqual([c['name'] for c in r['security_candidates']],['unknown','catchall'])
+        # A deny after a definite catch-all is unreachable.
+        r=inspect(config(rule('unknown',port='missing-service')+rule('catchall')+rule('unreachable-deny',action='deny')))
+        self.assertEqual(r['status'],'allow')
+
+    def test_unknown_allow_cannot_ignore_possible_deny_or_default_deny(self):
+        for tail in ['',rule('deny',action='deny')]:
+            r=inspect(config(rule('unknown',port='missing-service')+tail))
+            self.assertEqual(r['status'],'incomplete')
+            self.assertTrue(any(c['action']=='deny' for c in r['security_candidates']))
+        model=parse_config(FIXTURE.read_text())
+        model['vsyses']['vsys1']['defaults']['intrazone-default']='deny'
+        r=inspect_firewall(model,FlowState(SRC,DST),'ae1.10',lambda ip:[('ae1.10','lab-route')])
+        self.assertEqual(r['status'],'incomplete')
+
+    def test_unknown_nat_cannot_be_bypassed_by_allow_security(self):
+        model=config(rule(),nat('<destination-translation><translated-address>10.2.0.10</translated-address></destination-translation>',service='missing'))
+        self.assertEqual(inspect(model)['status'],'incomplete')
 
     def test_unknown_predicate_with_definite_miss_can_skip(self):
         model=config(rule('irrelevant',destination='192.0.2.2',port='missing')+rule())
@@ -136,9 +164,28 @@ class FlowPathTests(unittest.TestCase):
         self.assertEqual([s['device'] for s in checks],['PA-171','PA-172'])
         self.assertTrue(all(s['security_rule']=='vlan101-vlan123-1' for s in checks))
         self.assertEqual(r['paths'][0]['final_flow']['destination_ip'],DST)
-        self.assertEqual(find_path(snapshot,SRC,DST,site='lab',analysis='flow',protocol='tcp',destination_port=443)['status'],'incomplete')
+        self.assertEqual(find_path(snapshot,SRC,DST,site='lab',analysis='flow',protocol='tcp',destination_port=443)['status'],'ok')
+        broad=find_path(snapshot,SRC,DST,site='lab',analysis='flow')
+        self.assertEqual(broad['status'],'ok',broad['warnings'])
+        self.assertEqual(broad['flow']['protocol'],'any')
+        self.assertIsNone(broad['flow']['destination_port'])
+        checks=[s for s in broad['path'] if s['type']=='firewall_policy']
+        self.assertEqual([s['policy_resolution'] for s in checks],['action_only','action_only'])
+        self.assertTrue(all(s['security_rule'] is None for s in checks))
         # Independent reverse new connection is NOT an established session reply.
-        self.assertEqual(find_path(snapshot,DST,SRC,site='lab',analysis='flow',protocol='tcp',source_port=50001,destination_port=40000)['status'],'incomplete')
+        reverse=find_path(snapshot,DST,SRC,site='lab',analysis='flow',protocol='tcp',source_port=50001,destination_port=40000)
+        self.assertEqual(reverse['connection'],'new')
+        self.assertEqual(reverse['flow']['source_ip'],DST)
+        self.assertFalse(any(s.get('security_rule')=='vlan101-vlan123-1' for s in reverse['path']))
+
+    def test_stale_peer_is_explained_without_advancing_path(self):
+        snapshot=lab(populate=True)
+        for i in snapshot.interfaces:
+            if i['device']=='p1-leaf':i['freshness']='stale'
+        r=find_path(snapshot,SRC,DST,site='lab')
+        self.assertEqual(r['status'],'incomplete')
+        self.assertTrue(any('p1-leaf' in w and 'stale' in w for w in r['warnings']),r['warnings'])
+        self.assertFalse(any(s.get('type')=='physical' for s in r['path']))
 
     def test_dnat_routes_to_translated_endpoint_and_keeps_original_query(self):
         a=result('a',[interface('Lo0','10.1.0.10/32'),interface('Eth1','192.0.2.0/31')],
