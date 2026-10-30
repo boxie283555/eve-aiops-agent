@@ -15,7 +15,7 @@
 
 端点观察带有 `device_id/vrf_id/interface_id/vlan/scope_id`，区分 owned（接口自身）、neighbor（ARP）、learned（FDB）。ARP/FDB 只能在同设备、同 VLAN 下关联，保留全部附件端口。相同 IP/MAC 不会跨设备或 VRF 去重；冲突查询返回 `ambiguous` 和候选列表。
 
-PA 未提供的管理状态保留 null；子接口继承父口链路状态时标记 `state_source=parent_link`。模型层级位于 Agent 归一化快照；本次不修改 Nautobot IPAM 地址分配或自动创建物理线缆。既有异步接口状态同步继续工作。
+PA 未提供的管理状态保留 null；子接口继承父口链路状态时标记 `state_source=parent_link`。模型层级位于 Agent 归一化快照；不会根据 MAC 相等自动创建物理线缆。用户确认且经 lab 范围证据核实的连接可登记为 Nautobot cable。既有异步接口状态同步继续工作。
 
 ## 证据与时效
 
@@ -64,6 +64,8 @@ PA 未提供的管理状态保留 null；子接口继承父口链路状态时标
 
 ## 测试与升级
 
+后续主动校验、探测和验收仅限当前 Nautobot Site/Location 为 `lab` 的设备，连接前必须检查站点。非 lab 设备继续正常定时采集，只被动查看汇总健康状况，不作为测试目标。离线回归使用 lab 样本或合成数据；时钟提示符解析已改用合成样本。详见根目录 `AGENTS.md`。
+
 Python 3.12，安装 `agent/requirements.txt` 和测试依赖 `agent/requirements-test.txt` 后运行：
 
 ```sh
@@ -87,3 +89,16 @@ PYTHONPATH=agent python -m unittest discover -s agent/tests -v
 - 旧采集基线中的 p2-leaf Loopback6/Vlan610 当前在设备上已不存在，直接执行 show ip interface brief 已确认；没有为保留旧计数伪造接口状态。
 
 部署前备份位于服务器 `/opt/eve-aiops-backups/q2-model-20261030/`。首次验收发现的广播 IP 误识别 MAC 已修正；对应快照及 Nautobot 修复前记录分别保存在 Agent 数据卷 `q2-mac-correction-backup.json`、`q2-nautobot-mac-correction-backup.json`。复查 Nautobot 中该错误 MAC 为 0 条。
+
+## lab PA 物理连接确认（2026-10-30）
+
+用户确认原有 PA 对应关系。仅在 Nautobot 站点已核实为 `lab` 的 p1-svc / p2-svc 上执行定向检查，并结合 PA 正常采集的接口层级，确认：
+
+| PA 物理接口 | 交换机物理接口 | scoped ARP / FDB 证据 |
+|---|---|---|
+| PA-171 ethernet1/1（ae1 成员） | p1-svc Ethernet3（Port-Channel1 唯一成员） | FUSION / VLAN10：192.168.111.2 → badb.eefb.ad30 → Po1 |
+| PA-172 ethernet1/1（ae1 成员） | p2-svc Ethernet3（Port-Channel1 唯一成员） | FUSION / VLAN20：192.168.111.2 → badb.eefb.ad30 → Po1 |
+
+两次 lab 内定向 ping 各 3/3 成功；`show port-channel 1 detailed` 显示 Ethernet3 为唯一 Active / LACP / Rx,Tx 成员。两台 PA 的重复 MAC/IP 依靠站点、设备、VLAN 和接口层级区分。上述两条物理线缆登记为 Nautobot `Connected`，由现有后台拓扑构建读取；MAC 老化不删除人工确认的布线记录。来源为 Nautobot 设计确认，不冒充 LLDP 自动发现。今后改线时需更新 Nautobot cable。
+
+写入前的接口记录、线缆清单和请求保存在 Agent 数据卷 `/app/data/lab-pa-cables-20261030-before.json`。本次无需重启采集器或 Grafana。拓扑页面继续手动刷新，布局保存方式不变。确认物理线缆并不代表已验证防火墙策略或完整的三层转发路径。

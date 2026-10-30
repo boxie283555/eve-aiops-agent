@@ -131,17 +131,17 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(len(rows), 2)
         self.assertEqual(rows[1]["interface"], "Ethernet2")
 
-    def test_eos_clock_prompt_after_real_json(self):
+    def test_eos_clock_prompt_after_synthetic_json(self):
         from aiops_agent.routing import eos_route_table
 
-        for filename, count in [
-            ("q2-raw-DUT-720XP-48TXH-2C-S.txt", 10),
-            ("q2-raw-DUT-7050SPX4-48D8.txt", 25),
-        ]:
-            output = (FIXTURES / filename).read_text()
+        data = {"vrfs": {"default": {"routes": {
+            "192.0.2.0/24": {"routeType": "connected", "vias": [{"interface": "Et1"}]}
+        }}}}
+        for prompt in ["lab-clock(10:20:30)#", "lab-clock(10:20:31)#"]:
+            output = json.dumps(data) + "\n" + prompt
             self.assertIsNotNone(eos_route_table(output))
             rows = parse_routes(output, "arista_eos")
-            self.assertEqual(len({(r["vrf"], r["prefix"]) for r in rows}), count)
+            self.assertEqual({(r["vrf"], r["prefix"]) for r in rows}, {("default", "192.0.2.0/24")})
         self.assertIsNone(eos_route_table('{"vrfs": {}} unexpected trailing output'))
         self.assertIsNotNone(eos_route_table('{"vrfs": {"default": {"routes": {}}}}'))
 
