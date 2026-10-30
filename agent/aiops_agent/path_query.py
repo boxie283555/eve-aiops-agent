@@ -8,6 +8,8 @@ from ipaddress import ip_address, ip_network, ip_interface
 from .model import interface_name, mac_address
 from .forwarding import vlan_allowed, evaluate_policy
 from .topology import fresh
+from .flow import FlowState
+from .panos_policy import inspect_firewall
 
 
 def find_path(
@@ -21,6 +23,12 @@ def find_path(
     dst_vrf="all",
     mode="auto",
     site="all",
+    analysis="routing",
+    protocol="any",
+    source_port=None,
+    destination_port=None,
+    application=None,
+    ingress_interface=None,
 ):
     devices = {d["id"]: d for d in snapshot.devices if site == "all" or d.get("site") == site}
     interfaces = {i["id"]: i for i in snapshot.interfaces if i["device_id"] in devices}
@@ -112,6 +120,11 @@ def find_path(
         "warnings": [],
         "schema_version": snapshot.schema_version,
         "site": site,
+        "analysis": analysis,
+        "evidence_level": "configuration",
+        "flow_model_version": "1.0",
+        "connection": "new",
+
     }
 
     def finish(status, warning=None):
@@ -144,6 +157,10 @@ def find_path(
         }
         return base
 
+    if analysis not in {"routing", "flow"}:
+        return finish("invalid", "Unknown analysis mode")
+    if analysis == "flow" and mode == "physical":
+        return finish("invalid", "Flow analysis requires routed or auto mode")
     if mode not in {"auto", "physical", "routed"}:
         return finish("invalid", "Unknown path mode")
     if len(source) > 1 or len(destination) > 1:
@@ -287,6 +304,15 @@ def find_path(
         )
     if not destination_ip:
         return finish("incomplete", "A destination IP is required for route lookup.")
+    original_destination_ip = destination_ip
+    try:
+        initial_flow = FlowState(source.get("ip") or str(ip_address(src)), destination_ip,
+                                protocol, source_port, destination_port, application) if analysis == "flow" else None
+    except ValueError as exc:
+        return finish("invalid", str(exc))
+    if initial_flow:
+        base["flow"] = initial_flow.data()
+        base["warnings"].append("New-connection configuration prediction. Existing-session return traffic, threat profiles, ASIC installation and packet delivery are not verified. Application, when supplied, is an assumption.")
     addr = ip_address(destination_ip)
     start_vrf = source.get("vrf_id")
     if not start_vrf or source.get("vrf") in {"unknown", None}:
@@ -294,9 +320,10 @@ def find_path(
             "incomplete",
             "Source VRF is unknown; collect interface VRF membership or select a scoped endpoint.",
         )
-    base["warnings"].append(
-        "Configured forwarding candidates using RIB, VLAN, VXLAN and supported EOS traffic policies; firewall security/NAT, ASIC installation, packet delivery and actual ECMP hashing are not verified."
-    )
+    if analysis == "routing":
+        base["warnings"].append(
+            "Configured forwarding candidates using RIB, VLAN, VXLAN and supported EOS traffic policies; firewall security/NAT, ASIC installation, packet delivery and actual ECMP hashing are not verified."
+        )
 
     def lookup(did, vid, address, seen=None):
         seen = set() if seen is None else seen
@@ -424,12 +451,23 @@ def find_path(
         return complete, None
 
     # Every ECMP branch is kept, with bounded expansion and explicit truncation.
-    queue = deque([(source["device_id"], start_vrf, [], set(), (None, None, False))])
+    initial_context = (None, None, False)
+    if ingress_interface:
+        ingress = by_name.get((source["device_id"], interface_name(ingress_interface)))
+        if not ingress or ingress.get("vrf_id") != start_vrf or not fresh(ingress) or ingress.get("oper_up") is False:
+            return finish("invalid", "Ingress interface must be fresh, up and in the source device/VRF")
+        initial_context = (ingress["id"], ingress.get("vlan"), False)
+    elif source.get("kind") != "owned":
+        initial_context = (source.get("interface_id"), source.get("vlan"), False)
+    base["origin"] = "ingress" if initial_context[0] else "device"
+    queue = deque([(source["device_id"], start_vrf, [], set(), initial_context, initial_flow)])
     paths = []
     expansions = 0
     while queue and expansions < 64:
-        did, vid, path, seen, context = queue.popleft()
-        state = (did, vid, *context)
+        did, vid, path, seen, context, packet = queue.popleft()
+        destination_ip = packet.destination_ip if packet else original_destination_ip
+        addr = ip_address(destination_ip)
+        state = (did, vid, *context, packet)
         expansions += 1
         if state in seen or len(path) > 96:
             paths.append(
@@ -450,8 +488,44 @@ def find_path(
             )
             continue
         vrf_name = next((v["name"] for v in snapshot.vrfs if v["id"] == vid), "unknown")
+        if packet:
+            path = path + [step({"device": devices[did]["name"], "device_id": did,
+                "vrf": vrf_name, "interface": interfaces.get(context[0], {}).get("name"),
+                "flow_before": packet.data(), "evidence_level": "configuration"}, "flow_state")]
+        if packet and devices[did].get("platform") == "paloalto_panos":
+            if not context[0]:
+                paths.append({"status":"incomplete", "path":path, "reason":"PA flow evaluation requires an ingress logical interface"})
+                continue
+            def pa_routes(address):
+                rows, error = lookup(did, vid, ip_address(address))
+                if error:
+                    raise ValueError(error)
+                if any(r.get("action") in {"drop","discard","reject"} for r in rows):
+                    raise ValueError("PA egress route discards traffic")
+                if any(not fresh(interfaces.get(r.get("interface_id"), {})) or interfaces.get(r.get("interface_id"), {}).get("oper_up") is False for r in rows):
+                    raise ValueError("PA egress interface is down or stale")
+                return [(r["interface"], r["id"]) for r in rows]
+            evidence = devices[did].get("pa_policy")
+            if evidence and not fresh(evidence):
+                evidence = None
+            decision = inspect_firewall(evidence, packet, interfaces.get(context[0], {}).get("name", ""), pa_routes)
+            path = path + [step({**decision, "device":devices[did]["name"], "device_id":did,
+                "vrf":vrf_name, "interface":interfaces.get(context[0],{}).get("name"),
+                "verification_flow":packet.data()}, "firewall_policy")]
+            if decision["status"] != "allow":
+                paths.append({"status": "blocked" if decision["status"]=="blocked" else "incomplete",
+                    "path":path,"reason":decision["reason"]})
+                continue
+            before = packet
+            packet = FlowState(**decision["flow_after"])
+            if packet != before:
+                path = path + [step({"device":devices[did]["name"],"device_id":did,
+                    "nat_rule":decision.get("nat_rule"),"flow_before":before.data(),"flow_after":packet.data(),
+                    "evidence_level":"configuration"}, "nat_translation")]
+            destination_ip = packet.destination_ip
+            addr = ip_address(destination_ip)
         policy, error = evaluate_policy(devices[did].get("forwarding"), vrf_name,
-            source.get("ip"), destination_ip, context[1], context[2]) if context[0] else (None, None)
+            packet.source_ip if packet else source.get("ip"), destination_ip, context[1], context[2]) if context[0] else (None, None)
         if error:
             paths.append({"status": "incomplete", "path": path, "reason": error})
             continue
@@ -524,6 +598,7 @@ def find_path(
             ]
             if owned and (
                 not target
+                or destination_ip != original_destination_ip
                 or (
                     target["device_id"] == did
                     and target.get("vrf_id") == vid
@@ -551,7 +626,7 @@ def find_path(
                     decap = step({"device": remote["device"], "interface": remote["name"],
                         "vtep": route["vtep"], "vni": route["vni"]}, "vxlan_decap")
                     queue.append((remote["device_id"], remote_vid, branch + [encap, *underlay, decap],
-                        seen | {state}, (remote["id"], None, True)))
+                        seen | {state}, (remote["id"], None, True), packet))
                 continue
             next_ip = route.get("next_hop") or str(lookup_addr)
             try:
@@ -592,7 +667,8 @@ def find_path(
                             e["vrf_id"],
                             branch + [step(edge, "physical")],
                             seen | {state},
-                            (edge["remote_interface_id"], e.get("vlan"), False),
+                            (e["interface_id"], e.get("vlan"), False),
+                            packet,
                         )
                     )
                 continue
@@ -610,7 +686,7 @@ def find_path(
             if (
                 not route.get("next_hop")
                 and learned
-                and not (target and target.get("kind") == "owned")
+                and not (target and target.get("kind") == "owned" and destination_ip == original_destination_ip)
             ):
                 attachments = (
                     set().union(*(set(e.get("attachments", [])) for e in learned))
@@ -663,6 +739,14 @@ def find_path(
                 "reason": "ECMP expansion limit reached",
             }
         )
+    if initial_flow:
+        for branch in paths:
+            states = [h for h in branch["path"] if h.get("flow_after") or h.get("flow_before")]
+            branch["final_flow"] = initial_flow.data()
+            if states:
+                last = states[-1]
+                branch["final_flow"] = last["flow_before"] if last.get("status") == "blocked" else last.get("flow_after") or last["flow_before"]
+            branch["evidence_level"] = "configuration"
     base["paths"] = paths
     # A single path field remains for old callers; multiple branches are never silently reduced to the first.
     if len(paths) == 1:

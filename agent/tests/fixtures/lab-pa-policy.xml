@@ -1,0 +1,122 @@
+<config><shared><service />
+    <service-group />
+    <application />
+    <application-group />
+    </shared><devices><entry name="localhost.localdomain"><vsys><entry name="vsys1"><zone>
+            <entry name="SDN">
+              <network>
+                <layer3>
+                  <member>ae1.10</member>
+                </layer3>
+              </network>
+            </entry>
+          </zone>
+          <import>
+            <network>
+              <interface>
+                <member>ae1</member>
+                <member>ae1.10</member>
+              </interface>
+            </network>
+          </import>
+        <address>
+            <entry name="192-168-111-2">
+              <ip-netmask>192.168.111.2/29</ip-netmask>
+            </entry>
+            <entry name="10-200-123-0">
+              <ip-netmask>10.200.123.0/24</ip-netmask>
+            </entry>
+            <entry name="10-100-101-0">
+              <ip-netmask>10.100.101.0/24</ip-netmask>
+            </entry>
+          </address>
+          <service>
+            <entry name="TCP-50001">
+              <protocol>
+                <tcp>
+                  <port>50001</port>
+                  <override>
+                    <no />
+                  </override>
+                </tcp>
+              </protocol>
+            </entry>
+          </service>
+          <service-group />
+          <application />
+          <application-group />
+          <rulebase>
+            <security>
+              <rules>
+                <entry name="vlan101-vlan123-1" uuid="597232df-4f5d-44f5-9e90-7ddea427c18e">
+                  <to>
+                    <member>SDN</member>
+                  </to>
+                  <from>
+                    <member>SDN</member>
+                  </from>
+                  <source>
+                    <member>10-100-101-0</member>
+                  </source>
+                  <destination>
+                    <member>10-200-123-0</member>
+                  </destination>
+                  <source-user>
+                    <member>any</member>
+                  </source-user>
+                  <category>
+                    <member>any</member>
+                  </category>
+                  <application>
+                    <member>any</member>
+                  </application>
+                  <service>
+                    <member>TCP-50001</member>
+                  </service>
+                  <source-hip>
+                    <member>any</member>
+                  </source-hip>
+                  <destination-hip>
+                    <member>any</member>
+                  </destination-hip>
+                  <action>allow</action>
+                  <rule-type>intrazone</rule-type>
+                </entry>
+                <entry name="intrazone-SDN-default" uuid="24ea11a2-eb11-4a34-aa8e-e53c159a046e">
+                  <to>
+                    <member>SDN</member>
+                  </to>
+                  <from>
+                    <member>SDN</member>
+                  </from>
+                  <source>
+                    <member>any</member>
+                  </source>
+                  <destination>
+                    <member>any</member>
+                  </destination>
+                  <source-user>
+                    <member>any</member>
+                  </source-user>
+                  <category>
+                    <member>any</member>
+                  </category>
+                  <application>
+                    <member>any</member>
+                  </application>
+                  <service>
+                    <member>application-default</member>
+                  </service>
+                  <source-hip>
+                    <member>any</member>
+                  </source-hip>
+                  <destination-hip>
+                    <member>any</member>
+                  </destination-hip>
+                  <action>allow</action>
+                  <rule-type>intrazone</rule-type>
+                </entry>
+              </rules>
+            </security>
+          </rulebase>
+          </entry></vsys></entry></devices></config>

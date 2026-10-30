@@ -41,6 +41,14 @@ vi config/project.yml
 
 The older `.env`, `config/aiops.yml`, and `inventory/devices.yml` files are still supported for backward compatibility. Environment variables override values from `config/project.yml`.
 
+### Flow analysis and PA policy/NAT
+
+The tools page supports an explicit Flow analysis mode with protocol/ports,
+per-hop packet state, PA security-rule decisions and deterministic NAT
+translation. PA policy collection runs separately from metrics collection;
+node details offer read-only native rule and session verification for lab
+firewalls. See [scope, API parameters and limitations](docs/pa-flow-analysis.md).
+
 ### Nautobot inventory (Q1)
 
 The collector can use Nautobot as its device source of truth. Configure `NAUTOBOT_URL`, `NAUTOBOT_TOKEN`, and set `nautobot.inventory_source: nautobot` (or `AIOPS_INVENTORY_SOURCE=nautobot`). Nautobot devices must have a name, location, role, platform, and either a primary management IP or the `management_ip` custom field. The adapter reads connection settings from device custom fields and falls back to the global Agent credentials. Interface status, collection time, and collection errors are synchronized back to Nautobot asynchronously after each collection cycle.

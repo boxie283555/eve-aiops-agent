@@ -11,6 +11,8 @@ from datetime import datetime
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI, Query, Response
+from pydantic import BaseModel, Field
+from typing import Optional, Literal
 from fastapi.responses import HTMLResponse, PlainTextResponse
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
@@ -18,6 +20,7 @@ from .collector import Collector
 from .inventory import load_inventory
 from .nautobot import NautobotClient, NautobotError
 from .metrics import NAUTOBOT_SYNC_SUCCESS, NAUTOBOT_SYNC_LAST_SUCCESS, NAUTOBOT_SYNC_DURATION, NAUTOBOT_SYNC_UPDATED
+from .panos_evidence import attach_policy, refresh_policy, policy_status, verify_flow
 from .path_visualization import PATH_GRAPH_STYLE, PATH_GRAPH_SCRIPT
 from .parser import normalize_mac
 from .settings import load_settings
@@ -93,6 +96,10 @@ def nautobot_sync_status() -> dict:
     return {**interface_sync_status, "enabled": bool(settings.nautobot_url and settings.nautobot_token)}
 
 
+async def _pa_policy_once() -> None:
+    await asyncio.to_thread(refresh_policy, settings)
+
+
 async def _snapshot_once() -> None:
     await asyncio.to_thread(collect_and_snapshot, settings, collector)
 
@@ -133,6 +140,8 @@ async def startup() -> None:
         id="daily_compare",
         replace_existing=True,
     )
+    scheduler.add_job(_pa_policy_once, "interval", seconds=300, id="collect_pa_policy",
+                      replace_existing=True, max_instances=1, next_run_time=datetime.now())
     scheduler.start()
 
 
@@ -352,6 +361,15 @@ def tools_view() -> str:
           <select id="dstVrf"></select>
         </div>
       </div>
+      <div class="form-grid" style="margin-top:12px">
+        <div><label for="pathAnalysis">分析方式 / Analysis</label><select id="pathAnalysis" onchange="toggleFlowFields()"><option value="routing">路径推演 / Routing</option><option value="flow">流量 + PA 策略/NAT / Flow</option></select></div>
+        <div><label for="flowProtocol">协议 / Protocol</label><select id="flowProtocol"><option value="any">未指定 / Any</option><option value="tcp">TCP</option><option value="udp">UDP</option><option value="icmp">ICMP</option><option value="icmpv6">ICMPv6</option></select></div>
+        <div><label for="flowSourcePort">源端口 / Source port</label><input id="flowSourcePort" type="number" min="0" max="65535" placeholder="可选 / Optional"></div>
+        <div><label for="flowDestinationPort">目的端口 / Destination port</label><input id="flowDestinationPort" type="number" min="0" max="65535" placeholder="例如 / e.g. 50001"></div>
+        <div><label for="flowApplication">App-ID 假设 / Assumed application</label><input id="flowApplication" placeholder="未知时留空 / Leave blank if unknown"></div>
+        <div><label for="flowIngress">源设备入口 / Source ingress interface</label><input id="flowIngress" placeholder="设备自身发起时留空 / Optional"></div>
+      </div>
+      <p class="step-meta">流量分析按新建连接计算；交换源、目的后是独立新连接，不代表已建立会话的回包。</p>
       <div class="actions"><select id="pathMode"><option value="auto">Auto</option><option value="routed">Route lookup</option><option value="physical">Physical connectivity</option></select><button type="button" onclick="lookupPath()">Trace Path</button></div>
     </section>
     <section class="path-results">
@@ -365,6 +383,8 @@ def tools_view() -> str:
     const deviceSelects = ["macDevice", "srcDevice", "dstDevice"];
     const vrfSelects = ["macVrf", "srcVrf", "dstVrf"];
 
+    let paChecks = [];
+    toggleFlowFields();
     loadOptions();
     bindVrfToggle("macQuery", "macVrf");
 
@@ -380,6 +400,12 @@ def tools_view() -> str:
       await renderLookup("/tools/mac?" + params.toString(), "macResult");
     }
 
+    function toggleFlowFields() {
+      const enabled = document.getElementById("pathAnalysis").value === "flow";
+      for (const id of ["flowProtocol", "flowSourcePort", "flowDestinationPort", "flowApplication", "flowIngress"]) document.getElementById(id).disabled = !enabled;
+      if (enabled && document.getElementById("pathMode").value === "physical") document.getElementById("pathMode").value = "auto";
+    }
+
     async function lookupPath() {
       const src = document.getElementById("srcQuery").value.trim();
       const dst = document.getElementById("dstQuery").value.trim();
@@ -393,6 +419,14 @@ def tools_view() -> str:
         dst_device: document.getElementById("dstDevice").value,
         dst_vrf: document.getElementById("dstVrf").value,
       });
+      params.set("analysis", document.getElementById("pathAnalysis").value);
+      if (params.get("analysis") === "flow") {
+        for (const [key, id] of [["protocol", "flowProtocol"], ["source_port", "flowSourcePort"], ["destination_port", "flowDestinationPort"], ["application", "flowApplication"], ["ingress_interface", "flowIngress"]]) {
+          const input = document.getElementById(id);
+          if (!input.checkValidity()) { input.reportValidity(); return; }
+          if (input.value.trim()) params.set(key, input.value.trim());
+        }
+      }
       await renderPath("/tools/path?" + params.toString(), "pathResult");
     }
 
@@ -433,6 +467,10 @@ def tools_view() -> str:
         if (["all", ...(payload.sites || [])].includes(preferredSite)) document.getElementById("pathSite").value = preferredSite;
         await loadPathOptions();
         for (const [key, id] of [["src", "srcQuery"], ["dst", "dstQuery"]]) if (params.has(key)) document.getElementById(id).value = params.get(key);
+        for (const [key, id] of [["analysis", "pathAnalysis"], ["protocol", "flowProtocol"], ["source_port", "flowSourcePort"], ["destination_port", "flowDestinationPort"], ["application", "flowApplication"], ["ingress_interface", "flowIngress"]]) {
+          if (params.has(key)) document.getElementById(id).value = params.get(key);
+        }
+        toggleFlowFields();
         if (params.has("src") && params.has("dst")) await lookupPath();
       } catch (error) {
         for (const id of deviceSelects) fillSelect(id, [], "All devices");
@@ -501,6 +539,7 @@ def tools_view() -> str:
 
     function pathHtml(payload) {
       pathGraphs = [];
+      paChecks = [];
       const candidates = payload.status === "ambiguous"
         ? tableSection("Source candidates — select device and VRF above", payload.source_candidates || [], ["device", "vrf", "interface", "ip", "mac", "vlan"])
           + tableSection("Destination candidates", payload.destination_candidates || [], ["device", "vrf", "interface", "ip", "mac", "vlan"]) : "";
@@ -511,8 +550,9 @@ def tools_view() -> str:
         + (branch.reason ? '<div class="message">' + escapeHtml(branch.reason) + '</div>' : '')
         + '<details class="path-evidence"><summary>完整计算明细 / All evidence (' + (branch.path || []).length + ')</summary><div class="path">' + (branch.path || []).map(stepHtml).join("") + '</div></details></article>').join("");
       return '<div class="summary">' + pill(payload.status || "unavailable", payload.status === "ok" ? "good" : "warn")
-        + pill(payload.mode || "auto") + pill("Site: " + (payload.site || "all")) + '</div>'
+        + pill(payload.mode || "auto") + pill(payload.analysis || "routing") + pill("Site: " + (payload.site || "all")) + '</div>'
         + endpointSummary("Source", payload.source || {}) + endpointSummary("Destination", payload.destination || {})
+        + (payload.flow ? '<div class="message">新建连接 / New connection · ' + escapeHtml(flowText(payload.flow)) + '</div>' : '')
         + candidates + (paths || '<div class="message">No verified path available.</div>')
         + '<div class="summary">' + (payload.warnings || []).map(n => pill(n, "warn")).join("") + '</div>';
     }
@@ -525,14 +565,47 @@ def tools_view() -> str:
 
     function stepHtml(step, index) {
       const title = step.label || String(step.type || "step").replaceAll("_", " ");
-      const fields = ["device", "vrf", "prefix", "lookup_ip", "next_hop", "interface", "protocol", "policy", "action", "ingress_vlan", "empty_fieldsets", "vtep", "vni", "from", "to", "local_interface", "remote_interface", "confirmation", "source", "freshness", "observed_at"];
+      const fields = ["device", "vrf", "prefix", "lookup_ip", "next_hop", "interface", "protocol", "policy", "action", "status", "vsys", "from_zone", "to_zone", "original_to_zone", "security_rule", "nat_rule", "reason", "evidence_level", "ingress_vlan", "empty_fieldsets", "vtep", "vni", "from", "to", "local_interface", "remote_interface", "confirmation", "source", "freshness", "observed_at"];
       const details = fields.filter(key => step[key] != null && step[key] !== "")
         .map(key => pill(label(key) + ': ' + step[key])).join("");
       const evidence = Array.isArray(step.evidence) ? step.evidence.map(e =>
         typeof e === "object" ? pill((e.source || "observation") + ' · ' + (e.last_success_at || e.observed_at || "")) : "").join("") : "";
+      let flowInfo = '';
+      if (step.flow_before) flowInfo += '<div class="message">进入 / Before: ' + escapeHtml(flowText(step.flow_before)) + '</div>';
+      if (step.flow_after) flowInfo += '<div class="message">' + (step.status === 'blocked' ? '候选 NAT（已拒绝） / Candidate NAT (denied): ' : '离开 / After: ') + escapeHtml(flowText(step.flow_after)) + '</div>';
+      if (step.type === 'firewall_policy' && step.to_zone && step.original_to_zone && step.config_digest && step.verification_flow.protocol !== 'any') {
+        const check = {device_id:step.device_id, flow:step.verification_flow, ingress:step.interface, vsys:step.vsys,
+          from_zone:step.from_zone, to_zone:step.to_zone, original_to_zone:step.original_to_zone, config_digest:step.config_digest};
+        const index = paChecks.push(check) - 1;
+        flowInfo += '<button type="button" class="pa-verify" data-check="' + index + '">PA 原生规则/会话核验 / Verify on PA</button><div class="pa-verification-result"></div>';
+      }
       return '<div class="step"><div class="step-title">' + (index + 1) + '. ' + escapeHtml(title) + '</div><div class="step-meta summary">' + details + '</div>'
-        + (evidence ? '<details><summary>Evidence</summary><div class="summary">' + evidence + '</div></details>' : '') + '</div>';
+        + flowInfo + (evidence ? '<details><summary>Evidence</summary><div class="summary">' + evidence + '</div></details>' : '') + '</div>';
     }
+
+    function flowText(flow) {
+      return (flow.protocol || 'any').toUpperCase() + ' ' + flow.source_ip + (flow.source_port != null ? ':' + flow.source_port : '')
+        + ' → ' + flow.destination_ip + (flow.destination_port != null ? ':' + flow.destination_port : '')
+        + (flow.application ? ' · App-ID assumption: ' + flow.application : '');
+    }
+
+    document.getElementById('pathResult').addEventListener('click', async event => {
+      const button = event.target.closest('.pa-verify');
+      if (!button) return;
+      const request = paChecks[Number(button.dataset.check)], target = button.nextElementSibling;
+      button.disabled = true; target.textContent = '正在核验 / Verifying…';
+      try {
+        const response = await fetch('/api/pa/verify', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(request)});
+        const result = await response.json();
+        if (!response.ok) throw new Error(JSON.stringify(result.detail));
+        target.innerHTML = '<div class="message">' + escapeHtml(result.status + ' · ' + (result.reason || result.observed_at || '')) + '</div>'
+          + (result.security ? tableSection('PA security · ' + result.security.status, result.security.rules || [], ['name','action']) : '')
+          + (result.nat ? tableSection('PA NAT · ' + result.nat.status, result.nat.rules || [], ['name','action']) : '')
+          + (result.sessions ? '<div class="message">Session: ' + escapeHtml(result.sessions.status) + '</div>' + tableSection('Observed sessions',result.sessions.entries || [],['idx','id','source','dst','sport','dport','application','state']) : '')
+          + '<div class="step-meta">规则匹配不等于实际流量通过；没有会话不等于拒绝。 / Rule matching is not proof of delivery; no session is not a deny.</div>';
+      } catch (error) { target.textContent = '核验失败 / Verification failed: ' + String(error); }
+      finally { button.disabled = false; }
+    });
 
     function tableSection(title, rows, columns) {
       if (!rows.length) return '<div><h3>' + escapeHtml(title) + '</h3><div class="message">No matches</div></div>';
@@ -650,14 +723,54 @@ def normalized_path_lookup(src: str, dst: str, vrf: str = "all",
                            src_device: str = "all", dst_device: str = "all",
                            src_vrf: str = "all", dst_vrf: str = "all",
                            site: str = "all",
+                           analysis: str = Query("routing", pattern="^(routing|flow)$"),
+                           protocol: str = Query("any", pattern="^(any|tcp|udp|icmp|icmpv6)$"),
+                           source_port: Optional[int] = Query(None, ge=0, le=65535),
+                           destination_port: Optional[int] = Query(None, ge=0, le=65535),
+                           application: Optional[str] = Query(None, max_length=128),
+                           ingress_interface: Optional[str] = Query(None, max_length=128),
                            mode: str = Query("auto", pattern="^(auto|physical|routed)$")) -> dict[str, object]:
-    """Shared engine for the tools page and API; old query parameters remain valid."""
+    """Shared engine; new-connection analysis is explicit and legacy routing remains valid."""
     snapshot = load_snapshot()
     if snapshot is None:
         return {"status": "unavailable", "source": {}, "destination": {}, "path": [], "paths": [],
                 "warnings": ["topology snapshot is not available"]}
+    if analysis == "flow":
+        snapshot = attach_policy(snapshot)
     return find_path(snapshot, src, dst, vrf, src_device=src_device, dst_device=dst_device,
-                     src_vrf=src_vrf, dst_vrf=dst_vrf, mode=mode, site=site)
+                     src_vrf=src_vrf, dst_vrf=dst_vrf, mode=mode, site=site, analysis=analysis,
+                     protocol=protocol, source_port=source_port, destination_port=destination_port,
+                     application=application, ingress_interface=ingress_interface)
+
+
+class FlowInput(BaseModel):
+    source_ip: str = Field(max_length=64)
+    destination_ip: str = Field(max_length=64)
+    protocol: Literal["tcp", "udp", "icmp", "icmpv6"]
+    source_port: Optional[int] = Field(default=None, ge=0, le=65535)
+    destination_port: Optional[int] = Field(default=None, ge=0, le=65535)
+    application: Optional[str] = Field(default=None, max_length=128)
+
+
+class PAVerifyRequest(BaseModel):
+    device_id: str = Field(max_length=64)
+    flow: FlowInput
+    ingress: str = Field(max_length=128)
+    vsys: str = Field(max_length=128)
+    from_zone: str = Field(max_length=128)
+    to_zone: str = Field(max_length=128)
+    original_to_zone: str = Field(max_length=128)
+    config_digest: str = Field(max_length=64)
+
+
+@app.get("/api/pa/policy-status")
+def pa_policy_status() -> dict:
+    return policy_status()
+
+
+@app.post("/api/pa/verify")
+async def pa_verify(request: PAVerifyRequest) -> dict:
+    return await asyncio.to_thread(verify_flow, settings, request.model_dump())
 
 
 @app.get("/api/routes")

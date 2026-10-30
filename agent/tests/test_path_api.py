@@ -38,6 +38,27 @@ class PathApiTests(unittest.TestCase):
             self.assertEqual(self.client.get("/api/routes?site=missing").json()["routes"], [])
             self.assertEqual(self.client.get("/tools/options?site=lab").json()["sites"], ["lab"])
 
+    def test_flow_parameters_and_native_verification_validation(self):
+        from test_service_path import lab, SRC, DST
+        from test_panos_flow import FIXTURE, stamp
+        from aiops_agent.panos_policy import parse_config
+        snapshot = lab(populate=True)
+        for device in snapshot.devices:
+            if device["name"].startswith("PA-"):
+                xml = FIXTURE.read_text().replace("ae1.10", "ae1.20") if device["name"] == "PA-172" else FIXTURE.read_text()
+                device["pa_policy"] = stamp(parse_config(xml))
+        with patch("aiops_agent.main.load_snapshot", return_value=snapshot), patch("aiops_agent.main.attach_policy", side_effect=lambda x:x):
+            params = dict(src=SRC,dst=DST,site="lab",analysis="flow",protocol="tcp",source_port=40000,destination_port=50001)
+            api = self.client.get("/api/path", params=params)
+            self.assertEqual(api.status_code, 200)
+            self.assertEqual(api.json()["status"], "ok")
+            self.assertEqual(api.json(), self.client.get("/tools/path", params=params).json())
+            self.assertEqual(api.json()["flow"]["source_port"], 40000)
+            for invalid in [dict(destination_port=65536),dict(protocol="unknown"),dict(analysis="unknown")]:
+                self.assertEqual(self.client.get("/api/path", params={**params,**invalid}).status_code,422)
+            self.assertEqual(self.client.get("/api/path",params={**params,"protocol":"icmp"}).json()["status"],"invalid")
+        self.assertEqual(self.client.post("/api/pa/verify",json={"device_id":"unknown"}).status_code,422)
+
     def test_mode_validation(self):
         self.assertEqual(
             self.client.get(
