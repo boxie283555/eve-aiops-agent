@@ -85,6 +85,7 @@ class NautobotClient:
             devices.append(
                 {
                     "name": item.get("name") or item.get("display") or item.get("id"),
+                    "id": item.get("id"),
                     "role": self._related_name(role),
                     "site": self._related_name(site),
                     "host": primary_ip,
@@ -126,7 +127,7 @@ class NautobotClient:
         normalized_devices = []
         for item in devices:
             custom = item.get("custom_fields") or {}
-            normalized_devices.append({"name": item.get("name") or item.get("display"),
+            normalized_devices.append({"id": item["id"], "name": item.get("name") or item.get("display"),
                 "role": self._related_name(item.get("role")), "site": self._related_name(item.get("site") or item.get("location")),
                 "host": _address(item.get("primary_ip4") or item.get("primary_ip6") or custom.get("management_ip")),
                 "platform": self._related_name(item.get("platform")), "source": "nautobot"})
@@ -135,7 +136,7 @@ class NautobotClient:
             device_id = (item.get("device") or {}).get("id")
             if not device_id:
                 continue
-            normalized_interfaces.append({"device": device_names.get(device_id), "name": item.get("name"),
+            normalized_interfaces.append({"nautobot_id": item["id"], "device": device_names.get(device_id), "name": item.get("name"),
                 "description": item.get("description") or "", "type": self._related_name(item.get("type")),
                 "source": "nautobot", "status": self._related_name(item.get("status"))})
         normalized_endpoints = []
@@ -229,8 +230,8 @@ class NautobotClient:
                 current = match.get("custom_fields") or {}
                 current.update(
                     {
-                        "aiops_admin_status": "up" if interface.get("admin_up") else "down",
-                        "aiops_oper_status": "up" if interface.get("oper_up") else "down",
+                        "aiops_admin_status": "unknown" if interface.get("admin_up") is None else "up" if interface.get("admin_up") else "down",
+                        "aiops_oper_status": "unknown" if interface.get("oper_up") is None else "up" if interface.get("oper_up") else "down",
                         "aiops_last_collected": collected_at,
                         "aiops_collection_error": result.error or "",
                         "aiops_ip_address": str(interface.get("ip") or ""),

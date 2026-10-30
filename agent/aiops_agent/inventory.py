@@ -32,6 +32,7 @@ class Device:
     password_env: str | None = None
     secret_env: str | None = None
     snmp: SnmpTarget = SnmpTarget()
+    id: str | None = None
 
 
 def load_inventory(path: str = "/app/inventory/devices.yml") -> list[Device]:
@@ -60,6 +61,7 @@ def load_inventory(path: str = "/app/inventory/devices.yml") -> list[Device]:
         devices.append(
             Device(
                 name=str(merged["name"]),
+                id=merged.get("id"),
                 role=str(merged.get("role", "unknown")),
                 site=str(merged.get("site", "unknown")),
                 host=str(merged["host"]),

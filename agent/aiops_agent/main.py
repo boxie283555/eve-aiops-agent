@@ -49,7 +49,8 @@ async def _collect_loop_once() -> None:
         except NautobotError:
             # Runtime topology remains usable when Nautobot is temporarily down.
             design = None
-    await asyncio.to_thread(save_snapshot, build_snapshot(collector.latest_results, design))
+    snapshot = await asyncio.to_thread(build_snapshot, collector.latest_results, design, load_snapshot())
+    await asyncio.to_thread(save_snapshot, snapshot)
     if settings.nautobot_url and settings.nautobot_token:
         if interface_sync_task is None or interface_sync_task.done():
             interface_sync_task = asyncio.create_task(_sync_interfaces_background())
@@ -141,6 +142,10 @@ def structured_state() -> dict[str, object]:
                 "tcam_resources": [asdict(resource) for resource in result.tcam_resources],
                 "resources": asdict(result.resources),
                 "firewall_metrics": result.firewall_metrics,
+                "id": result.device.id,
+                "routes": result.routes,
+                "collected_at": result.collected_at,
+                "dataset_status": result.dataset_status,
                 "interfaces": result.interfaces,
                 "mac_table": [asdict(entry) for entry in result.mac_table],
                 "arp_table": [asdict(entry) for entry in result.arp_table],
@@ -295,7 +300,7 @@ def tools_view() -> str:
       <h2>End-to-End Path</h2>
       <div class="form-grid">
         <div class="wide">
-          <label for="srcQuery">Source MAC or IP</label>
+          <label for="srcQuery">Source MAC, IP or device:interface</label>
           <input id="srcQuery" placeholder="10.110.0.11">
         </div>
         <div>
@@ -307,7 +312,7 @@ def tools_view() -> str:
           <select id="srcVrf"></select>
         </div>
         <div class="wide">
-          <label for="dstQuery">Destination MAC or IP</label>
+          <label for="dstQuery">Destination MAC, IP or device:interface</label>
           <input id="dstQuery" placeholder="10.120.0.21">
         </div>
         <div>
@@ -319,8 +324,10 @@ def tools_view() -> str:
           <select id="dstVrf"></select>
         </div>
       </div>
-      <div class="actions"><button type="button" onclick="lookupPath()">Trace Path</button></div>
+      <div class="actions"><select id="pathMode"><option value="auto">Auto</option><option value="routed">Route lookup</option><option value="physical">Physical connectivity</option></select><button type="button" onclick="lookupPath()">Trace Path</button></div>
       <div id="pathResult" class="result"><div class="message">Waiting for query...</div></div>
+      <div class="actions"><button type="button" onclick="showRoutes()">Show routes for source device / VRF</button></div>
+      <div id="routesResult" class="result"></div>
     </section>
   </main>
   <script>
@@ -329,8 +336,8 @@ def tools_view() -> str:
 
     loadOptions();
     bindVrfToggle("macQuery", "macVrf");
-    bindVrfToggle("srcQuery", "srcVrf");
-    bindVrfToggle("dstQuery", "dstVrf");
+
+
 
     async function lookupMac() {
       const query = document.getElementById("macQuery").value.trim();
@@ -349,11 +356,22 @@ def tools_view() -> str:
         src,
         dst,
         src_device: document.getElementById("srcDevice").value,
-        src_vrf: isIp(src) ? document.getElementById("srcVrf").value : "all",
+        src_vrf: document.getElementById("srcVrf").value,
+        mode: document.getElementById("pathMode").value,
         dst_device: document.getElementById("dstDevice").value,
-        dst_vrf: isIp(dst) ? document.getElementById("dstVrf").value : "all",
+        dst_vrf: document.getElementById("dstVrf").value,
       });
       await renderPath("/tools/path?" + params.toString(), "pathResult");
+    }
+
+    async function showRoutes() {
+      const target = document.getElementById("routesResult");
+      target.textContent = "Loading routes...";
+      const params = new URLSearchParams({device: document.getElementById("srcDevice").value, vrf: document.getElementById("srcVrf").value});
+      try {
+        const payload = await (await fetch("/api/routes?" + params)).json();
+        target.innerHTML = tableSection("Collected RIB routes", payload.routes || [], ["device", "vrf", "prefix", "next_hop", "interface", "protocol", "freshness", "last_success_at"]);
+      } catch (error) { target.textContent = "Route request failed: " + error; }
     }
 
     function bindVrfToggle(queryId, vrfId) {
@@ -431,33 +449,35 @@ def tools_view() -> str:
     }
 
     function pathHtml(payload) {
-      const source = endpointSummary("Source", payload.source || {});
-      const destination = endpointSummary("Destination", payload.destination || {});
-      const steps = payload.path || [];
-      const path = steps.length
-        ? '<div class="path">' + steps.map((step, index) => stepHtml(step, index)).join("") + '</div>'
-        : '<div class="message">No path could be inferred from current MAC, ARP, and LLDP data.</div>';
-      const notes = ((payload.evidence || {}).notes || []).map(note => '<span class="pill">' + escapeHtml(note) + '</span>').join("");
-      return source + destination + '<h3>Path</h3>' + path + '<div class="summary">' + notes + '</div>';
+      const candidates = payload.status === "ambiguous"
+        ? tableSection("Source candidates — select device and VRF above", payload.source_candidates || [], ["device", "vrf", "interface", "ip", "mac", "vlan"])
+          + tableSection("Destination candidates", payload.destination_candidates || [], ["device", "vrf", "interface", "ip", "mac", "vlan"]) : "";
+      const branches = payload.paths || [];
+      const paths = branches.map((branch, i) => '<h3>Path ' + (i+1) + ' · ' + escapeHtml(branch.status) + '</h3>'
+        + '<div class="path">' + (branch.path || []).map(stepHtml).join("") + '</div>'
+        + (branch.reason ? '<div class="message">' + escapeHtml(branch.reason) + '</div>' : '')).join("");
+      return '<div class="summary">' + pill(payload.status || "unavailable", payload.status === "ok" ? "good" : "warn")
+        + pill(payload.mode || "auto") + '</div>'
+        + endpointSummary("Source", payload.source || {}) + endpointSummary("Destination", payload.destination || {})
+        + candidates + (paths || '<div class="message">No verified path available.</div>')
+        + '<div class="summary">' + (payload.warnings || []).map(n => pill(n, "warn")).join("") + '</div>';
     }
 
     function endpointSummary(title, endpoint) {
       return '<h3>' + title + '</h3><div class="summary">'
-        + pill("Query: " + (endpoint.query || ""))
-        + (endpoint.ip ? pill("IP: " + endpoint.ip) : "")
-        + (endpoint.mac ? pill("MAC: " + endpoint.mac) : "")
-        + pill("ARP: " + ((endpoint.arp_matches || []).length))
-        + pill("MAC table: " + ((endpoint.mac_matches || []).length))
-        + '</div>';
+        + ["query", "device", "vrf", "interface", "ip", "mac"].filter(k => endpoint[k])
+          .map(k => pill(k + ": " + endpoint[k])).join("") + '</div>';
     }
 
     function stepHtml(step, index) {
       const title = step.label || String(step.type || "step").replaceAll("_", " ");
-      const details = Object.entries(step)
-        .filter(([key]) => !["type", "label"].includes(key))
-        .map(([key, value]) => '<span class="pill">' + escapeHtml(key) + ': ' + escapeHtml(String(value ?? "")) + '</span>')
-        .join("");
-      return '<div class="step"><div class="step-title">' + (index + 1) + '. ' + escapeHtml(title) + '</div><div class="step-meta summary">' + details + '</div></div>';
+      const fields = ["device", "vrf", "prefix", "next_hop", "interface", "protocol", "from", "to", "local_interface", "remote_interface", "confirmation", "source", "freshness", "observed_at"];
+      const details = fields.filter(key => step[key] != null && step[key] !== "")
+        .map(key => pill(label(key) + ': ' + step[key])).join("");
+      const evidence = Array.isArray(step.evidence) ? step.evidence.map(e =>
+        typeof e === "object" ? pill((e.source || "observation") + ' · ' + (e.last_success_at || e.observed_at || "")) : "").join("") : "";
+      return '<div class="step"><div class="step-title">' + (index + 1) + '. ' + escapeHtml(title) + '</div><div class="step-meta summary">' + details + '</div>'
+        + (evidence ? '<details><summary>Evidence</summary><div class="summary">' + evidence + '</div></details>' : '') + '</div>';
     }
 
     function tableSection(title, rows, columns) {
@@ -508,17 +528,17 @@ async function load(){
     // Manual data refresh preserves the positions currently being edited.
     if(dragged||selecting)return;
     const positions=Object.fromEntries((data.devices||[]).map(node=>[node.name,topology.positions[node.name]||data.layout?.[node.name]]));
-    topology={nodes:data.devices||[],links:(data.links||[]).filter(link=>link.type==='physical'),positions,observedAt:data.observed_at||''};
+    topology={nodes:data.devices||[],links:(data.links||[]).filter(link=>link.type==='physical'&&link.confirmation==='confirmed'&&link.freshness==='fresh'),positions,observedAt:data.observed_at||''};
     const cols=Math.max(1,Math.ceil(Math.sqrt(topology.nodes.length))),dx=1100/cols,dy=500/Math.max(1,Math.ceil(topology.nodes.length/cols));
     topology.nodes.forEach((node,i)=>{topology.positions[node.name] ||= {x:60+(i%cols)*dx,y:110+Math.floor(i/cols)*dy};});
     selected=new Set([...selected].filter(name=>Object.hasOwn(topology.positions,name)));
-    render(); meta.textContent=`${topology.nodes.length} devices · ${topology.links.length} links · observed ${topology.observedAt}`;
+    render(); meta.textContent=`${topology.nodes.length} devices · ${topology.links.length} confirmed links · ${(data.links||[]).filter(l=>l.confirmation!=='confirmed').length} candidates (hidden) · observed ${topology.observedAt}`;
   } catch(error){meta.textContent='Failed to load topology: '+error;}
 }
 function render(){
   const svg=document.getElementById('graph'), p=topology.positions, escv=esc; let out='';
   topology.links.forEach((link,i)=>{const a=p[link.from],b=p[link.to];if(!a||!b)return;const label=(link.local_interface||'?')+' ↔ '+(link.remote_interface||'?');const showIf=document.getElementById('showInterfaces')?.checked!==false;out+=`<line data-link="${i}" class="link ${link.type==='evpn_vxlan'?'evpn':''}" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"/><text class="link-label" style="display:${showIf?'block':'none'}" x="${(a.x+b.x)/2}" y="${(a.y+b.y)/2-5}">${escv(label)}</text><title>${escv(link.from)}:${escv(link.local_interface||'')} → ${escv(link.to)}:${escv(link.remote_interface||'')} (${escv(link.type||'link')})</title>`;});
-  topology.nodes.forEach(node=>{const q=p[node.name],color=node.up===true?'#27ae60':node.error==='not_collected'?'#f2c94c':'#eb5757';out+=`<g data-node="${escv(node.name)}"><circle class="node ${selected.has(node.name)?'selected':''}" cx="${q.x}" cy="${q.y}" r="22" fill="${color}"/><text class="label" x="${q.x}" y="${q.y+42}">${escv(node.name)}</text><text class="iface" x="${q.x}" y="${q.y+57}">${escv(node.role||'')} · ${escv(node.site||'')}</text><title>${escv(node.name)}\n${node.up?'up':'down'}${node.error?' · '+escv(node.error):''}</title></g>`;});
+  topology.nodes.forEach(node=>{const q=p[node.name],color=node.up===true&&node.freshness==='fresh'?'#27ae60':node.up===true||node.error==='not_collected'?'#f2c94c':'#eb5757';out+=`<g data-node="${escv(node.name)}"><circle class="node ${selected.has(node.name)?'selected':''}" cx="${q.x}" cy="${q.y}" r="22" fill="${color}"/><text class="label" x="${q.x}" y="${q.y+42}">${escv(node.name)}</text><text class="iface" x="${q.x}" y="${q.y+57}">${escv(node.role||'')} · ${escv(node.site||'')}</text><title>${escv(node.name)}\n${node.up?'up':'down'}${node.error?' · '+escv(node.error):''}</title></g>`;});
   svg.innerHTML=out;
   svg.querySelectorAll('[data-node]').forEach(group=>{group.addEventListener('pointerdown',startDrag);group.addEventListener('pointerenter',()=>showInfo(group.dataset.node));group.addEventListener('pointerleave',()=>{document.getElementById('deviceInfo').textContent='';});});
 }
@@ -528,7 +548,7 @@ function updateVisuals(){
   svg.querySelectorAll('.link-label').forEach(label=>{const link=topology.links[Number(label.dataset.link||0)],a=p[link.from],b=p[link.to];if(a&&b){label.setAttribute('x',(a.x+b.x)/2);label.setAttribute('y',(a.y+b.y)/2-5);}});svg.querySelectorAll('[data-link]').forEach(line=>{const link=topology.links[Number(line.dataset.link)],a=p[link.from],b=p[link.to];if(a&&b){line.setAttribute('x1',a.x);line.setAttribute('y1',a.y);line.setAttribute('x2',b.x);line.setAttribute('y2',b.y);}});
 }
 function startDrag(event){event.preventDefault();event.stopPropagation();const name=event.currentTarget.dataset.node;if(!selected.has(name)){selected.clear();selected.add(name);render();}const svg=document.getElementById('graph'),box=svg.getBoundingClientRect();dragged={name,pointerId:event.pointerId,lastX:event.clientX,lastY:event.clientY,box};event.currentTarget.setPointerCapture(event.pointerId);event.currentTarget.addEventListener('pointermove',drag);event.currentTarget.addEventListener('pointerup',endDrag,{once:true});event.currentTarget.addEventListener('pointercancel',endDrag,{once:true});}
-function showInfo(name){const n=topology.nodes.find(x=>x.name===name);if(n)document.getElementById('deviceInfo').textContent=`${n.name} · ${n.host||'-'} · ${n.platform||'-'} · ${n.role||'-'} · ${n.site||'-'} · ${n.up?'UP':'DOWN'}${n.error?' · '+n.error:''}`;}
+function showInfo(name){const n=topology.nodes.find(x=>x.name===name);if(n)document.getElementById('deviceInfo').textContent=`${n.name} · ${n.host||'-'} · ${n.platform||'-'} · ${n.role||'-'} · ${n.site||'-'} · ${n.up?(n.freshness==='fresh'?'UP':'STALE'):'DOWN'} · last success ${n.last_success_at||'-'}${n.error?' · '+n.error:''}`;}
 function startBox(event){if(event.target.closest('[data-node]'))return;const svg=document.getElementById('graph'),box=svg.getBoundingClientRect();selecting={x:(event.clientX-box.left)*1200/box.width,y:(event.clientY-box.top)*700/box.height,box};svg.setPointerCapture(event.pointerId);svg.addEventListener('pointermove',boxMove);svg.addEventListener('pointerup',endBox,{once:true});}
 function boxMove(event){if(!selecting)return;const r=document.getElementById('graph').getBoundingClientRect(),x=(event.clientX-r.left)*1200/r.width,y=(event.clientY-r.top)*700/r.height;const x1=Math.min(selecting.x,x),x2=Math.max(selecting.x,x),y1=Math.min(selecting.y,y),y2=Math.max(selecting.y,y);selected.clear();topology.nodes.forEach(n=>{const q=topology.positions[n.name];if(q.x>=x1&&q.x<=x2&&q.y>=y1&&q.y<=y2)selected.add(n.name);});render();}
 function endBox(){selecting=null;}
@@ -545,38 +565,6 @@ def mac_lookup(query: str, device: str = "all", vrf: str = "all") -> dict[str, o
     return _lookup_mac(query, device_filter=device, vrf_filter=vrf)
 
 
-@app.get("/tools/path")
-def path_lookup(
-    src: str,
-    dst: str,
-    src_device: str = "all",
-    src_vrf: str = "all",
-    dst_device: str = "all",
-    dst_vrf: str = "all",
-) -> dict[str, object]:
-    source = _resolve_endpoint(src, device_filter=src_device, vrf_filter=src_vrf)
-    destination = _resolve_endpoint(dst, device_filter=dst_device, vrf_filter=dst_vrf)
-    source_location = _best_local_location(source)
-    destination_location = _best_local_location(destination)
-    path = _build_path_steps(source, destination, source_location, destination_location)
-    return {
-        "source": source,
-        "destination": destination,
-        "path": path,
-        "evidence": {
-            "lldp_path": _shortest_lldp_path(
-                source_location.get("device") if source_location else "",
-                destination_location.get("device") if destination_location else "",
-            ),
-            "notes": [
-                "MAC entries on Vxlan/Vx ports indicate remote overlay learning.",
-                "Physical/local ports are preferred as endpoint attachment points.",
-                "If LLDP is incomplete, the path is a best-effort logical path.",
-            ],
-        },
-    }
-
-
 @app.get("/api/topology")
 def topology_api() -> dict[str, object]:
     """Return the persisted normalized topology v1 snapshot."""
@@ -585,7 +573,8 @@ def topology_api() -> dict[str, object]:
         return {"status": "unavailable", "devices": [], "interfaces": [], "links": [], "endpoints": []}
     return {"status": "ok", "observed_at": snapshot.observed_at, "devices": snapshot.devices,
             "interfaces": snapshot.interfaces, "links": snapshot.links, "endpoints": snapshot.endpoints,
-            "layout": load_layout()}
+            "layout": load_layout(), "schema_version": snapshot.schema_version,
+            "vrfs": snapshot.vrfs, "routes": snapshot.routes, "warnings": snapshot.warnings}
 
 
 @app.get("/api/topology/layout")
@@ -601,14 +590,31 @@ def topology_layout_put(payload: dict[str, dict[str, float]]) -> dict[str, objec
     return {"status": "ok", "layout": layout}
 
 
+@app.get("/tools/path")
 @app.get("/api/path")
-def normalized_path_lookup(src: str, dst: str, vrf: str = "all") -> dict[str, object]:
-    """Resolve IP/MAC/device:interface endpoints against the durable topology."""
+def normalized_path_lookup(src: str, dst: str, vrf: str = "all",
+                           src_device: str = "all", dst_device: str = "all",
+                           src_vrf: str = "all", dst_vrf: str = "all",
+                           mode: str = Query("auto", pattern="^(auto|physical|routed)$")) -> dict[str, object]:
+    """Shared engine for the tools page and API; old query parameters remain valid."""
     snapshot = load_snapshot()
     if snapshot is None:
-        return {"status": "unavailable", "source": {}, "destination": {}, "path": [],
+        return {"status": "unavailable", "source": {}, "destination": {}, "path": [], "paths": [],
                 "warnings": ["topology snapshot is not available"]}
-    return find_path(snapshot, src, dst, vrf)
+    return find_path(snapshot, src, dst, vrf, src_device=src_device, dst_device=dst_device,
+                     src_vrf=src_vrf, dst_vrf=dst_vrf, mode=mode)
+
+
+@app.get("/api/routes")
+def routes_api(device: str = "all", vrf: str = "all", prefix: str = "all") -> dict[str, object]:
+    snapshot = load_snapshot()
+    if snapshot is None:
+        return {"status": "unavailable", "routes": []}
+    rows = [r for r in snapshot.routes
+            if (device == "all" or device in {r["device"], r["device_id"]})
+            and (vrf == "all" or vrf in {r["vrf"], r["vrf_id"]})
+            and (prefix == "all" or prefix == r["prefix"])]
+    return {"status": "ok", "observed_at": snapshot.observed_at, "routes": rows}
 
 
 @app.get("/api/topology/anomalies")
@@ -624,22 +630,19 @@ def topology_anomalies() -> dict[str, object]:
     for interface in snapshot.interfaces:
         if interface.get("admin_up") and interface.get("oper_up") is False:
             anomalies.append({"type": "interface_down", "device": interface.get("device"), "interface": interface.get("name")})
-    return {"status": "ok", "observed_at": snapshot.observed_at, "anomalies": anomalies}
+    for link in snapshot.links:
+        if link.get("confirmation") != "confirmed" or link.get("freshness") != "fresh":
+            anomalies.append({"type": "unconfirmed_link" if link.get("confirmation") != "confirmed" else "stale_link",
+                              "link_id": link["id"], "from": link["from"], "to": link["to"]})
+    return {"status": "ok", "observed_at": snapshot.observed_at, "anomalies": anomalies, "warnings": snapshot.warnings}
 
 
 @app.get("/tools/options")
 def tools_options() -> dict[str, object]:
-    vrfs = sorted(
-        {
-            entry.vrf
-            for result in collector.latest_results.values()
-            for entry in result.arp_table
-            if entry.vrf
-        }
-    )
+    snapshot = load_snapshot()
     return {
-        "devices": sorted(device.name for device in devices),
-        "vrfs": vrfs,
+        "devices": sorted(d["name"] for d in snapshot.devices) if snapshot else sorted(d.name for d in devices),
+        "vrfs": sorted({v["name"] for v in snapshot.vrfs if v["name"] != "unknown"}) if snapshot else [],
     }
 
 
@@ -738,214 +741,6 @@ def _normalize_filter(value: str | None) -> str:
 
 def _matches_filter(value: object, selected: str) -> bool:
     return selected == "all" or str(value) == selected
-
-
-def _best_local_location(endpoint: dict[str, object]) -> dict[str, object]:
-    matches = endpoint.get("mac_matches", [])
-    if not isinstance(matches, list):
-        return {}
-    local = [match for match in matches if match.get("location_type") == "local"]
-    if local:
-        return local[0]
-    arp_location = _best_arp_location(endpoint)
-    if arp_location:
-        return arp_location
-    overlay = [match for match in matches if match.get("location_type") == "overlay"]
-    return overlay[0] if overlay else {}
-
-
-def _best_arp_location(endpoint: dict[str, object]) -> dict[str, object]:
-    arp_matches = endpoint.get("arp_matches", [])
-    if not isinstance(arp_matches, list):
-        return {}
-    learned_candidates = [
-        match
-        for match in arp_matches
-        if "not learned" not in str(match.get("interface", "")).lower()
-        and not str(match.get("interface", "")).lower().startswith("management")
-    ]
-    fallback_candidates = [
-        match
-        for match in arp_matches
-        if not str(match.get("interface", "")).lower().startswith("management")
-    ]
-    candidates = learned_candidates or fallback_candidates
-    if not candidates:
-        return {}
-    match = sorted(candidates, key=lambda item: (item.get("vrf") != "TENANT", item["site"], item["device"]))[0]
-    interface = str(match.get("interface", ""))
-    learned = "not learned" not in interface.lower()
-    return {
-        "device": match.get("device"),
-        "role": match.get("role"),
-        "site": match.get("site"),
-        "vlan": interface.split(",", maxsplit=1)[0],
-        "port": match.get("interface"),
-        "location_type": "arp" if learned else "l3_gateway",
-        "evidence": "arp" if learned else "arp_gateway_only",
-        "ip": match.get("ip"),
-        "mac": match.get("mac"),
-        "vrf": match.get("vrf"),
-    }
-
-
-def _build_path_steps(
-    source_endpoint: dict[str, object],
-    destination_endpoint: dict[str, object],
-    source: dict[str, object],
-    destination: dict[str, object],
-) -> list[dict[str, object]]:
-    steps: list[dict[str, object]] = []
-    hop = 1
-
-    source_resolution = _ip_resolution_step(source_endpoint, "source", hop)
-    if source_resolution:
-        steps.append(source_resolution)
-        hop += 1
-
-    if not source or not destination:
-        if source:
-            steps.append(_attachment_step("source", source, hop))
-            hop += 1
-        steps.append(
-            {
-                "type": "unknown",
-                "label": f"Hop {hop}: location incomplete",
-                "detail": "source or destination location was not found in current ARP/MAC/LLDP data",
-                "source_found": bool(source),
-                "destination_found": bool(destination),
-            }
-        )
-        hop += 1
-        if destination:
-            steps.append(_attachment_step("destination", destination, hop))
-            hop += 1
-        destination_resolution = _ip_resolution_step(destination_endpoint, "destination", hop)
-        if destination_resolution:
-            steps.append(destination_resolution)
-        return steps
-
-    steps.append(_attachment_step("source", source, hop))
-    hop += 1
-
-    if source.get("device") == destination.get("device"):
-        steps.append(
-            {
-                "type": "same_device_switching",
-                "label": f"Hop {hop}: switch locally on {source.get('device')}",
-                "device": source.get("device"),
-                "detail": "source and destination MACs are local on the same device",
-            }
-        )
-        hop += 1
-    else:
-        lldp_path = _shortest_lldp_path(str(source.get("device", "")), str(destination.get("device", "")))
-        if lldp_path:
-            for edge in lldp_path:
-                steps.append(
-                    {
-                        "type": "underlay_hop",
-                        "label": f"Hop {len(steps) + 1}: {edge.get('from')} -> {edge.get('to')}",
-                        **edge,
-                    }
-                )
-        else:
-            steps.append(
-                {
-                    "type": "overlay_or_unknown",
-                    "label": f"Hop {hop}: overlay or unknown transit",
-                    "from": source.get("device"),
-                    "to": destination.get("device"),
-                    "detail": "no complete LLDP path found; traffic is inferred through EVPN/VXLAN overlay",
-                }
-            )
-            hop += 1
-
-    steps.append(_attachment_step("destination", destination, len(steps) + 1))
-    destination_resolution = _ip_resolution_step(destination_endpoint, "destination", len(steps) + 1)
-    if destination_resolution:
-        steps.append(destination_resolution)
-    return steps
-
-
-def _ip_resolution_step(endpoint: dict[str, object], side: str, hop: int) -> dict[str, object]:
-    ip = endpoint.get("ip")
-    if not ip:
-        return {}
-    arp_matches = endpoint.get("arp_matches", [])
-    arp_match = arp_matches[0] if isinstance(arp_matches, list) and arp_matches else {}
-    return {
-        "type": f"{side}_ip_resolution",
-        "label": f"Hop {hop}: {side} IP to MAC resolution",
-        "device": arp_match.get("device"),
-        "site": arp_match.get("site"),
-        "role": arp_match.get("role"),
-        "vrf": arp_match.get("vrf") or endpoint.get("vrf_filter"),
-        "ip": ip,
-        "mac": endpoint.get("mac"),
-        "interface": arp_match.get("interface"),
-        "evidence": "arp",
-    }
-
-
-def _attachment_step(side: str, location: dict[str, object], hop: int) -> dict[str, object]:
-    device = location.get("device")
-    interface = location.get("port")
-    label_side = "source" if side == "source" else "destination"
-    return {
-        "type": f"{side}_attachment",
-        "label": f"Hop {hop}: {label_side} attachment on {device}",
-        "device": device,
-        "role": location.get("role"),
-        "site": location.get("site"),
-        "interface": interface,
-        "vlan": location.get("vlan"),
-        "location_type": location.get("location_type"),
-        "evidence": location.get("evidence"),
-    }
-
-
-def _shortest_lldp_path(start: str, end: str) -> list[dict[str, object]]:
-    if not start or not end or start == end:
-        return []
-
-    graph: dict[str, list[dict[str, str]]] = {}
-    known_devices = {device.name for device in devices}
-    for result in collector.latest_results.values():
-        for neighbor in result.lldp_neighbors:
-            if neighbor.neighbor not in known_devices:
-                continue
-            graph.setdefault(result.device.name, []).append(
-                {
-                    "from": result.device.name,
-                    "to": neighbor.neighbor,
-                    "local_interface": neighbor.local_interface,
-                    "neighbor_interface": neighbor.neighbor_interface,
-                }
-            )
-            graph.setdefault(neighbor.neighbor, []).append(
-                {
-                    "from": neighbor.neighbor,
-                    "to": result.device.name,
-                    "local_interface": neighbor.neighbor_interface,
-                    "neighbor_interface": neighbor.local_interface,
-                }
-            )
-
-    queue: list[tuple[str, list[dict[str, str]]]] = [(start, [])]
-    seen = {start}
-    while queue:
-        node, path = queue.pop(0)
-        for edge in graph.get(node, []):
-            next_node = edge["to"]
-            if next_node in seen:
-                continue
-            next_path = [*path, edge]
-            if next_node == end:
-                return next_path
-            seen.add(next_node)
-            queue.append((next_node, next_path))
-    return []
 
 
 def _mac_location_type(port: str) -> str:

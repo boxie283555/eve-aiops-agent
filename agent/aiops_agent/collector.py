@@ -4,6 +4,11 @@ import time
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field, replace
+from datetime import datetime, timezone
+from functools import partial
+from netmiko.utilities import get_structured_data_textfsm
+from .routing import eos_interfaces, panos_interfaces, parse_routes, command_ok, eos_route_table
+from .model import interface_name
 from typing import Any, Callable
 
 from netmiko import ConnectHandler, NetmikoAuthenticationException, NetmikoTimeoutException
@@ -28,7 +33,6 @@ from .parser import (
     parse_modules,
     parse_power_supplies,
     parse_ip_interface_brief,
-    parse_panos_interfaces,
     parse_panos_arp,
     parse_panos_sessions,
     parse_panos_resources,
@@ -55,6 +59,7 @@ COMMANDS_BY_PLATFORM = {
         "arp": "show arp all",
         "sessions": "show session info",
         "resources": "show system resources",
+        "routes": "show routing route",
         # Keep PAN-OS collection bounded; these commands can enter a long
         # pagination/commit wait on VM firewalls and are not needed for the
         # physical topology graph.
@@ -75,6 +80,7 @@ COMMANDS_BY_PLATFORM = {
         "arp": "show ip arp vrf all",
         "lldp_neighbors": "show lldp neighbors",
         "route_summary": "show ip route vrf all summary",
+        "routes": "show ip route vrf all | json",
         "bgp_summary": "show bgp summary",
         "ospf_neighbors": "show ip ospf neighbor",
         "nve_peers": "show vxlan vtep",
@@ -97,6 +103,7 @@ COMMANDS_BY_PLATFORM = {
         "arp": "show ip arp vrf all",
         "lldp_neighbors": "show lldp neighbors",
         "route_summary": "show ip route vrf all summary",
+        "routes": "show ip route vrf all",
         "bgp_summary": "show bgp all summary",
         "ospf_neighbors": "show ip ospf neighbors",
         "nve_peers": "show nve peers",
@@ -127,6 +134,9 @@ class DeviceResult:
     tcam_resources: list[TcamResource] = field(default_factory=list)
     resources: DeviceResourceUsage = field(default_factory=DeviceResourceUsage)
     firewall_metrics: dict[str, float] = field(default_factory=dict)
+    routes: list[dict[str, Any]] = field(default_factory=list)
+    collected_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    dataset_status: dict[str, bool] = field(default_factory=dict)
 
 
 class Collector:
@@ -143,9 +153,12 @@ class Collector:
             for future in as_completed(future_map):
                 result = future.result()
                 results[result.device.name] = result
+                self.latest_results[result.device.name] = result
+                self._publish_metrics(result)
         results = self._enrich_nve_peer_hostnames(results)
         for result in results.values():
-            self._publish_metrics(result)
+            if result.nve:
+                self._publish_metrics(result)  # Successful NVE label enrichment only.
         self.latest_results = results
         return results
 
@@ -202,20 +215,27 @@ class Collector:
                 auth_timeout=self.settings.command_timeout_seconds,
                 banner_timeout=self.settings.command_timeout_seconds,
             )
-            connection.send_command("terminal length 0", expect_string=r"#|>")
+            if device.platform != "paloalto_panos":
+                connection.send_command("terminal length 0", expect_string=r"#|>")
             command_set = COMMANDS_BY_PLATFORM.get(device.platform, COMMANDS_BY_PLATFORM["cisco_nxos"])
             for key, command in command_set.items():
-                # PAN-OS prompts can repeat the hostname and do not reliably
-                # satisfy Netmiko's default prompt detector; timing mode still
-                # returns the complete operational output.
-                runner = connection.send_command_timing if device.platform == "paloalto_panos" else connection.send_command
+                # Read EOS/PAN-OS output until quiet: prompt-looking text in
+                # command output otherwise causes premature matches/timeouts.
+                if device.platform == "arista_eos":
+                    runner = partial(connection.send_command_timing, last_read=1)
+                elif device.platform == "paloalto_panos":
+                    runner = connection.send_command_timing
+                else:
+                    runner = connection.send_command
                 outputs[key] = self._safe_command(runner, command)
-                if key in TEXTFSM_COMMAND_KEYS:
-                    structured = self._safe_textfsm_command(connection.send_command, command)
+                if key in TEXTFSM_COMMAND_KEYS and device.platform != "paloalto_panos" and command_ok(outputs[key]):
+                    # Reuse the captured output; a second SSH command can leave
+                    # a timed-out response in the channel for the next dataset.
+                    structured = self._parse_textfsm_output(outputs[key], device.platform, command)
                     if structured is not None:
                         structured_outputs[key] = structured
 
-            interfaces = parse_panos_interfaces(outputs.get("interface", "")) if device.platform == "paloalto_panos" else parse_ip_interface_brief(outputs.get("ip_interface_brief", ""))
+            interfaces = panos_interfaces(outputs.get("interface", "")) if device.platform == "paloalto_panos" else parse_ip_interface_brief(outputs.get("ip_interface_brief", ""))
             interface_counters = parse_show_interface(outputs.get("interface", ""))
             snmp_sample = self._collect_snmp_sample(device)
             if snmp_sample.interfaces:
@@ -226,6 +246,10 @@ class Collector:
                     name: merge_interface_counters(counters, (snmp_sample.interfaces or {}).get(name))
                     for name, counters in interface_counters.items()
                 }
+            if device.platform != "paloalto_panos":
+                metadata = eos_interfaces(outputs.get("ip_interface_brief", ""), outputs.get("interface", ""), outputs.get("running_config", ""))
+                known = {interface_name(i.name) for i in interfaces}
+                interfaces = [*interfaces, *[row for name, row in metadata.items() if name not in known]]
             interface_payload: list[dict[str, object]] = []
             for iface in interfaces:
                 iface_name = iface.get("name") if isinstance(iface, dict) else iface.name
@@ -254,6 +278,25 @@ class Collector:
                     }
                 )
 
+            if device.platform != "paloalto_panos":
+                for iface in interface_payload:
+                    extra = metadata.get(interface_name(str(iface["name"])), {})
+                    iface.update({k: v for k, v in extra.items() if k != "name" and v is not None})
+                    iface["ip"] = str((iface.get("addresses") or [""])[0]).split("/")[0] or None
+            else:
+                original = {i["name"]: i for i in interfaces}
+                for iface in interface_payload:
+                    iface.update(original.get(iface["name"], {}))
+            routes = parse_routes(outputs.get("routes", ""), device.platform)
+            dataset_status = {key: command_ok(value) for key, value in outputs.items()}
+            if device.platform == "arista_eos":
+                dataset_status["routes"] = eos_route_table(outputs.get("routes", "")) is not None
+            if device.platform == "paloalto_panos":
+                dataset_status["routes"] = dataset_status.get("routes", False) and "VIRTUAL ROUTER:" in outputs.get("routes", "")
+
+            dataset_status["interfaces"] = bool(interface_payload) and dataset_status.get("interface", False)
+            if device.platform != "paloalto_panos":
+                dataset_status["interfaces"] = dataset_status["interfaces"] and dataset_status.get("running_config", False)
             return DeviceResult(
                 device=device,
                 ok=True,
@@ -264,6 +307,8 @@ class Collector:
                 ospf=parse_ospf_neighbors(outputs.get("ospf_neighbors", "")),
                 nve=parse_nve_peers(outputs.get("nve_peers", "")),
                 interfaces=interface_payload,
+                routes=routes,
+                dataset_status=dataset_status,
                 mac_table=parse_mac_address_table(outputs.get("mac_address_table", "")),
                 arp_table=parse_panos_arp(outputs.get("arp", "")) if device.platform == "paloalto_panos" else parse_ip_arp(outputs.get("arp", "")),
                 lldp_neighbors=parse_lldp_neighbors(outputs.get("lldp_neighbors", "")),
@@ -326,14 +371,12 @@ class Collector:
         except Exception as exc:  # Network images may reject optional commands.
             return f"COMMAND_FAILED: {exc.__class__.__name__}: {exc}"
 
-    def _safe_textfsm_command(self, runner: Callable[..., Any], command: str) -> Any | None:
+    def _parse_textfsm_output(self, output: str, platform: str, command: str) -> Any | None:
         try:
-            result = runner(command, read_timeout=self.settings.command_timeout_seconds, use_textfsm=True)
+            result = get_structured_data_textfsm(output, platform=platform, command=command)
         except Exception:
             return None
-        if isinstance(result, str):
-            return None
-        return result
+        return None if isinstance(result, str) else result
 
     def _collect_snmp_sample(self, device: Device):
         if not self.settings.snmp_enabled or not device.use_snmp or not self.settings.snmp_community:
@@ -427,8 +470,10 @@ class Collector:
 
         for iface in result.interfaces:
             name = str(iface["name"])
-            metrics.INTERFACE_ADMIN_UP.labels(result.device.name, name).set(1 if iface["admin_up"] else 0)
-            metrics.INTERFACE_OPER_UP.labels(result.device.name, name).set(1 if iface["oper_up"] else 0)
+            if iface["admin_up"] is not None:
+                metrics.INTERFACE_ADMIN_UP.labels(result.device.name, name).set(1 if iface["admin_up"] else 0)
+            if iface["oper_up"] is not None:
+                metrics.INTERFACE_OPER_UP.labels(result.device.name, name).set(1 if iface["oper_up"] else 0)
             if iface["rx_bps"] is not None:
                 metrics.INTERFACE_RX_BPS.labels(result.device.name, name).set(float(iface["rx_bps"]))
             if iface["tx_bps"] is not None:
