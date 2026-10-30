@@ -37,58 +37,154 @@
       },
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "palette-classic"
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
           },
-          "mappings": [],
-          "unit": "none"
+          "mappings": []
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Software version"
+            },
+            "properties": [
+              {
+                "id": "custom.minWidth",
+                "value": 220
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Devices"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "custom.width",
+                "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Share"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              },
+              {
+                "id": "custom.width",
+                "value": 85
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
-        "h": 7,
-        "w": 8,
+        "h": 8,
+        "w": 12,
         "x": 0,
         "y": 1
       },
       "id": 18,
       "options": {
-        "displayLabels": [
-          "name",
-          "percent"
+        "showHeader": true,
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "displayName": "Devices",
+            "desc": true
+          }
         ],
-        "legend": {
-          "displayMode": "table",
-          "placement": "right",
-          "showLegend": true,
-          "values": [
-            "value",
-            "percent"
-          ]
-        },
-        "pieType": "pie",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
+        "footer": {
+          "show": false
         }
       },
       "pluginVersion": "11.3.0",
       "targets": [
         {
           "expr": "count by (version) (aiops_device_hardware_info{device=~\"$device\"})",
-          "legendFormat": "{{version}}",
+          "format": "table",
+          "instant": true,
+          "range": false,
           "refId": "A"
+        },
+        {
+          "expr": "100 * (count by (version) (aiops_device_hardware_info{device=~\"$device\"})) / scalar(count(aiops_device_hardware_info{device=~\"$device\"}))",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "refId": "B"
         }
       ],
       "title": "Software Version Share",
-      "type": "piechart"
+      "type": "table",
+      "description": "Current software version distribution for the selected devices. Each row shows the full reported version, device count and percentage. Unknown means the collector has not reported a version.",
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "version",
+            "mode": "outerTabular"
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "version",
+                "Value #A",
+                "Value #B"
+              ]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "indexByName": {
+              "version": 0,
+              "Value #A": 1,
+              "Value #B": 2
+            },
+            "renameByName": {
+              "version": "Software version",
+              "Value #A": "Devices",
+              "Value #B": "Share"
+            }
+          }
+        }
+      ]
     },
     {
       "datasource": {
@@ -115,9 +211,9 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 7,
-        "w": 8,
-        "x": 8,
+        "h": 8,
+        "w": 6,
+        "x": 12,
         "y": 1
       },
       "id": 19,
@@ -187,9 +283,9 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 7,
-        "w": 8,
-        "x": 16,
+        "h": 8,
+        "w": 6,
+        "x": 18,
         "y": 1
       },
       "id": 20,
@@ -259,7 +355,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 8
+        "y": 9
       },
       "id": 21,
       "options": {
@@ -308,7 +404,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 8
+        "y": 9
       },
       "id": 16,
       "options": {
@@ -447,7 +543,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 15
+        "y": 16
       },
       "id": 17,
       "options": {
@@ -503,7 +599,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 22
+        "y": 23
       },
       "id": 106,
       "panels": [],
@@ -552,7 +648,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 23
+        "y": 24
       },
       "id": 25,
       "options": {
@@ -681,7 +777,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 23
+        "y": 24
       },
       "id": 26,
       "options": {
@@ -736,7 +832,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 31
+        "y": 32
       },
       "id": 100,
       "panels": [],
@@ -775,7 +871,7 @@
         "h": 5,
         "w": 12,
         "x": 0,
-        "y": 32
+        "y": 33
       },
       "id": 1,
       "options": {
@@ -841,7 +937,7 @@
         "h": 5,
         "w": 12,
         "x": 12,
-        "y": 32
+        "y": 33
       },
       "id": 2,
       "options": {
@@ -906,7 +1002,7 @@
         "h": 6,
         "w": 24,
         "x": 0,
-        "y": 37
+        "y": 38
       },
       "id": 107,
       "options": {
@@ -969,7 +1065,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 43
+        "y": 44
       },
       "id": 102,
       "panels": [],
@@ -1008,7 +1104,7 @@
         "h": 5,
         "w": 8,
         "x": 0,
-        "y": 44
+        "y": 45
       },
       "id": 5,
       "options": {
@@ -1118,7 +1214,7 @@
         "h": 8,
         "w": 16,
         "x": 8,
-        "y": 44
+        "y": 45
       },
       "id": 11,
       "options": {
@@ -1193,7 +1289,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 52
+        "y": 53
       },
       "id": 22,
       "options": {
@@ -1265,7 +1361,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 60
+        "y": 61
       },
       "id": 23,
       "options": {
@@ -1298,7 +1394,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 68
+        "y": 69
       },
       "id": 105,
       "panels": [],
@@ -1337,7 +1433,7 @@
         "h": 5,
         "w": 8,
         "x": 0,
-        "y": 69
+        "y": 70
       },
       "id": 6,
       "options": {
@@ -1447,7 +1543,7 @@
         "h": 8,
         "w": 16,
         "x": 8,
-        "y": 69
+        "y": 70
       },
       "id": 12,
       "options": {
@@ -1508,7 +1604,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 77
+        "y": 78
       },
       "id": 103,
       "panels": [],
@@ -1547,7 +1643,7 @@
         "h": 5,
         "w": 6,
         "x": 0,
-        "y": 78
+        "y": 79
       },
       "id": 4,
       "options": {
@@ -1657,7 +1753,7 @@
         "h": 8,
         "w": 18,
         "x": 6,
-        "y": 78
+        "y": 79
       },
       "id": 13,
       "options": {
@@ -1734,7 +1830,7 @@
         "h": 9,
         "w": 16,
         "x": 0,
-        "y": 86
+        "y": 87
       },
       "id": 14,
       "options": {
@@ -1843,7 +1939,7 @@
         "h": 9,
         "w": 8,
         "x": 16,
-        "y": 86
+        "y": 87
       },
       "id": 15,
       "options": {
@@ -1885,7 +1981,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 95
+        "y": 96
       }
     },
     {
@@ -1897,7 +1993,7 @@
         "h": 5,
         "w": 24,
         "x": 0,
-        "y": 96
+        "y": 97
       },
       "options": {
         "mode": "markdown",
@@ -1915,7 +2011,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 101
+        "y": 102
       },
       "id": 101,
       "panels": [],
@@ -1958,7 +2054,7 @@
         "h": 4,
         "w": 24,
         "x": 0,
-        "y": 102
+        "y": 103
       },
       "id": 3,
       "options": {
@@ -2032,7 +2128,7 @@
         "h": 10,
         "w": 16,
         "x": 0,
-        "y": 106
+        "y": 107
       },
       "id": 7,
       "options": {
@@ -2145,7 +2241,7 @@
         "h": 10,
         "w": 8,
         "x": 16,
-        "y": 106
+        "y": 107
       },
       "id": 8,
       "options": {
@@ -2270,7 +2366,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 116
+        "y": 117
       },
       "id": 24,
       "options": {
