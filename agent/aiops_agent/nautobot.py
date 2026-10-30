@@ -5,14 +5,21 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime, timezone
 from typing import Any
 
 from .parser import is_interface_name
+from .model import interface_name, mac_address
 
 
 class NautobotError(RuntimeError):
     """Raised when Nautobot cannot provide the requested inventory."""
+
+
+class NautobotSyncError(NautobotError):
+    def __init__(self, updated: int, failed_devices: list[str]):
+        self.updated = updated
+        self.failed_devices = failed_devices
+        super().__init__(f"Interface synchronization failed for {len(failed_devices)} device(s)")
 
 
 def _address(value: Any) -> str:
@@ -37,6 +44,7 @@ class NautobotClient:
         # A client lives for one inventory/sync/graph read. Reuse related names
         # within that read instead of fetching one status per interface.
         self._related_names: dict[str, str] = {}
+        self._related_objects: dict[str, dict[str, Any]] = {}
 
     def _get(self, path: str) -> dict[str, Any]:
         request = urllib.request.Request(
@@ -48,6 +56,35 @@ class NautobotClient:
                 return json.load(response)
         except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
             raise NautobotError(f"Nautobot request failed: {exc}") from exc
+
+    def _get_all(self, path: str) -> list[dict[str, Any]]:
+        """Follow bounded pages without making a large limit=0 response."""
+        rows = []
+        seen = set()
+        while path:
+            if path in seen:
+                raise NautobotError("Repeated Nautobot pagination cursor")
+            seen.add(path)
+            page = self._get(path)
+            rows.extend(page.get("results", []))
+            next_url = page.get("next")
+            if not next_url:
+                break
+            parsed = urllib.parse.urlsplit(next_url)
+            if parsed.netloc and parsed.netloc != urllib.parse.urlsplit(self.base_url).netloc:
+                raise NautobotError("Unexpected Nautobot pagination host")
+            path = parsed.path.split("/api/", 1)[-1] + ("?" + parsed.query if parsed.query else "")
+        return rows
+
+    def _related_object(self, value: Any) -> dict[str, Any]:
+        if not isinstance(value, dict):
+            return {}
+        url = value.get("url")
+        if not url or value.get("name"):
+            return value
+        if url not in self._related_objects:
+            self._related_objects[url] = self._get(url.split("/api/", 1)[-1])
+        return self._related_objects[url]
 
     def _related_name(self, value: Any) -> str:
         if not isinstance(value, dict):
@@ -61,7 +98,7 @@ class NautobotClient:
         if url in self._related_names:
             return self._related_names[url]
         try:
-            detail = self._get(url.split("/api/", 1)[-1])
+            detail = self._related_object(value)
             name = str(detail.get("name") or detail.get("slug") or detail.get("display") or "unknown")
             if name != "unknown":
                 self._related_names[url] = name
@@ -75,17 +112,16 @@ class NautobotClient:
         devices: list[dict[str, Any]] = []
         for item in results:
             custom_fields = item.get("custom_fields") or {}
-            primary_ip = _address(
-                item.get("primary_ip4")
-                or item.get("primary_ip6")
-                or custom_fields.get("management_ip")
-            )
+            primary = item.get("primary_ip4") or item.get("primary_ip6")
+            primary_ip = _address(primary) or _address(custom_fields.get("management_ip"))
+            if not primary_ip and primary:
+                primary_ip = _address(self._related_object(primary))
             if not primary_ip:
                 continue
             role = item.get("role") or {}
             site = item.get("site") or item.get("location") or {}
-            platform = item.get("platform") or {}
-            platform_name = self._related_name(platform).lower().replace(" ", "_")
+            platform = self._related_object(item.get("platform") or {})
+            platform_name = str(platform.get("network_driver") or self._related_name(platform)).lower().replace(" ", "_")
             if platform_name in {"arista_eos", "arista_eos_"}:
                 platform_name = "arista_eos"
             if platform_name in {"palo_alto_pan-os", "palo_alto_panos", "pan-os"}:
@@ -137,7 +173,7 @@ class NautobotClient:
             custom = item.get("custom_fields") or {}
             normalized_devices.append({"id": item["id"], "name": item.get("name") or item.get("display"),
                 "role": self._related_name(item.get("role")), "site": self._related_name(item.get("site") or item.get("location")),
-                "host": _address(item.get("primary_ip4") or item.get("primary_ip6") or custom.get("management_ip")),
+                "host": _address(item.get("primary_ip4") or item.get("primary_ip6")) or _address(custom.get("management_ip")),
                 "platform": self._related_name(item.get("platform")), "source": "nautobot"})
         normalized_interfaces = []
         for item in interfaces:
@@ -166,7 +202,7 @@ class NautobotClient:
         return {"devices": normalized_devices, "interfaces": normalized_interfaces,
                 "links": normalized_links, "endpoints": normalized_endpoints}
 
-    def _request(self, method: str, path: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+    def _request(self, method: str, path: str, payload: Any = None) -> Any:
         data = json.dumps(payload).encode() if payload is not None else None
         request = urllib.request.Request(
             f"{self.base_url}/api/{path.lstrip('/')}",
@@ -185,83 +221,100 @@ class NautobotClient:
             raise NautobotError(f"Nautobot request failed: {exc}") from exc
 
     def sync_interface_states(self, results: list[Any]) -> int:
-        """Write the latest Agent state to matching Nautobot interfaces."""
-        fields = {
-            "aiops_admin_status": "text",
-            "aiops_oper_status": "text",
-            "aiops_last_collected": "text",
-            "aiops_collection_error": "text",
-            "aiops_ip_address": "text",
-        }
-        existing = self._get("extras/custom-fields/?limit=100").get("results", [])
-        for key, field_type in fields.items():
+        """Synchronize in bounded batches; one failed device cannot stop others."""
+        fields = ["aiops_admin_status", "aiops_oper_status", "aiops_last_collected",
+                  "aiops_collection_error", "aiops_ip_address"]
+        existing = self._get_all("extras/custom-fields/?limit=100")
+        for key in fields:
             if not any(item.get("key") == key for item in existing):
-                self._request(
-                    "POST",
-                    "extras/custom-fields/",
-                    {"label": key.replace("aiops_", "").replace("_", " ").title(), "key": key, "type": field_type, "content_types": ["dcim.interface"]},
-                )
-
-        collected_at = datetime.now(timezone.utc).isoformat()
-        devices = self._get("dcim/devices/?limit=0").get("results", [])
-        device_ids = {item.get("name"): item.get("id") for item in devices}
-        statuses = self._get("extras/statuses/?limit=100").get("results", [])
+                self._request("POST", "extras/custom-fields/", {
+                    "label": key.replace("aiops_", "").replace("_", " ").title(),
+                    "key": key, "type": "text", "content_types": ["dcim.interface"],
+                })
+        devices = self._get_all("dcim/devices/?limit=100")
+        device_ids = {item.get("name"): item["id"] for item in devices}
+        statuses = self._get_all("extras/statuses/?limit=100")
         active_status = next((item["id"] for item in statuses if item.get("name") == "Active"), None)
-        interfaces = self._get("dcim/interfaces/?limit=0").get("results", [])
-        interface_ids = {
-            (item.get("device", {}).get("id"), item.get("name")): item
-            for item in interfaces
-        }
-        updates: list[tuple[str, dict[str, Any]]] = []
-        for result in results:
+
+        def sync_device(result: Any) -> tuple[int, bool]:
             device_id = device_ids.get(result.device.name)
             if not device_id:
-                continue
-            for interface in result.interfaces:
-                name = str(interface.get("name") or "")
-                if not is_interface_name(name):
-                    continue
-                match = interface_ids.get((device_id, name))
-                if not match:
-                    # Create discovered interfaces so Nautobot becomes the
-                    # complete source of truth, including PAN-OS logical and
-                    # aggregate interfaces that were not pre-seeded.
-                    payload: dict[str, Any] = {"device": device_id, "name": name, "type": "other"}
-                    if active_status:
-                        payload["status"] = active_status
-                    if interface.get("description"):
-                        payload["description"] = interface["description"]
-                    if interface.get("mac") and ":" in str(interface["mac"]):
-                        payload["mac_address"] = str(interface["mac"])
-                    match = self._request("POST", "dcim/interfaces/", payload)
-                    interface_ids[(device_id, name)] = match
-                current = match.get("custom_fields") or {}
-                current.update(
-                    {
-                        "aiops_admin_status": "unknown" if interface.get("admin_up") is None else "up" if interface.get("admin_up") else "down",
-                        "aiops_oper_status": "unknown" if interface.get("oper_up") is None else "up" if interface.get("oper_up") else "down",
-                        "aiops_last_collected": collected_at,
-                        "aiops_collection_error": result.error or "",
-                        "aiops_ip_address": str(interface.get("ip") or ""),
+                return 0, True
+            rows = self._get_all("dcim/interfaces/?" + urllib.parse.urlencode({
+                "device_id": device_id, "limit": 100,
+            }))
+            by_name = {interface_name(row["name"]): row for row in rows}
+            successful = bool(result.ok and result.dataset_status.get("interfaces", False))
+            observed_at = result.collected_at
+            updates = []
+            failed = False
+            # Failed collection must not renew last-success timestamps or invent down states.
+            if not successful:
+                updates = [{"id": row["id"], "custom_fields": {
+                    "aiops_collection_error": result.error or "interfaces dataset unavailable",
+                }} for row in rows]
+            else:
+                for iface in result.interfaces:
+                    name = str(iface.get("name") or "")
+                    if not is_interface_name(name):
+                        continue
+                    match = by_name.get(interface_name(name))
+                    mac = mac_address(iface.get("mac"))
+                    if not match:
+                        payload = {"device": device_id, "name": name, "type": "other"}
+                        if active_status:
+                            payload["status"] = active_status
+                        if iface.get("description"):
+                            payload["description"] = iface["description"]
+                        if mac:
+                            payload["mac_address"] = mac
+                        try:
+                            match = self._request("POST", "dcim/interfaces/", payload)
+                            by_name[interface_name(name)] = match
+                        except NautobotError:
+                            failed = True
+                            continue
+                    # Only patch fields owned by the collector, preserving operator metadata.
+                    custom = {
+                        "aiops_admin_status": "unknown" if iface.get("admin_up") is None else "up" if iface["admin_up"] else "down",
+                        "aiops_oper_status": "unknown" if iface.get("oper_up") is None else "up" if iface["oper_up"] else "down",
+                        "aiops_last_collected": observed_at,
+                        "aiops_collection_error": "",
+                        "aiops_ip_address": str(iface.get("ip") or ""),
                     }
-                )
-                mac = str(interface.get("mac") or "")
-                if mac and "." in mac:
-                    mac = ":".join(mac.replace(".", "")[i:i+2] for i in range(0, 12, 2))
-                patch = {"custom_fields": current}
-                if mac and len(mac) == 17:
-                    patch["mac_address"] = mac
-                updates.append((f"dcim/interfaces/{match['id']}/", patch))
-
-        def update(item: tuple[str, dict[str, Any]]) -> bool:
-            self._request("PATCH", item[0], item[1])
-            return True
+                    payload = {"id": match["id"], "custom_fields": custom}
+                    if mac:
+                        payload["mac_address"] = mac
+                    updates.append(payload)
+            updated = 0
+            for start in range(0, len(updates), 50):
+                batch = updates[start:start + 50]
+                # PATCH is idempotent: retry once after an ambiguous timeout.
+                for attempt in range(2):
+                    try:
+                        self._request("PATCH", "dcim/interfaces/", batch)
+                        updated += len(batch)
+                        break
+                    except NautobotError:
+                        if attempt == 1:
+                            failed = True
+            return updated, failed
 
         updated = 0
-        with ThreadPoolExecutor(max_workers=8) as executor:
-            futures = [executor.submit(update, item) for item in updates]
+        failed_devices = []
+        # This entire operation runs in a background thread, separate from collection.
+        # Two concurrent devices bound Nautobot load; each request contains at most 50 rows.
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            futures = {executor.submit(sync_device, result): result.device.name for result in results}
             for future in as_completed(futures):
-                future.result()
-                updated += 1
+                name = futures[future]
+                try:
+                    count, failed = future.result()
+                    updated += count
+                    if failed:
+                        failed_devices.append(name)
+                except Exception:
+                    failed_devices.append(name)
+        if failed_devices:
+            raise NautobotSyncError(updated, sorted(failed_devices))
         return updated
-

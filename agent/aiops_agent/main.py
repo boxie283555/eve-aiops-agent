@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 import re
 import time
@@ -16,6 +17,7 @@ from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from .collector import Collector
 from .inventory import load_inventory
 from .nautobot import NautobotClient, NautobotError
+from .metrics import NAUTOBOT_SYNC_SUCCESS, NAUTOBOT_SYNC_LAST_SUCCESS, NAUTOBOT_SYNC_DURATION, NAUTOBOT_SYNC_UPDATED
 from .parser import normalize_mac
 from .settings import load_settings
 from .snapshots import collect_and_snapshot, compare_latest
@@ -26,6 +28,10 @@ devices = load_inventory()
 collector = Collector(settings, devices)
 scheduler = AsyncIOScheduler(timezone="Asia/Shanghai")
 interface_sync_task: asyncio.Task[None] | None = None
+interface_sync_status = {"status": "not_run", "last_attempt_at": None,
+                         "last_success_at": None, "updated_interfaces": 0,
+                         "failed_devices": [], "error": None}
+logger = logging.getLogger(__name__)
 MRTG_TELEMETRY_METRICS_URL = os.getenv("AIOPS_TELEGRAF_METRICS_URL", "http://telegraf:9273/metrics")
 MRTG_TELEMETRY_CACHE: dict[tuple[str, str, str], tuple[float, float]] = {}
 
@@ -57,14 +63,33 @@ async def _collect_loop_once() -> None:
 
 
 async def _sync_interfaces_background() -> None:
+    started = time.time()
+    interface_sync_status.update(status="running", last_attempt_at=started, error=None, failed_devices=[])
     try:
-        await asyncio.to_thread(
-            NautobotClient(settings.nautobot_url or "", settings.nautobot_token or "", settings.nautobot_timeout_seconds).sync_interface_states,
+        updated = await asyncio.to_thread(
+            NautobotClient(settings.nautobot_url or "", settings.nautobot_token or "", max(30.0, settings.nautobot_timeout_seconds)).sync_interface_states,
             list(collector.latest_results.values()),
         )
-    except NautobotError:
-        # Nautobot is an inventory sink; a sync outage must not stop metrics.
-        return
+        completed = time.time()
+        interface_sync_status.update(status="ok", last_success_at=completed, updated_interfaces=updated)
+        NAUTOBOT_SYNC_SUCCESS.set(1)
+        NAUTOBOT_SYNC_LAST_SUCCESS.set(completed)
+        NAUTOBOT_SYNC_UPDATED.set(updated)
+    except Exception as exc:
+        # Surface sink failures without stopping collection or exposing response payloads.
+        updated = getattr(exc, "updated", 0)
+        interface_sync_status.update(status="error", error=type(exc).__name__,
+                                     updated_interfaces=updated, failed_devices=getattr(exc, "failed_devices", []))
+        NAUTOBOT_SYNC_SUCCESS.set(0)
+        NAUTOBOT_SYNC_UPDATED.set(updated)
+        logger.warning("Nautobot interface sync failed (%s); %s interfaces updated", type(exc).__name__, updated)
+    finally:
+        NAUTOBOT_SYNC_DURATION.set(time.time() - started)
+
+
+@app.get("/api/nautobot/sync")
+def nautobot_sync_status() -> dict:
+    return {**interface_sync_status, "enabled": bool(settings.nautobot_url and settings.nautobot_token)}
 
 
 async def _snapshot_once() -> None:

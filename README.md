@@ -56,6 +56,10 @@ docker compose --env-file .env up -d
 
 The current deployment exposes Nautobot on port `8082`; the existing firewall policy UI uses port `8081`. After importing and validating the inventory, set `AIOPS_INVENTORY_SOURCE=nautobot` in the Agent environment and rebuild the Agent container.
 
+Lab-only NAPALM setup and bounded asynchronous interface synchronization are documented in
+[Nautobot NAPALM and sync](docs/nautobot-napalm-sync.md). Sync health is available at
+`/api/nautobot/sync` and through `aiops_nautobot_sync_*` Prometheus metrics.
+
 ## Quick Start
 
 On the monitoring host:

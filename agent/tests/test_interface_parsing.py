@@ -64,13 +64,13 @@ Ethernet4/1/1.20 192.168.111.2/29 up lowerlayerdown 9214''')
                   'aiops_collection_error', 'aiops_ip_address']
         payloads = {
             'extras/custom-fields/?limit=100': [{'key': k} for k in fields],
-            'dcim/devices/?limit=0': [{'name': 'switch', 'id': 'device-id'}],
+            'dcim/devices/?limit=100': [{'name': 'switch', 'id': 'device-id'}],
             'extras/statuses/?limit=100': [{'name': 'Active', 'id': 'active'}],
-            'dcim/interfaces/?limit=0': [],
+            'dcim/interfaces/?device_id=device-id&limit=100': [],
         }
         client._get = lambda path: {'results': payloads[path]}
         client._request = Mock(side_effect=AssertionError('Unexpected write'))
-        result = SimpleNamespace(device=SimpleNamespace(name='switch'), interfaces=[
+        result = SimpleNamespace(device=SimpleNamespace(name='switch'), ok=True, dataset_status={'interfaces': True}, collected_at='2026-01-01T00:00:00+00:00', interfaces=[
             {'name': n} for n in ['1.', '2.', 'Pattern', 'Things', 'You']])
         self.assertEqual(client.sync_interface_states([result]), 0)
         client._request.assert_not_called()

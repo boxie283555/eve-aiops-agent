@@ -2,6 +2,11 @@ from __future__ import annotations
 
 from prometheus_client import Gauge, Counter
 
+NAUTOBOT_SYNC_SUCCESS = Gauge("aiops_nautobot_sync_success", "Whether the last interface sync completed successfully.")
+NAUTOBOT_SYNC_LAST_SUCCESS = Gauge("aiops_nautobot_sync_last_success_timestamp_seconds", "Unix time of last successful interface sync.")
+NAUTOBOT_SYNC_DURATION = Gauge("aiops_nautobot_sync_duration_seconds", "Duration of the last interface sync.")
+NAUTOBOT_SYNC_UPDATED = Gauge("aiops_nautobot_sync_updated_interfaces", "Interfaces written by the last sync, including partial progress.")
+
 
 DEVICE_UP = Gauge(
     "aiops_device_up",
