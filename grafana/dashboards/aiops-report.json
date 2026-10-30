@@ -521,12 +521,309 @@
       }
     },
     {
+      "id": 9300,
+      "type": "row",
+      "title": "Q3 · 配置备份与漂移",
+      "gridPos": {
+        "x": 0,
+        "y": 15,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 9301,
+      "type": "stat",
+      "title": "未处理无主漂移",
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 6,
+        "h": 4
+      },
+      "description": "只覆盖当前已执行配置备份的 lab 设备。未处理为尚未登记处理结果；无主为观察窗口内没有匹配的预登记变更。演练单独统计，不能计入真实漂移验收。",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum(aiops_config_drift_records{device=~\"$device\",origin=\"observed\",status=\"open\",unowned=\"true\"})) and on() (aiops_config_history_available == 1) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "decimals": 0,
+          "noValue": "未备份 / 无数据",
+          "color": {
+            "mode": "thresholds",
+            "fixedColor": "blue"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal"
+      },
+      "links": [
+        {
+          "title": "查看漂移记录",
+          "url": "http://192.168.20.169:8080/config/drift?unowned=true",
+          "targetBlank": true
+        }
+      ]
+    },
+    {
+      "id": 9302,
+      "type": "stat",
+      "title": "待处理演练漂移",
+      "gridPos": {
+        "x": 6,
+        "y": 16,
+        "w": 6,
+        "h": 4
+      },
+      "description": "只覆盖当前已执行配置备份的 lab 设备。未处理为尚未登记处理结果；无主为观察窗口内没有匹配的预登记变更。演练单独统计，不能计入真实漂移验收。",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum(aiops_config_drift_records{device=~\"$device\",origin=\"exercise\",status=\"open\",unowned=\"true\"})) and on() (aiops_config_history_available == 1) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "decimals": 0,
+          "noValue": "未备份 / 无数据",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal"
+      },
+      "links": [
+        {
+          "title": "查看漂移记录",
+          "url": "http://192.168.20.169:8080/config/drift?unowned=true",
+          "targetBlank": true
+        }
+      ]
+    },
+    {
+      "id": 9303,
+      "type": "stat",
+      "title": "演练漂移历史记录",
+      "gridPos": {
+        "x": 12,
+        "y": 16,
+        "w": 6,
+        "h": 4
+      },
+      "description": "只覆盖当前已执行配置备份的 lab 设备。未处理为尚未登记处理结果；无主为观察窗口内没有匹配的预登记变更。演练单独统计，不能计入真实漂移验收。",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum(aiops_config_drift_records{device=~\"$device\",origin=\"exercise\",unowned=\"true\"})) and on() (aiops_config_history_available == 1) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "decimals": 0,
+          "noValue": "未备份 / 无数据",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal"
+      },
+      "links": [
+        {
+          "title": "查看漂移记录",
+          "url": "http://192.168.20.169:8080/config/drift?unowned=true",
+          "targetBlank": true
+        }
+      ]
+    },
+    {
+      "id": 9304,
+      "type": "stat",
+      "title": "最近备份失败设备",
+      "gridPos": {
+        "x": 18,
+        "y": 16,
+        "w": 6,
+        "h": 4
+      },
+      "description": "只覆盖当前已执行配置备份的 lab 设备。未处理为尚未登记处理结果；无主为观察窗口内没有匹配的预登记变更。演练单独统计，不能计入真实漂移验收。",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum(1-aiops_config_backup_success{device=~\"$device\"})) and on() (aiops_config_history_available == 1) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "decimals": 0,
+          "noValue": "未备份 / 无数据",
+          "color": {
+            "mode": "thresholds",
+            "fixedColor": "blue"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal"
+      },
+      "links": [
+        {
+          "title": "查看漂移记录",
+          "url": "http://192.168.20.169:8080/config/drift?unowned=true",
+          "targetBlank": true
+        }
+      ]
+    },
+    {
       "id": 2,
       "title": "在线设备",
       "type": "stat",
       "gridPos": {
         "x": 0,
-        "y": 15,
+        "y": 20,
         "w": 6,
         "h": 4
       },
@@ -584,7 +881,7 @@
       "type": "stat",
       "gridPos": {
         "x": 6,
-        "y": 15,
+        "y": 20,
         "w": 6,
         "h": 4
       },
@@ -658,7 +955,7 @@
       "type": "stat",
       "gridPos": {
         "x": 12,
-        "y": 15,
+        "y": 20,
         "w": 6,
         "h": 4
       },
@@ -732,7 +1029,7 @@
       "type": "stat",
       "gridPos": {
         "x": 18,
-        "y": 15,
+        "y": 20,
         "w": 6,
         "h": 4
       },
@@ -806,7 +1103,7 @@
       "type": "table",
       "gridPos": {
         "x": 0,
-        "y": 19,
+        "y": 24,
         "w": 24,
         "h": 11
       },
@@ -1027,7 +1324,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 30,
+        "y": 35,
         "w": 12,
         "h": 8
       },
@@ -1113,7 +1410,7 @@
       "type": "bargauge",
       "gridPos": {
         "x": 12,
-        "y": 30,
+        "y": 35,
         "w": 12,
         "h": 8
       },
@@ -1179,7 +1476,7 @@
       "type": "row",
       "gridPos": {
         "x": 0,
-        "y": 38,
+        "y": 43,
         "w": 24,
         "h": 1
       },
@@ -1201,7 +1498,7 @@
       "type": "table",
       "gridPos": {
         "x": 0,
-        "y": 39,
+        "y": 44,
         "w": 12,
         "h": 11
       },
@@ -1284,7 +1581,7 @@
       "type": "text",
       "gridPos": {
         "x": 12,
-        "y": 39,
+        "y": 44,
         "w": 12,
         "h": 7
       },
@@ -1307,7 +1604,7 @@
       "type": "stat",
       "gridPos": {
         "x": 12,
-        "y": 46,
+        "y": 51,
         "w": 4,
         "h": 4
       },
@@ -1381,7 +1678,7 @@
       "type": "stat",
       "gridPos": {
         "x": 16,
-        "y": 46,
+        "y": 51,
         "w": 4,
         "h": 4
       },
@@ -1455,7 +1752,7 @@
       "type": "stat",
       "gridPos": {
         "x": 20,
-        "y": 46,
+        "y": 51,
         "w": 4,
         "h": 4
       },
@@ -1529,7 +1826,7 @@
       "type": "stat",
       "gridPos": {
         "x": 0,
-        "y": 50,
+        "y": 55,
         "w": 6,
         "h": 4
       },
@@ -1601,7 +1898,7 @@
       "type": "stat",
       "gridPos": {
         "x": 6,
-        "y": 50,
+        "y": 55,
         "w": 6,
         "h": 4
       },
@@ -1659,7 +1956,7 @@
       "type": "stat",
       "gridPos": {
         "x": 12,
-        "y": 50,
+        "y": 55,
         "w": 6,
         "h": 4
       },
@@ -1717,7 +2014,7 @@
       "type": "stat",
       "gridPos": {
         "x": 18,
-        "y": 50,
+        "y": 55,
         "w": 6,
         "h": 4
       },
@@ -1775,7 +2072,7 @@
       "type": "row",
       "gridPos": {
         "x": 0,
-        "y": 54,
+        "y": 59,
         "w": 24,
         "h": 1
       },
@@ -1797,7 +2094,7 @@
       "type": "bargauge",
       "gridPos": {
         "x": 0,
-        "y": 55,
+        "y": 60,
         "w": 8,
         "h": 9
       },
@@ -1880,7 +2177,7 @@
       "type": "bargauge",
       "gridPos": {
         "x": 8,
-        "y": 55,
+        "y": 60,
         "w": 8,
         "h": 9
       },
@@ -1963,7 +2260,7 @@
       "type": "bargauge",
       "gridPos": {
         "x": 16,
-        "y": 55,
+        "y": 60,
         "w": 8,
         "h": 9
       },
@@ -2046,7 +2343,7 @@
       "type": "table",
       "gridPos": {
         "x": 0,
-        "y": 64,
+        "y": 69,
         "w": 12,
         "h": 10
       },
@@ -2227,7 +2524,7 @@
       "type": "table",
       "gridPos": {
         "x": 12,
-        "y": 64,
+        "y": 69,
         "w": 12,
         "h": 10
       },
@@ -2310,7 +2607,7 @@
       "type": "table",
       "gridPos": {
         "x": 0,
-        "y": 74,
+        "y": 79,
         "w": 12,
         "h": 9
       },
@@ -2396,7 +2693,7 @@
       "type": "table",
       "gridPos": {
         "x": 12,
-        "y": 74,
+        "y": 79,
         "w": 12,
         "h": 9
       },
@@ -2488,7 +2785,7 @@
       "type": "table",
       "gridPos": {
         "x": 0,
-        "y": 83,
+        "y": 88,
         "w": 12,
         "h": 10
       },
@@ -2626,7 +2923,7 @@
       "type": "table",
       "gridPos": {
         "x": 12,
-        "y": 83,
+        "y": 88,
         "w": 12,
         "h": 10
       },
@@ -2709,7 +3006,7 @@
       "type": "row",
       "gridPos": {
         "x": 0,
-        "y": 93,
+        "y": 98,
         "w": 24,
         "h": 1
       },
@@ -2731,7 +3028,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 94,
+        "y": 99,
         "w": 12,
         "h": 8
       },
@@ -2817,7 +3114,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 94,
+        "y": 99,
         "w": 12,
         "h": 8
       },
@@ -2903,7 +3200,7 @@
       "type": "bargauge",
       "gridPos": {
         "x": 0,
-        "y": 102,
+        "y": 107,
         "w": 12,
         "h": 10
       },
@@ -2969,7 +3266,7 @@
       "type": "table",
       "gridPos": {
         "x": 12,
-        "y": 102,
+        "y": 107,
         "w": 12,
         "h": 10
       },
@@ -3055,7 +3352,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 112,
+        "y": 117,
         "w": 12,
         "h": 8
       },
@@ -3141,7 +3438,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 112,
+        "y": 117,
         "w": 12,
         "h": 8
       },
@@ -3227,7 +3524,7 @@
       "type": "row",
       "gridPos": {
         "x": 0,
-        "y": 120,
+        "y": 125,
         "w": 24,
         "h": 1
       },
@@ -3249,7 +3546,7 @@
       "type": "stat",
       "gridPos": {
         "x": 0,
-        "y": 121,
+        "y": 126,
         "w": 6,
         "h": 4
       },
@@ -3307,7 +3604,7 @@
       "type": "stat",
       "gridPos": {
         "x": 6,
-        "y": 121,
+        "y": 126,
         "w": 6,
         "h": 4
       },
@@ -3365,7 +3662,7 @@
       "type": "stat",
       "gridPos": {
         "x": 12,
-        "y": 121,
+        "y": 126,
         "w": 6,
         "h": 4
       },
@@ -3423,7 +3720,7 @@
       "type": "stat",
       "gridPos": {
         "x": 18,
-        "y": 121,
+        "y": 126,
         "w": 6,
         "h": 4
       },
@@ -3481,7 +3778,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 125,
+        "y": 130,
         "w": 12,
         "h": 8
       },
@@ -3555,7 +3852,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 125,
+        "y": 130,
         "w": 12,
         "h": 8
       },
@@ -3629,7 +3926,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 133,
+        "y": 138,
         "w": 12,
         "h": 8
       },
@@ -3703,7 +4000,7 @@
       "type": "text",
       "gridPos": {
         "x": 12,
-        "y": 133,
+        "y": 138,
         "w": 12,
         "h": 8
       },
@@ -3726,7 +4023,7 @@
       "type": "row",
       "gridPos": {
         "x": 0,
-        "y": 141,
+        "y": 146,
         "w": 24,
         "h": 1
       },
@@ -3748,7 +4045,7 @@
       "type": "stat",
       "gridPos": {
         "x": 0,
-        "y": 142,
+        "y": 147,
         "w": 8,
         "h": 4
       },
@@ -3806,7 +4103,7 @@
       "type": "stat",
       "gridPos": {
         "x": 8,
-        "y": 142,
+        "y": 147,
         "w": 8,
         "h": 4
       },
@@ -3864,7 +4161,7 @@
       "type": "stat",
       "gridPos": {
         "x": 16,
-        "y": 142,
+        "y": 147,
         "w": 8,
         "h": 4
       },
@@ -3922,7 +4219,7 @@
       "type": "bargauge",
       "gridPos": {
         "x": 0,
-        "y": 146,
+        "y": 151,
         "w": 12,
         "h": 10
       },
@@ -3988,7 +4285,7 @@
       "type": "bargauge",
       "gridPos": {
         "x": 12,
-        "y": 146,
+        "y": 151,
         "w": 12,
         "h": 10
       },
@@ -4054,7 +4351,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 156,
+        "y": 161,
         "w": 12,
         "h": 8
       },
@@ -4140,7 +4437,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 156,
+        "y": 161,
         "w": 12,
         "h": 8
       },
@@ -4214,7 +4511,7 @@
       "type": "table",
       "gridPos": {
         "x": 0,
-        "y": 164,
+        "y": 169,
         "w": 12,
         "h": 10
       },
@@ -4320,7 +4617,7 @@
       "type": "table",
       "gridPos": {
         "x": 12,
-        "y": 164,
+        "y": 169,
         "w": 12,
         "h": 10
       },
@@ -4409,7 +4706,7 @@
       "type": "text",
       "gridPos": {
         "x": 0,
-        "y": 174,
+        "y": 179,
         "w": 24,
         "h": 4
       },
@@ -4432,7 +4729,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 178,
+        "y": 183,
         "w": 12,
         "h": 10
       },
@@ -4506,7 +4803,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 178,
+        "y": 183,
         "w": 12,
         "h": 10
       },

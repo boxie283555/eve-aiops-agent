@@ -17,6 +17,8 @@ from fastapi.responses import HTMLResponse, PlainTextResponse
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from .collector import Collector
+from .config_api import router as config_router
+from .config_history import backup as backup_configuration
 from .inventory import load_inventory, inventory_status
 from .health import network_health, prometheus_health
 from .health_view import HEALTH_PAGE
@@ -44,6 +46,7 @@ MRTG_TELEMETRY_METRICS_URL = os.getenv("AIOPS_TELEGRAF_METRICS_URL", "http://tel
 MRTG_TELEMETRY_CACHE: dict[tuple[str, str, str], tuple[float, float]] = {}
 
 app = FastAPI(title="EVE AIOps Agent", version="0.1.0")
+app.include_router(config_router(settings))
 
 
 def _hour_minute(value: str) -> tuple[int, int]:
@@ -113,6 +116,13 @@ def pa_interface_traffic() -> dict:
     return PA_TRAFFIC.snapshot()
 
 
+async def _config_backup_once() -> None:
+    try:
+        await asyncio.to_thread(backup_configuration, settings)
+    except Exception as exc:
+        logger.warning("Configuration backup failed (%s)", type(exc).__name__)
+
+
 async def _snapshot_once() -> None:
     await asyncio.to_thread(collect_and_snapshot, settings, collector)
 
@@ -157,6 +167,8 @@ async def startup() -> None:
                       replace_existing=True, max_instances=1, next_run_time=datetime.now())
     scheduler.add_job(_pa_traffic_once, "interval", seconds=PA_TRAFFIC_INTERVAL, id="collect_pa_traffic",
                       replace_existing=True, max_instances=1, next_run_time=datetime.now())
+    scheduler.add_job(_config_backup_once, "interval", seconds=max(300, int(os.getenv("AIOPS_CONFIG_BACKUP_INTERVAL", "900"))),
+                      id="config_backup", replace_existing=True, max_instances=1)
     scheduler.start()
 
 

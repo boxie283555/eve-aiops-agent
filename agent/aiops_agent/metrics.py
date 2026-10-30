@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from prometheus_client import Gauge, Counter, REGISTRY
 from .panos_traffic import add_rates, TrafficCollector
+from .config_history import DriftCollector
 
 
 class InterfaceRateGauge(Gauge):
@@ -12,6 +13,7 @@ class InterfaceRateGauge(Gauge):
 
 
 REGISTRY.register(TrafficCollector())
+REGISTRY.register(DriftCollector())
 
 NAUTOBOT_SYNC_SUCCESS = Gauge("aiops_nautobot_sync_success", "Whether the last interface sync completed successfully.")
 NAUTOBOT_SYNC_LAST_SUCCESS = Gauge("aiops_nautobot_sync_last_success_timestamp_seconds", "Unix time of last successful interface sync.")

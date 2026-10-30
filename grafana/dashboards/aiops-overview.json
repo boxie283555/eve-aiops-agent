@@ -477,6 +477,303 @@
       }
     },
     {
+      "id": 9300,
+      "type": "row",
+      "title": "Q3 · 配置备份与漂移 / Q3 · Configuration and drift",
+      "gridPos": {
+        "x": 0,
+        "y": 11,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 9301,
+      "type": "stat",
+      "title": "未处理无主漂移 / Open unowned drift",
+      "gridPos": {
+        "x": 0,
+        "y": 12,
+        "w": 6,
+        "h": 4
+      },
+      "description": "只覆盖当前已执行配置备份的 lab 设备。未处理为尚未登记处理结果；无主为观察窗口内没有匹配的预登记变更。演练单独统计，不能计入真实漂移验收。 / Covers lab devices with backup attempts. Open means unresolved; unowned means no matching preregistered change for the observation window. Exercises never count as real drift acceptance.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum(aiops_config_drift_records{device=~\"$device\",origin=\"observed\",status=\"open\",unowned=\"true\"})) and on() (aiops_config_history_available == 1) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "decimals": 0,
+          "noValue": "未备份 / 无数据 / No backup / data",
+          "color": {
+            "mode": "thresholds",
+            "fixedColor": "blue"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal"
+      },
+      "links": [
+        {
+          "title": "查看漂移记录 / View drift records",
+          "url": "http://192.168.20.169:8080/config/drift?unowned=true",
+          "targetBlank": true
+        }
+      ]
+    },
+    {
+      "id": 9302,
+      "type": "stat",
+      "title": "待处理演练漂移 / Open exercise drift",
+      "gridPos": {
+        "x": 6,
+        "y": 12,
+        "w": 6,
+        "h": 4
+      },
+      "description": "只覆盖当前已执行配置备份的 lab 设备。未处理为尚未登记处理结果；无主为观察窗口内没有匹配的预登记变更。演练单独统计，不能计入真实漂移验收。 / Covers lab devices with backup attempts. Open means unresolved; unowned means no matching preregistered change for the observation window. Exercises never count as real drift acceptance.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum(aiops_config_drift_records{device=~\"$device\",origin=\"exercise\",status=\"open\",unowned=\"true\"})) and on() (aiops_config_history_available == 1) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "decimals": 0,
+          "noValue": "未备份 / 无数据 / No backup / data",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal"
+      },
+      "links": [
+        {
+          "title": "查看漂移记录 / View drift records",
+          "url": "http://192.168.20.169:8080/config/drift?unowned=true",
+          "targetBlank": true
+        }
+      ]
+    },
+    {
+      "id": 9303,
+      "type": "stat",
+      "title": "演练漂移历史记录 / Exercise drift history",
+      "gridPos": {
+        "x": 12,
+        "y": 12,
+        "w": 6,
+        "h": 4
+      },
+      "description": "只覆盖当前已执行配置备份的 lab 设备。未处理为尚未登记处理结果；无主为观察窗口内没有匹配的预登记变更。演练单独统计，不能计入真实漂移验收。 / Covers lab devices with backup attempts. Open means unresolved; unowned means no matching preregistered change for the observation window. Exercises never count as real drift acceptance.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum(aiops_config_drift_records{device=~\"$device\",origin=\"exercise\",unowned=\"true\"})) and on() (aiops_config_history_available == 1) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "decimals": 0,
+          "noValue": "未备份 / 无数据 / No backup / data",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal"
+      },
+      "links": [
+        {
+          "title": "查看漂移记录 / View drift records",
+          "url": "http://192.168.20.169:8080/config/drift?unowned=true",
+          "targetBlank": true
+        }
+      ]
+    },
+    {
+      "id": 9304,
+      "type": "stat",
+      "title": "最近备份失败设备 / Latest backup failures",
+      "gridPos": {
+        "x": 18,
+        "y": 12,
+        "w": 6,
+        "h": 4
+      },
+      "description": "只覆盖当前已执行配置备份的 lab 设备。未处理为尚未登记处理结果；无主为观察窗口内没有匹配的预登记变更。演练单独统计，不能计入真实漂移验收。 / Covers lab devices with backup attempts. Open means unresolved; unowned means no matching preregistered change for the observation window. Exercises never count as real drift acceptance.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum(1-aiops_config_backup_success{device=~\"$device\"})) and on() (aiops_config_history_available == 1) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "decimals": 0,
+          "noValue": "未备份 / 无数据 / No backup / data",
+          "color": {
+            "mode": "thresholds",
+            "fixedColor": "blue"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal"
+      },
+      "links": [
+        {
+          "title": "查看漂移记录 / View drift records",
+          "url": "http://192.168.20.169:8080/config/drift?unowned=true",
+          "targetBlank": true
+        }
+      ]
+    },
+    {
       "id": 104,
       "type": "row",
       "title": "Software Version Share",
@@ -484,7 +781,7 @@
       "panels": [],
       "gridPos": {
         "x": 0,
-        "y": 11,
+        "y": 16,
         "w": 24,
         "h": 1
       }
@@ -571,7 +868,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 12,
+        "y": 17,
         "w": 12,
         "h": 9
       },
@@ -657,7 +954,7 @@
       "panels": [],
       "gridPos": {
         "x": 0,
-        "y": 21,
+        "y": 26,
         "w": 24,
         "h": 1
       }
@@ -699,7 +996,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 22,
+        "y": 27,
         "w": 12,
         "h": 9
       },
@@ -769,7 +1066,7 @@
       "panels": [],
       "gridPos": {
         "x": 0,
-        "y": 31,
+        "y": 36,
         "w": 24,
         "h": 1
       }
@@ -815,7 +1112,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 32,
+        "y": 37,
         "w": 12,
         "h": 8
       },
@@ -856,7 +1153,7 @@
       "panels": [],
       "gridPos": {
         "x": 0,
-        "y": 40,
+        "y": 45,
         "w": 24,
         "h": 1
       }
@@ -902,7 +1199,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 41,
+        "y": 46,
         "w": 12,
         "h": 8
       },
@@ -943,7 +1240,7 @@
       "panels": [],
       "gridPos": {
         "x": 0,
-        "y": 49,
+        "y": 54,
         "w": 24,
         "h": 1
       }
@@ -969,7 +1266,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 50,
+        "y": 55,
         "w": 24,
         "h": 8
       },
@@ -1034,7 +1331,7 @@
       "panels": [],
       "gridPos": {
         "x": 0,
-        "y": 58,
+        "y": 63,
         "w": 24,
         "h": 1
       }
@@ -1168,7 +1465,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 59,
+        "y": 64,
         "w": 24,
         "h": 9
       },
@@ -1232,7 +1529,7 @@
       "panels": [],
       "gridPos": {
         "x": 0,
-        "y": 68,
+        "y": 73,
         "w": 24,
         "h": 1
       }
@@ -1278,7 +1575,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 69,
+        "y": 74,
         "w": 12,
         "h": 8
       },
@@ -1319,7 +1616,7 @@
       "panels": [],
       "gridPos": {
         "x": 0,
-        "y": 77,
+        "y": 82,
         "w": 24,
         "h": 1
       }
@@ -1425,7 +1722,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 78,
+        "y": 83,
         "w": 24,
         "h": 9
       },
@@ -1486,7 +1783,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 87
+        "y": 92
       },
       "id": 100,
       "panels": [],
@@ -1525,7 +1822,7 @@
         "h": 5,
         "w": 12,
         "x": 0,
-        "y": 88
+        "y": 93
       },
       "id": 1,
       "options": {
@@ -1591,7 +1888,7 @@
         "h": 5,
         "w": 12,
         "x": 12,
-        "y": 88
+        "y": 93
       },
       "id": 2,
       "options": {
@@ -1656,7 +1953,7 @@
         "h": 6,
         "w": 24,
         "x": 0,
-        "y": 93
+        "y": 98
       },
       "id": 107,
       "options": {
@@ -1721,7 +2018,7 @@
       "panels": [],
       "gridPos": {
         "x": 0,
-        "y": 99,
+        "y": 104,
         "w": 24,
         "h": 1
       }
@@ -1746,7 +2043,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 100,
+        "y": 105,
         "w": 8,
         "h": 4
       },
@@ -1805,7 +2102,7 @@
       },
       "gridPos": {
         "x": 8,
-        "y": 100,
+        "y": 105,
         "w": 8,
         "h": 4
       },
@@ -1864,7 +2161,7 @@
       },
       "gridPos": {
         "x": 16,
-        "y": 100,
+        "y": 105,
         "w": 8,
         "h": 4
       },
@@ -1947,7 +2244,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 104,
+        "y": 109,
         "w": 8,
         "h": 8
       },
@@ -2027,7 +2324,7 @@
       },
       "gridPos": {
         "x": 8,
-        "y": 104,
+        "y": 109,
         "w": 8,
         "h": 8
       },
@@ -2107,7 +2404,7 @@
       },
       "gridPos": {
         "x": 16,
-        "y": 104,
+        "y": 109,
         "w": 8,
         "h": 8
       },
@@ -2188,7 +2485,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 112,
+        "y": 117,
         "w": 8,
         "h": 8
       },
@@ -2269,7 +2566,7 @@
       },
       "gridPos": {
         "x": 8,
-        "y": 112,
+        "y": 117,
         "w": 8,
         "h": 8
       },
@@ -2311,7 +2608,7 @@
       "title": "Firewall Collection Status",
       "gridPos": {
         "x": 16,
-        "y": 112,
+        "y": 117,
         "w": 8,
         "h": 8
       },
@@ -2472,7 +2769,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 120
+        "y": 125
       },
       "id": 102,
       "panels": [],
@@ -2511,7 +2808,7 @@
         "h": 5,
         "w": 8,
         "x": 0,
-        "y": 121
+        "y": 126
       },
       "id": 5,
       "options": {
@@ -2621,7 +2918,7 @@
         "h": 8,
         "w": 16,
         "x": 8,
-        "y": 121
+        "y": 126
       },
       "id": 11,
       "options": {
@@ -2696,7 +2993,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 129
+        "y": 134
       },
       "id": 22,
       "options": {
@@ -2768,7 +3065,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 137
+        "y": 142
       },
       "id": 23,
       "options": {
@@ -2801,7 +3098,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 145
+        "y": 150
       },
       "id": 105,
       "panels": [],
@@ -2840,7 +3137,7 @@
         "h": 5,
         "w": 8,
         "x": 0,
-        "y": 146
+        "y": 151
       },
       "id": 6,
       "options": {
@@ -2950,7 +3247,7 @@
         "h": 8,
         "w": 16,
         "x": 8,
-        "y": 146
+        "y": 151
       },
       "id": 12,
       "options": {
@@ -3011,7 +3308,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 154
+        "y": 159
       },
       "id": 103,
       "panels": [],
@@ -3050,7 +3347,7 @@
         "h": 5,
         "w": 6,
         "x": 0,
-        "y": 155
+        "y": 160
       },
       "id": 4,
       "options": {
@@ -3160,7 +3457,7 @@
         "h": 8,
         "w": 18,
         "x": 6,
-        "y": 155
+        "y": 160
       },
       "id": 13,
       "options": {
@@ -3237,7 +3534,7 @@
         "h": 9,
         "w": 16,
         "x": 0,
-        "y": 163
+        "y": 168
       },
       "id": 14,
       "options": {
@@ -3346,7 +3643,7 @@
         "h": 9,
         "w": 8,
         "x": 16,
-        "y": 163
+        "y": 168
       },
       "id": 15,
       "options": {
@@ -3388,7 +3685,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 172
+        "y": 177
       }
     },
     {
@@ -3400,7 +3697,7 @@
         "h": 5,
         "w": 24,
         "x": 0,
-        "y": 173
+        "y": 178
       },
       "options": {
         "mode": "markdown",
@@ -3418,7 +3715,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 178
+        "y": 183
       },
       "id": 101,
       "panels": [],
@@ -3461,7 +3758,7 @@
         "h": 4,
         "w": 24,
         "x": 0,
-        "y": 179
+        "y": 184
       },
       "id": 3,
       "options": {
@@ -3535,7 +3832,7 @@
         "h": 10,
         "w": 16,
         "x": 0,
-        "y": 183
+        "y": 188
       },
       "id": 7,
       "options": {
@@ -3648,7 +3945,7 @@
         "h": 10,
         "w": 8,
         "x": 16,
-        "y": 183
+        "y": 188
       },
       "id": 8,
       "options": {
@@ -3773,7 +4070,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 193
+        "y": 198
       },
       "id": 24,
       "options": {
@@ -3974,7 +4271,7 @@
       "title": "Palo Alto · 防火墙接口流量 / Firewall Interface Traffic",
       "gridPos": {
         "x": 0,
-        "y": 202,
+        "y": 207,
         "w": 24,
         "h": 1
       },
@@ -4005,7 +4302,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 203,
+        "y": 208,
         "w": 12,
         "h": 10
       },
@@ -4062,7 +4359,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 203,
+        "y": 208,
         "w": 12,
         "h": 10
       },

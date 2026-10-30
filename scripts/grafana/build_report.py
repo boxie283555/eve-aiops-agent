@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Generate the Chinese and English reports from one definition (stdlib only)."""
+from add_config_drift import inject as inject_config_drift
 import argparse
 import json
 from pathlib import Path
@@ -256,11 +257,12 @@ def build(lang):
     variable['definition']=variable['query']['query']='label_values(aiops_device_up, device)'
     variable['allValue']='.*'
     variable['label']=tr('设备范围','Device scope')
-    return dict(annotations={'list':[]},editable=True,fiscalYearStartMonth=0,graphTooltip=1,id=None,
+    dashboard = dict(annotations={'list':[]},editable=True,fiscalYearStartMonth=0,graphTooltip=1,id=None,
                 links=[{'title':'语言 / Language','type':'dashboards','tags':['aiops-report-language'],'asDropdown':True,'includeVars':True,'keepTime':True,'targetBlank':False},
                        {'title':tr('完整运维视图 ↗','Operations dashboard ↗'),'type':'link','url':'/d/eve-aiops-overview/ai-networking-ops','includeVars':True,'keepTime':True,'targetBlank':True,'icon':'dashboard','tags':[]},
                        {'title':tr('物理拓扑 ↗','Physical topology ↗'),'type':'link','url':'http://192.168.20.169:8080/topology','targetBlank':True,'icon':'external link','tags':[]}],
                 panels=panels,refresh='1m',schemaVersion=40,tags=['aiops','report','aiops-report-language'],templating={'list':[variable]},time={'from':'now-24h','to':'now'},timepicker={},timezone='browser',title=tr('中文 · 网络运行简报','English · Network Operations Report'),uid='eve-aiops-report'+('' if lang=='zh' else '-en'),version=2,weekStart='')
+    return inject_config_drift(dashboard, lang)
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--check',action='store_true');args=parser.parse_args()
