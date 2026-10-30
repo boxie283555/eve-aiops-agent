@@ -52,6 +52,12 @@ Ethernet2 unassigned not a status
 1. unassigned up up
 Ethernet3 bad-address up up'''), [])
 
+    def test_eos_unpopulated_ports_remain_in_inventory(self):
+        rows = parse_ip_interface_brief('''Ethernet2/3/1 unassigned down notpresent 1500
+Ethernet4/1/1.20 192.168.111.2/29 up lowerlayerdown 9214''')
+        self.assertEqual([r.name for r in rows], ['Ethernet2/3/1', 'Ethernet4/1/1.20'])
+        self.assertTrue(all(not r.oper_up for r in rows))
+
     def test_sync_rejects_invalid_names_even_from_another_parser(self):
         client = NautobotClient('http://unused', 'test')
         fields = ['aiops_admin_status', 'aiops_oper_status', 'aiops_last_collected',

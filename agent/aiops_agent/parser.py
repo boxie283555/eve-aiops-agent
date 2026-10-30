@@ -173,7 +173,8 @@ def parse_ip_interface_brief(output: str) -> list[InterfaceState]:
                                          oper_up=protocol == link == admin == "up"))
             continue
         state = re.match(
-            r"^(up|down|admin(?:istratively)?\s+down)\s+(up|down)(?:\s|$)",
+            r"^(up|down|admin(?:istratively)?\s+down)\s+"
+            r"(up|down|notpresent|lowerlayerdown|dormant|testing|unknown)(?:\s|$)",
             " ".join(fields[2:]), re.IGNORECASE,
         )
         if not state:
