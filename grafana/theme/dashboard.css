@@ -1,0 +1,43 @@
+/* Only the AI Networking OPS overview, including its single-panel view. */
+body[data-aiops-dashboard="eve-aiops-overview"] {
+  --aiops-panel-border: #6683a3;
+  --aiops-title-bg: #243a53;
+  --aiops-title-text: #ecf6ff;
+  --aiops-accent: #8fc5ff;
+}
+body.theme-light[data-aiops-dashboard="eve-aiops-overview"] {
+  --aiops-panel-border: #587a9e;
+  --aiops-title-bg: #e5f0fc;
+  --aiops-title-text: #163b61;
+  --aiops-accent: #3674ae;
+}
+body[data-aiops-dashboard="eve-aiops-overview"] .react-grid-item:has(section[data-testid^="data-testid Panel header "]) {
+  padding: 4px;
+  box-sizing: border-box;
+}
+body[data-aiops-dashboard="eve-aiops-overview"] section[data-testid^="data-testid Panel header "] {
+  border: 2px solid var(--aiops-panel-border) !important;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 16%);
+}
+body[data-aiops-dashboard="eve-aiops-overview"] section[data-testid^="data-testid Panel header "] [data-testid="header-container"] {
+  background: var(--aiops-title-bg);
+  border-bottom: 2px solid var(--aiops-panel-border);
+  border-left: 4px solid var(--aiops-accent);
+  border-radius: 5px 5px 0 0;
+  min-height: 32px;
+  height: 32px;
+  padding: 3px 10px;
+  flex-shrink: 0;
+}
+body[data-aiops-dashboard="eve-aiops-overview"] [data-testid="header-container"] h2 {
+  color: var(--aiops-title-text);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 24px;
+}
+body[data-aiops-dashboard="eve-aiops-overview"] [data-testid^="data-testid dashboard-row-title-"] {
+  color: var(--aiops-accent);
+  font-size: 16px;
+  font-weight: 700;
+}
