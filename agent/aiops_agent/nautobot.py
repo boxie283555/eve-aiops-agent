@@ -34,6 +34,9 @@ class NautobotClient:
         self.base_url = url.rstrip("/")
         self.token = token
         self.timeout = timeout
+        # A client lives for one inventory/sync/graph read. Reuse related names
+        # within that read instead of fetching one status per interface.
+        self._related_names: dict[str, str] = {}
 
     def _get(self, path: str) -> dict[str, Any]:
         request = urllib.request.Request(
@@ -55,9 +58,14 @@ class NautobotClient:
         url = value.get("url")
         if not url:
             return "unknown"
+        if url in self._related_names:
+            return self._related_names[url]
         try:
             detail = self._get(url.split("/api/", 1)[-1])
-            return str(detail.get("name") or detail.get("slug") or detail.get("display") or "unknown")
+            name = str(detail.get("name") or detail.get("slug") or detail.get("display") or "unknown")
+            if name != "unknown":
+                self._related_names[url] = name
+            return name
         except NautobotError:
             return "unknown"
 

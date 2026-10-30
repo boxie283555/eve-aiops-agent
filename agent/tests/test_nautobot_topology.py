@@ -1,11 +1,26 @@
 import unittest
 from unittest.mock import Mock
 
-from aiops_agent.nautobot import NautobotClient
+from aiops_agent.nautobot import NautobotClient, NautobotError
 from aiops_agent.topology import build_snapshot
 
 
 class NautobotCableTests(unittest.TestCase):
+    def test_related_name_lookup_is_reused_within_client(self):
+        client = NautobotClient("http://unused", "test")
+        client._get = Mock(return_value={"name": "Connected"})
+        reference = {"url": "http://unused/api/extras/statuses/connected/"}
+        for _ in range(100):
+            self.assertEqual(client._related_name(reference), "Connected")
+        client._get.assert_called_once_with("extras/statuses/connected/")
+
+    def test_failed_related_lookup_does_not_poison_cache(self):
+        client = NautobotClient("http://unused", "test")
+        client._get = Mock(side_effect=[NautobotError("timeout"), {"name": "Connected"}])
+        reference = {"url": "http://unused/api/extras/statuses/connected/"}
+        self.assertEqual(client._related_name(reference), "unknown")
+        self.assertEqual(client._related_name(reference), "Connected")
+
     def test_cable_device_ids_resolve_to_snapshot_names(self):
         client = NautobotClient("http://unused", "test")
         payloads = {

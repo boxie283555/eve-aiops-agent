@@ -44,7 +44,7 @@ async def _collect_loop_once() -> None:
     if settings.nautobot_url and settings.nautobot_token:
         try:
             design = await asyncio.to_thread(
-                NautobotClient(settings.nautobot_url, settings.nautobot_token, settings.nautobot_timeout_seconds).topology
+                NautobotClient(settings.nautobot_url, settings.nautobot_token, max(30.0, settings.nautobot_timeout_seconds)).topology
             )
         except NautobotError:
             # Runtime topology remains usable when Nautobot is temporarily down.
