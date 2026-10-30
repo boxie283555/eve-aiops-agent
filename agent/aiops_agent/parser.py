@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from ipaddress import IPv4Interface
 from dataclasses import dataclass
 from typing import Any
 
@@ -138,26 +139,50 @@ class TcamResource:
     source: str = "cli"
 
 
+def is_interface_name(value: str) -> bool:
+    """Recognize numbered EOS/NX-OS/PAN-OS interface names, not CLI prose."""
+    return bool(re.fullmatch(r"[A-Za-z][A-Za-z-]*\d+(?:[/.:]\d+)*", value))
+
+
 def parse_ip_interface_brief(output: str) -> list[InterfaceState]:
+    if output.lstrip().startswith("COMMAND_FAILED"):
+        return []
     states: list[InterfaceState] = []
     for line in output.splitlines():
         line = line.strip()
         if not line or line.startswith(("IP Interface", "Interface", "---")):
             continue
         fields = re.split(r"\s+", line)
-        if len(fields) < 4:
+        if len(fields) < 3:
             continue
         name = fields[0]
-        if fields[2].lower() in {"up", "down", "administratively"}:
-            status = fields[2].lower()
-            proto = fields[3].lower()
-        else:
-            proto = fields[-1].lower()
-            status = " ".join(fields[2:-1]).lower()
+        if not is_interface_name(name):
+            continue
+        if fields[1].lower() != "unassigned":
+            try:
+                IPv4Interface(fields[1])
+            except ValueError:
+                continue
+        nxos_state = re.fullmatch(
+            r"protocol-(up|down)/link-(up|down)/admin-(up|down)",
+            fields[2], re.IGNORECASE,
+        )
+        if nxos_state:
+            protocol, link, admin = (value.lower() for value in nxos_state.groups())
+            states.append(InterfaceState(name=name, admin_up=admin == "up",
+                                         oper_up=protocol == link == admin == "up"))
+            continue
+        state = re.match(
+            r"^(up|down|admin(?:istratively)?\s+down)\s+(up|down)(?:\s|$)",
+            " ".join(fields[2:]), re.IGNORECASE,
+        )
+        if not state:
+            continue
+        status, proto = (value.lower() for value in state.groups())
         states.append(
             InterfaceState(
                 name=name,
-                admin_up=("admin down" not in status and "down" not in status),
+                admin_up=not status.startswith("admin"),
                 oper_up=(proto == "up"),
             )
         )

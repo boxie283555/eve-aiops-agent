@@ -8,6 +8,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from typing import Any
 
+from .parser import is_interface_name
+
 
 class NautobotError(RuntimeError):
     """Raised when Nautobot cannot provide the requested inventory."""
@@ -208,7 +210,7 @@ class NautobotClient:
                 continue
             for interface in result.interfaces:
                 name = str(interface.get("name") or "")
-                if not name:
+                if not is_interface_name(name):
                     continue
                 match = interface_ids.get((device_id, name))
                 if not match:
