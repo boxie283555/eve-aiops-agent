@@ -47,7 +47,9 @@ def router(settings):
     @routes.get('/backups')
     def backups(device_id: str | None = None, limit: int = Query(default=100,ge=1,le=1000)):
         with history.connect() as db:
-            sql='SELECT id,device_id,device,platform,created_at,fingerprint,exercise_id,phase FROM versions'
+            sql='''SELECT v.id,device_id,device,platform,created_at,fingerprint,exercise_id,phase,
+                COALESCE(o.last_observed_at,v.created_at) AS last_observed_at
+                FROM versions v LEFT JOIN version_observations o ON o.version_id=v.id'''
             args=[]
             if device_id:sql+=' WHERE device_id=?';args.append(device_id)
             return {'versions':[dict(r) for r in db.execute(sql+' ORDER BY seq DESC LIMIT ?',args+[limit])]}

@@ -54,6 +54,9 @@ def connect():
         host TEXT, platform TEXT, created_at REAL, fingerprint TEXT, raw_hash TEXT,
         raw_file TEXT, model_file TEXT, exercise_id TEXT, phase TEXT, checked INTEGER DEFAULT 0);
       CREATE INDEX IF NOT EXISTS versions_device ON versions(device_id,seq);
+      CREATE TABLE IF NOT EXISTS version_observations (
+        version_id TEXT PRIMARY KEY, last_observed_at REAL NOT NULL,
+        baseline_observed_at REAL);
       CREATE TABLE IF NOT EXISTS drifts (
         id TEXT PRIMARY KEY, before_id TEXT, after_id TEXT UNIQUE, device_id TEXT, device TEXT,
         detected_at REAL, origin TEXT, exercise_id TEXT, phase TEXT,
@@ -150,12 +153,19 @@ def record_backup(device, raw, exercise_id=None, phase='observation'):
     model = normalize_config(raw, device.platform)
     serialized = json.dumps(model, sort_keys=True, ensure_ascii=False)
     fingerprint = digest(serialized)
-    stamp = time.time()
     with connect() as db:
-        previous = db.execute('SELECT * FROM versions WHERE device_id=? ORDER BY seq DESC LIMIT 1',(device.id,)).fetchone()
+        # Serialize the version and its observation boundary with other writers/detection.
+        db.execute('BEGIN IMMEDIATE')
+        stamp = time.time()
+        previous = db.execute('''SELECT v.*, o.last_observed_at FROM versions v
+            LEFT JOIN version_observations o ON o.version_id=v.id
+            WHERE device_id=? ORDER BY seq DESC LIMIT 1''',(device.id,)).fetchone()
         db.execute('INSERT OR REPLACE INTO attempts VALUES (?,?,?,?,?)',(device.id,device.name,stamp,1,None))
         if previous and previous['fingerprint'] == fingerprint and previous['host'] == device.host and previous['platform'] == device.platform:
-            return {'device':device.name,'status':'unchanged','version_id':previous['id']}
+            db.execute('''INSERT INTO version_observations(version_id,last_observed_at) VALUES (?,?)
+                ON CONFLICT(version_id) DO UPDATE SET last_observed_at=excluded.last_observed_at''',
+                (previous['id'],stamp))
+            return {'device':device.name,'status':'unchanged','version_id':previous['id'],'last_observed_at':stamp}
         version = uuid.uuid4().hex
         folder = Path(str(uuid.UUID(device.id)))
         raw_file = str(folder/(version+('.xml' if device.platform=='paloalto_panos' else '.txt')))
@@ -165,14 +175,21 @@ def record_backup(device, raw, exercise_id=None, phase='observation'):
         db.execute('''INSERT INTO versions(id,device_id,device,host,platform,created_at,fingerprint,raw_hash,raw_file,model_file,exercise_id,phase)
                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?)''',
                    (version,device.id,device.name,device.host,device.platform,stamp,fingerprint,digest(raw),raw_file,model_file,exercise_id,phase))
-        return {'device':device.name,'status':'saved','version_id':version,'raw_file':raw_file,'fingerprint':fingerprint}
+        # Freeze the BEFORE boundary now; later observations must not reattribute this transition.
+        baseline = (previous['last_observed_at'] if previous['last_observed_at'] is not None
+                    else previous['created_at']) if previous else None
+        db.execute('INSERT INTO version_observations VALUES (?,?,?)',(version,stamp,baseline))
+        return {'device':device.name,'status':'saved','version_id':version,'raw_file':raw_file,
+                'fingerprint':fingerprint,'last_observed_at':stamp}
 
 
 def detect_drift():
     created = []
     with connect() as db:
         db.execute('BEGIN IMMEDIATE')
-        for current in db.execute('SELECT * FROM versions WHERE checked=0 ORDER BY seq').fetchall():
+        for current in db.execute('''SELECT v.*, o.baseline_observed_at FROM versions v
+                LEFT JOIN version_observations o ON o.version_id=v.id
+                WHERE checked=0 ORDER BY seq''').fetchall():
             previous = db.execute('SELECT * FROM versions WHERE device_id=? AND seq<? ORDER BY seq DESC LIMIT 1',
                                   (current['device_id'],current['seq'])).fetchone()
             if previous and previous['host']==current['host'] and previous['platform']==current['platform']:
@@ -185,12 +202,14 @@ def detect_drift():
                 before,after=models
                 changes=differences(before,after)
                 if changes:
+                    # Legacy versions have no observation evidence: retain their original boundary.
+                    baseline = (current['baseline_observed_at'] if current['baseline_observed_at'] is not None
+                                else previous['created_at'])
                     planned = None
                     for change in db.execute('SELECT * FROM changes WHERE device_id=? AND starts_at<=? AND ends_at>=? AND created_at<=?',
-                            (current['device_id'],current['created_at'],previous['created_at'],previous['created_at'])):
+                            (current['device_id'],baseline,current['created_at'],baseline)):
                         # Entire observation window and all changed sections must be covered.
-                        if (change['starts_at']<=previous['created_at'] and change['ends_at']>=current['created_at']
-                                and all(x['context'] in json.loads(change['contexts']) for x in changes)):
+                        if all(x['context'] in json.loads(change['contexts']) for x in changes):
                             planned = change['id'];break
                     drift_id = uuid.uuid4().hex
                     db.execute('''INSERT INTO drifts(id,before_id,after_id,device_id,device,detected_at,origin,exercise_id,phase,unowned,change_ref,status,changes)
@@ -287,6 +306,7 @@ def register_change(change_id, device_id, owner, starts_at, ends_at, contexts):
     if not contexts or not 0<ends_at-starts_at<=86400 or ends_at<=time.time():
         raise ValueError('Expected explicit contexts and a future window of at most 24 hours')
     with connect() as db:
+        db.execute('BEGIN IMMEDIATE')
         db.execute('INSERT INTO changes VALUES (?,?,?,?,?,?,?)',
                    (change_id,device_id,owner,starts_at,ends_at,json.dumps(contexts),time.time()))
     return {'id':change_id,'status':'registered'}

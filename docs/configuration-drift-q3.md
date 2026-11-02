@@ -6,8 +6,8 @@
 
 默认目录 `/app/data/config_history/`（Docker `agent-data` 持久卷），可由 `AIOPS_CONFIG_HISTORY_PATH` 指定绝对路径。目录权限 0700，原始配置、规范化模型和数据库文件 0600。原始配置可能包含设备密钥，只允许服务器受控访问，API 不提供原文下载。
 
-- `POST /config/backup`：无请求体时备份当前 lab 设备；`{"devices":["p1-ext"]}` 选择名称或 UUID。成功后自动检测漂移；重复配置只更新备份状态，不生成重复版本。
-- `GET /config/backups`：版本元数据，可按 `device_id` 筛选。
+- `POST /config/backup`：无请求体时备份当前 lab 设备；`{"devices":["p1-ext"]}` 选择名称或 UUID。成功后自动检测漂移；重复配置更新成功观察时间 `last_observed_at`，不生成重复版本。
+- `GET /config/backups`：版本元数据，可按 `device_id` 筛选；`created_at` 是版本首次保存时间，`last_observed_at` 是该版本最近一次成功观察时间。
 - `POST /config/drift/detect`：可单独补做检测，按版本幂等处理。
 - `GET /config/drift?unowned=true`：保留全部无主记录，包括已处理与演练。支持 `status=open|resolved`、`origin=observed|exercise`、`limit`。
 - `POST /config/drift/{id}/resolve`：`{"actor":"operator","reason":"已核实并恢复"}`。处理结果不可改写原始归属、版本和差异。
@@ -22,7 +22,15 @@ CLI 按缩进保留父子层级，在接口、ACL、BGP 等配置块内保留命
 
 `unowned=true` 的准确含义是：**观察窗口内没有匹配的预登记变更引用**，不是证明现场操作者未经批准。当前没有对接外部 ITSM 审批系统。
 
-预登记接口 `POST /config/changes` 使用 `id/device/owner/starts_at/ends_at/contexts`；时间为 Unix 秒，窗口最长 24 小时，contexts 必须精确列出配置块，例如 `interface Loopback0` 或 `router bgp 65102`。登记必须早于比较基线，时间窗口完整覆盖前后两次采样，并包含所有变更块，才关联 `change_ref`；事后登记不会追认历史漂移。这仍是操作员声明的变更登记，不代表外部审批系统签名验证。
+预登记接口 `POST /config/changes` 使用 `id/device/owner/starts_at/ends_at/contexts`；时间为 Unix 秒，窗口最长 24 小时，contexts 必须精确列出配置块，例如 `interface Loopback0` 或 `router bgp 65102`。登记必须早于比较基线的成功观察，时间窗口完整覆盖前后两次采样，并包含所有变更块，才关联 `change_ref`；事后登记不会追认历史漂移。这仍是操作员声明的变更登记，不代表外部审批系统签名验证。
+
+已有设备的操作顺序：
+
+1. `POST /config/changes` 登记变更编号、设备、责任人、计划窗口及配置块。
+2. 窗口开始后、实际修改前，对该设备执行 `POST /config/backup`，确认 `saved` 或 `unchanged`，以及返回的 `last_observed_at` 落在窗口内。已有版本即使内容未变，也会记录这次成功观察。
+3. 执行已登记的配置修改，在窗口结束前再次成功备份。全部变更块匹配时，漂移记录关联 `change_ref` 并显示 `unowned=false`。
+
+新版本保存时，将前一个版本的最近成功观察时间固定为本次差异的窗口起点；终点是新版本的 `created_at`。延迟检测、后续无变化备份、失败备份或事后登记均不能扩大或改写该窗口。观察元数据与版本索引在同一事务中持久化。升级自动新增观察元数据表；旧版本缺少观察证据时仅使用原版本创建时间，不根据最近尝试时间猜测历史成功观察，也不重算已检测漂移的归属。
 
 ## 演练与真实验收
 

@@ -115,6 +115,99 @@ class HistoryTests(unittest.TestCase):
         self.save(BASE.replace('description original','description late',1));h.detect_drift()
         self.assertTrue(h.list_drifts()['records'][0]['unowned'])
 
+    def save_at(self, stamp, text=BASE):
+        with patch.object(h.time,'time',return_value=stamp):
+            return self.save(text)
+
+    def register_at(self, stamp, start=200, end=500, contexts=None):
+        with patch.object(h.time,'time',return_value=stamp):
+            return h.register_change('CHG-existing',self.device.id,'operator',start,end,
+                                     contexts or ['interface Ethernet1'])
+
+    def test_unchanged_observation_enables_registered_change_on_existing_device(self):
+        first=self.save_at(100);h.detect_drift()
+        self.register_at(200)
+        observed=self.save_at(300)
+        self.assertEqual(observed['version_id'],first['version_id'])
+        self.assertEqual(observed['last_observed_at'],300)
+        self.save_at(400,BASE.replace('description original','description planned',1))
+        # Each operation reopens SQLite, so boundaries must survive connection/process lifetime.
+        self.assertEqual(h.detect_drift()['created'],1)
+        record=h.list_drifts()['records'][0]
+        self.assertFalse(record['unowned']);self.assertEqual(record['change_ref'],'CHG-existing')
+        with h.connect() as db:
+            self.assertEqual(db.execute('SELECT count(*) FROM versions').fetchone()[0],2)
+            self.assertEqual(db.execute('SELECT created_at FROM versions WHERE id=?',
+                                       (first['version_id'],)).fetchone()[0],100)
+        self.assertEqual(len(list(Path(self.temp.name).glob('*/*.json'))),2)
+
+    def test_delayed_detection_cannot_use_post_change_registration_or_observation(self):
+        self.save_at(100)
+        changed=BASE.replace('description original','description changed',1)
+        version=self.save_at(200,changed)
+        self.register_at(250,start=100)
+        self.save_at(300,changed)
+        # A later rollback has the same fingerprint as the original version; it is a new version.
+        self.save_at(350)
+        h.detect_drift()
+        records={r['after_id']:r for r in h.list_drifts()['records']}
+        self.assertTrue(records[version['version_id']]['unowned'])
+        self.assertIsNone(records[version['version_id']]['change_ref'])
+        self.assertEqual(h.detect_drift()['created'],0)
+
+    def test_later_unchanged_observation_does_not_extend_original_change_window(self):
+        self.save_at(100);self.register_at(200)
+        self.save_at(300)
+        changed=BASE.replace('description original','description planned',1)
+        self.save_at(400,changed)
+        self.save_at(600,changed)
+        h.detect_drift()
+        self.assertFalse(h.list_drifts()['records'][0]['unowned'])
+
+    def test_failed_backup_cannot_advance_successful_baseline(self):
+        self.save_at(100);self.register_at(200)
+        with patch.object(h.time,'time',return_value=300),\
+                patch.object(h,'current_lab_devices',return_value=[self.device]),\
+                patch.object(h,'fetch_config',side_effect=TimeoutError):
+            self.assertEqual(h.backup(SimpleNamespace())['status'],'partial')
+        self.save_at(400,BASE.replace('description original','description changed',1))
+        h.detect_drift()
+        self.assertTrue(h.list_drifts()['records'][0]['unowned'])
+
+    def test_window_must_cover_both_successful_observations(self):
+        for start,end in [(350,500),(200,350)]:
+            with self.subTest(start=start,end=end):
+                with tempfile.TemporaryDirectory() as folder,\
+                        patch.dict(os.environ,{'AIOPS_CONFIG_HISTORY_PATH':folder}):
+                    self.save_at(100);self.register_at(200,start=start,end=end)
+                    self.save_at(300)
+                    self.save_at(400,BASE.replace('description original','description changed',1))
+                    h.detect_drift()
+                    self.assertTrue(h.list_drifts()['records'][0]['unowned'])
+
+    def test_renewed_baseline_still_requires_every_changed_context(self):
+        self.save_at(100);self.register_at(200);self.save_at(300)
+        self.save_at(400,BASE.replace('original','changed'))  # Interface AND BGP.
+        h.detect_drift()
+        self.assertTrue(h.list_drifts()['records'][0]['unowned'])
+
+    def test_legacy_database_does_not_invent_successful_observations_or_rewrite_drift(self):
+        self.save_at(100)
+        changed=BASE.replace('description original','description changed',1)
+        self.save_at(200,changed);h.detect_drift()
+        existing=h.list_drifts()['records']
+        self.save_at(300)
+        # Simulate the old schema, with both detected history and an unchecked version.
+        with h.connect() as db:db.execute('DROP TABLE version_observations')
+        self.register_at(350,start=100)
+        self.save_at(400)  # New successful observation of the legacy current version.
+        h.detect_drift()
+        rows=h.list_drifts()['records']
+        self.assertEqual(next(r for r in rows if r['id']==existing[0]['id']),existing[0])
+        self.assertTrue(all(r['unowned'] for r in rows))
+        self.save_at(450,changed);h.detect_drift()
+        self.assertFalse(h.list_drifts()['records'][0]['unowned'])
+
     def test_failed_collection_and_scope_do_not_create_drift(self):
         with patch.object(h,'current_lab_devices',return_value=[self.device]),patch.object(h,'fetch_config',side_effect=TimeoutError):
             result=h.backup(SimpleNamespace())
@@ -155,6 +248,8 @@ class HistoryTests(unittest.TestCase):
         self.assertEqual(rows['total'],1)
         self.assertEqual(client.get('/config/drift?origin=observed').json()['total'],0)
         self.assertNotIn('confidential-value',client.get('/config/backups').text)
+        versions=client.get('/config/backups',params={'device_id':self.device.id}).json()['versions']
+        self.assertTrue(all(v['last_observed_at']>=v['created_at'] for v in versions))
         response=client.post('/config/drift/'+rows['records'][0]['id']+'/resolve',json={'actor':'test','reason':'restored'})
         self.assertEqual(response.status_code,200)
         self.assertEqual(client.get('/config/drift?status=open').json()['total'],0)
