@@ -9,6 +9,7 @@ import copy
 import json
 from pathlib import Path
 from add_config_drift import inject
+from tcam_status import inject as inject_tcam
 
 ROOT=Path(__file__).resolve().parents[2]
 TITLES='''9001|网络健康评估分 · 100|Network health points · 100
@@ -201,7 +202,7 @@ def build(source,lang):
                 {'title':choose('接口流量明细 ↗','Interface traffic details ↗'),'type':'link','url':'http://192.168.20.169:8080/mrtg','targetBlank':True},
                 {'title':choose('网络运行简报 ↗','Operations report ↗'),'type':'link','url':'/d/eve-aiops-report'+('-en' if lang=='en' else '')+'/report',
                  'includeVars':True,'keepTime':True,'targetBlank':False}]
-    return inject(d,lang)
+    return inject(inject_tcam(d,lang),lang)
 
 
 def main():

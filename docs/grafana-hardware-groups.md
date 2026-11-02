@@ -19,10 +19,19 @@ Grafana 使用隐藏的 hardware_group 变量重复面板，避免把厂商名�
 历史资源曲线用所选时间终点的资产分类过滤；早于此指标首次上线的历史终点没有分类数据。
 无 TCAM / 电源等可选指标时保留 No data；未安装的虚拟电源显示 N/A (not installed)。
 
+TCAM 区域另有双语「采样状态」表，展示资源观测数、越界百分比数、Prometheus
+最新抓取时间及设备采集状态。抓取时间不是设备采集时间，不能据此证明设备刚完成采集。
+当前 CLI 周期性采集与页面 30 秒刷新独立。没有资源观测时不推断占用为零或设备离线。
+利用率图只显示 0–100% 的观测，越界值保留在资源明细，并单独计数；不会截断成 100%。
+Agent 抓取失败或设备最近采集失败时不展示当前资源值，历史缺口保留。
+这属于展示与状态说明修复，未修改底层解析器；部分容量列解析的异常仍需进一步核对。
+
 更新分组配置：
 
 ```sh
 python scripts/grafana/group_hardware.py
+python scripts/grafana/build_overview_languages.py
+python scripts/grafana/build_overview_languages.py --check
 python scripts/grafana/build_report.py --check
 ```
 
