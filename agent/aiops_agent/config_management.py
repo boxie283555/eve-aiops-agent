@@ -11,6 +11,7 @@ import secrets
 import time
 import uuid
 from datetime import datetime
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from apscheduler.triggers.cron import CronTrigger
@@ -122,6 +123,59 @@ def version_metadata(row):
     return {key:row[key] for key in ['id','device_id','device','platform','created_at','fingerprint']}
 
 
+def backup_metadata(row):
+    """Expose file identity and dates, never raw configuration or server paths."""
+    value=version_metadata(row)
+    value.update({key:row[key] for key in ['exercise_id','phase','last_observed_at']})
+    path=h.root_path()/row['raw_file']
+    value['filename']=Path(row['raw_file']).name
+    try:
+        value['file_available']=path.is_file()
+        value['size_bytes']=path.stat().st_size if value['file_available'] else None
+    except OSError:
+        value['file_available']=False;value['size_bytes']=None
+    return value
+
+
+def list_backups(device_id=None, limit=100, offset=0):
+    where=' WHERE v.device_id=?' if device_id else ''
+    args=[device_id] if device_id else []
+    with h.connect() as db:
+        total=db.execute('SELECT count(*) FROM versions v'+where,args).fetchone()[0]
+        rows=db.execute('''SELECT v.*, COALESCE(o.last_observed_at,v.created_at) AS last_observed_at
+            FROM versions v LEFT JOIN version_observations o ON o.version_id=v.id'''+where+
+            ' ORDER BY v.seq DESC LIMIT ? OFFSET ?',args+[limit,offset]).fetchall()
+    return {'total':total,'versions':[backup_metadata(dict(r)) for r in rows]}
+
+
+def backup_status():
+    with h.connect() as db:
+        attempts=[dict(r) for r in db.execute('SELECT * FROM attempts ORDER BY device')]
+        latest={r['device_id']:backup_metadata(dict(r)) for r in db.execute('''
+            SELECT v.*,COALESCE(o.last_observed_at,v.created_at) AS last_observed_at
+            FROM versions v LEFT JOIN version_observations o ON o.version_id=v.id
+            WHERE v.seq=(SELECT MAX(x.seq) FROM versions x WHERE x.device_id=v.device_id)''')}
+    return {'devices':[{**a,'latest_backup':latest.get(a['device_id'])} for a in attempts]}
+
+
+def backup_preview(version_id):
+    row,model=load_version(version_id)
+    # Use rows, not redacted dictionary keys, so distinct secret-bearing contexts survive.
+    blocks=[{'context':key,'configuration':value} for key,value in sorted(model.items())]
+    blocks=json.loads(re.sub(r'<sensitive:[a-f0-9]{64}>','<redacted>',json.dumps(blocks)))
+    return {'version':version_metadata(row),'redacted':True,'blocks':blocks}
+
+
+def compare_versions(device_id, before_id, after_id):
+    a,b=[load_version(key) for key in [before_id,after_id]]
+    if any(row['device_id']!=device_id for row,_ in [a,b]):
+        raise ValueError('Both versions must belong to the selected device')
+    if (a[0]['host'],a[0]['platform'])!=(b[0]['host'],b[0]['platform']):
+        raise ValueError('Management address or platform changed; versions are different baselines')
+    return {'mode':'version','device_id':device_id,'before':version_metadata(a[0]),
+            'after':version_metadata(b[0]),'changes':h.differences(a[1],b[1])}
+
+
 def compare(device_id, before_at, after_at):
     if not all(math.isfinite(x) for x in [before_at,after_at]) or before_at>after_at:
         raise ValueError('Expected two finite timestamps in chronological order')
@@ -133,11 +187,9 @@ def compare(device_id, before_at, after_at):
                 (device_id,stamp)).fetchone()
             if not row:raise ValueError('No successful backup at or before the selected time')
             samples.append(dict(row))
-    a,b=[load_version(s['version_id']) for s in samples]
-    if (a[0]['host'],a[0]['platform'])!=(b[0]['host'],b[0]['platform']):
-        raise ValueError('Management address or platform changed; versions are different baselines')
-    return {'device_id':device_id,'before':samples[0],'after':samples[1],
-            'requested_before_at':before_at,'requested_after_at':after_at,'changes':h.differences(a[1],b[1])}
+    result=compare_versions(device_id,samples[0]['version_id'],samples[1]['version_id'])
+    return {**result,'mode':'time','before':samples[0],'after':samples[1],
+            'requested_before_at':before_at,'requested_after_at':after_at}
 
 
 def restore_supported(device):

@@ -91,6 +91,16 @@ def router(settings, schedule_changed=None):
     def compare(device_id: str, before_at: float, after_at: float):
         try:return management.compare(device_id,before_at,after_at)
         except ValueError as exc:raise HTTPException(400,str(exc)) from None
+        except OSError:raise HTTPException(409,'Backup evidence unavailable') from None
+
+    @routes.get('/compare/versions')
+    def compare_versions(device_id: str, before_id: str, after_id: str):
+        try:return management.compare_versions(device_id,before_id,after_id)
+        except ValueError as exc:raise HTTPException(400,str(exc)) from None
+        except OSError:raise HTTPException(409,'Backup evidence unavailable') from None
+
+    @routes.get('/backup-status')
+    def backup_status():return management.backup_status()
 
     @routes.get('/audit')
     def audit(device_id: str | None = None, limit: int = Query(100,ge=1,le=1000), offset: int = Query(0,ge=0)):
@@ -125,14 +135,15 @@ def router(settings, schedule_changed=None):
         return result
 
     @routes.get('/backups')
-    def backups(device_id: str | None = None, limit: int = Query(default=100,ge=1,le=1000)):
-        with history.connect() as db:
-            sql='''SELECT v.id,device_id,device,platform,created_at,fingerprint,exercise_id,phase,
-                COALESCE(o.last_observed_at,v.created_at) AS last_observed_at
-                FROM versions v LEFT JOIN version_observations o ON o.version_id=v.id'''
-            args=[]
-            if device_id:sql+=' WHERE device_id=?';args.append(device_id)
-            return {'versions':[dict(r) for r in db.execute(sql+' ORDER BY seq DESC LIMIT ?',args+[limit])]}
+    def backups(device_id: str | None = None, limit: int = Query(default=100,ge=1,le=1000),
+                offset: int = Query(default=0,ge=0)):
+        return management.list_backups(device_id,limit,offset)
+
+    @routes.get('/backups/{version_id}')
+    def backup_preview(version_id: str):
+        try:return management.backup_preview(version_id)
+        except ValueError as exc:raise HTTPException(400,str(exc)) from None
+        except OSError:raise HTTPException(409,'Backup evidence unavailable') from None
 
     @routes.post('/drift/detect')
     async def detect():
