@@ -37,6 +37,12 @@
       "type": "link",
       "url": "http://192.168.20.169:8080/firewall/?lang=zh",
       "targetBlank": true
+    },
+    {
+      "title": "品牌监控首页 ↗",
+      "type": "link",
+      "url": "http://192.168.20.169:8080/monitor?lang=zh",
+      "targetBlank": true
     }
   ],
   "panels": [

@@ -41,6 +41,12 @@
       "type": "link",
       "url": "http://192.168.20.169:8080/firewall/?lang=en",
       "targetBlank": true
+    },
+    {
+      "title": "Network Pulse ↗",
+      "type": "link",
+      "url": "http://192.168.20.169:8080/monitor?lang=en",
+      "targetBlank": true
     }
   ],
   "panels": [

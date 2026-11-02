@@ -197,7 +197,8 @@ def build(source,lang):
     d['uid']='eve-aiops-overview'+('-en' if lang=='en' else '')
     d['id']=None
     d['tags']=list(dict.fromkeys(d.get('tags',[])+['aiops-ops-language']))
-    d['links']=[{'title':'语言 / Language','type':'dashboards','tags':['aiops-ops-language'],'asDropdown':True,
+    d['links']=[{'title':choose('品牌监控首页 ↗','Network Pulse ↗'),'type':'link','url':'http://192.168.20.169:8080/monitor?lang='+lang,'targetBlank':True},
+                {'title':'语言 / Language','type':'dashboards','tags':['aiops-ops-language'],'asDropdown':True,
                  'includeVars':True,'keepTime':True,'targetBlank':False},
                 {'title':choose('接口流量明细 ↗','Interface traffic details ↗'),'type':'link','url':'http://192.168.20.169:8080/mrtg','targetBlank':True},
                 {'title':choose('网络运行简报 ↗','Operations report ↗'),'type':'link','url':'/d/eve-aiops-report'+('-en' if lang=='en' else '')+'/report',

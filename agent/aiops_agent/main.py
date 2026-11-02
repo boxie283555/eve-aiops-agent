@@ -28,6 +28,7 @@ from .metrics import NAUTOBOT_SYNC_SUCCESS, NAUTOBOT_SYNC_LAST_SUCCESS, NAUTOBOT
 from .panos_traffic import refresh_traffic, STORE as PA_TRAFFIC, INTERVAL as PA_TRAFFIC_INTERVAL, overlay_interfaces
 from .panos_evidence import attach_policy, refresh_policy, policy_status, verify_flow
 from .tools_view import TOOLS_PAGE
+from .monitoring import router as monitoring_router
 from .parser import normalize_mac
 from .settings import load_settings
 from .snapshots import collect_and_snapshot, compare_latest
@@ -203,6 +204,9 @@ def active_inventory() -> dict:
 def health_score(site: str = "all") -> dict:
     return network_health(list(collector.devices), dict(collector.latest_results), load_snapshot(), site,
                           ttl=int(os.getenv("AIOPS_TOPOLOGY_TTL_SECONDS", "600")))
+
+
+app.include_router(monitoring_router(collector, health_score))
 
 
 @app.get("/health", response_class=HTMLResponse)
