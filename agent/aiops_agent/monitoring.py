@@ -107,7 +107,8 @@ def expressions(site, device):
     trends = []
     for direction in ('rx', 'tx'):
         value = '(aiops_pa_interface_'+direction+'_bps or on(device,interface) aiops_interface_'+direction+'_bps)'
-        trends.append(named('max(('+value+') and on(device) ('+valid+'))', direction))
+        # Keep the winning interface's identity at each evaluation timestamp.
+        trends.append(named('topk(1, ('+value+') and on(device) ('+valid+'))', direction))
     trends.append(named('sum('+scope+')', 'online'))
     return current, ' or '.join(trends)
 
@@ -262,11 +263,23 @@ def summarize(records, health, evidence, now=None, ttl=600):
              if source_ok and coverage and devices else None)
     timeline = list(range(evidence['start'], evidence['end']+1, evidence['step']))
     trends = {}
+    sources = {key: [None] * len(timeline) for key in ('rx', 'tx')}
+    indexes = {t: i for i, t in enumerate(timeline)}
     for row in evidence['trend']:
         key = row['metric'].get('series')
         if key not in {'rx','tx','online'}:continue
-        points = {int(float(t)):number(v) for t,v in row['values']}
-        trends[key] = [points.get(t) for t in timeline]
+        values = trends.setdefault(key, [None] * len(timeline))
+        # query_range returns a separate sparse series for each historical winner.
+        # Merge by timestamp, never overwrite other interfaces' earlier samples.
+        for t, raw in row['values']:
+            i, value = indexes.get(int(float(t))), number(raw)
+            if i is None or value is None:continue
+            if values[i] is not None and values[i] >= value:continue
+            values[i] = value
+            if key in sources:
+                labels = row['metric']
+                sources[key][i] = (dict(device=labels['device'], interface=labels['interface'])
+                                   if labels.get('device') and labels.get('interface') else None)
     return dict(source_ok=source_ok, config_ok=config_ok, generated_at=now, sampled_at=evidence['end'],
                 errors=evidence['errors'], devices=sorted(devices,key=lambda d:(d['manufacturer'],d['device_type'],d['name'])),
                 interfaces=sorted(interfaces,key=lambda p:max(p.get('rx_bps',0),p.get('tx_bps',0)),reverse=True),
@@ -280,7 +293,7 @@ def summarize(records, health, evidence, now=None, ttl=600):
                              interface_review=total('interface_review')),
                 sync=dict(success=global_values.get('aiops_nautobot_sync_success') if source_ok else None,
                           last_success=global_values.get('aiops_nautobot_sync_last_success_timestamp_seconds') if source_ok else None),
-                trend=dict(timestamps=timeline,series=trends))
+                trend=dict(timestamps=timeline,series=trends,sources=sources))
 
 
 def router(collector, health_provider):

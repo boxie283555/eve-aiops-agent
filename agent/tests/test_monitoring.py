@@ -80,6 +80,28 @@ class SummaryTests(unittest.TestCase):
         self.assertIn('device="a\\"} or up{"',current)
         self.assertIn('site="lab"',current);self.assertNotIn('device=~',current)
         self.assertIn('or on(device,interface)',trend);self.assertIn('up{job="eve-aiops-agent"} == 1',trend)
+        self.assertEqual(trend.count('topk(1,'),2)
+
+    def test_traffic_sources_follow_each_historical_winner_and_direction(self):
+        r,h,e=fixture()
+        e['trend']=[
+            {'metric':{'series':'rx','device':'lab-a','interface':'Ethernet1'},
+             'values':[[900,'10'],[960,'NaN'],[1020,'0']]},
+            {'metric':{'series':'rx','device':'lab-b','interface':'Ethernet2'},
+             'values':[[930,'20']]},
+            {'metric':{'series':'tx','device':'lab-pa','interface':'ethernet1/1'},
+             'values':[[900,'5'],[1020,'30']]},
+        ]
+        trend=summarize(r,h,e,now=1030)['trend']
+        self.assertEqual(trend['series']['rx'],[10,20,None,None,0])
+        self.assertEqual(trend['sources']['rx'],[
+            dict(device='lab-a',interface='Ethernet1'),
+            dict(device='lab-b',interface='Ethernet2'),None,None,
+            dict(device='lab-a',interface='Ethernet1')])
+        self.assertEqual(trend['sources']['tx'][0],dict(device='lab-pa',interface='ethernet1/1'))
+        self.assertIsNone(trend['sources']['tx'][1])
+        e['trend'].reverse()
+        self.assertEqual(summarize(r,h,e,now=1030)['trend'],trend)
 
     def test_retained_optional_gauge_cannot_override_failed_dataset(self):
         r,h,e=fixture()
