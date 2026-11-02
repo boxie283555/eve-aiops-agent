@@ -598,8 +598,8 @@
       },
       "links": [
         {
-          "title": "View drift records",
-          "url": "http://192.168.20.169:8080/config/drift?unowned=true",
+          "title": "Configuration management",
+          "url": "http://192.168.20.169:8080/config/ui?lang=en",
           "targetBlank": true
         }
       ]
@@ -669,8 +669,8 @@
       },
       "links": [
         {
-          "title": "View drift records",
-          "url": "http://192.168.20.169:8080/config/drift?unowned=true",
+          "title": "Configuration management",
+          "url": "http://192.168.20.169:8080/config/ui?lang=en",
           "targetBlank": true
         }
       ]
@@ -740,8 +740,8 @@
       },
       "links": [
         {
-          "title": "View drift records",
-          "url": "http://192.168.20.169:8080/config/drift?unowned=true",
+          "title": "Configuration management",
+          "url": "http://192.168.20.169:8080/config/ui?lang=en",
           "targetBlank": true
         }
       ]
@@ -811,8 +811,8 @@
       },
       "links": [
         {
-          "title": "View drift records",
-          "url": "http://192.168.20.169:8080/config/drift?unowned=true",
+          "title": "Configuration management",
+          "url": "http://192.168.20.169:8080/config/ui?lang=en",
           "targetBlank": true
         }
       ]
@@ -829,7 +829,7 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "**Open unowned drift**: unresolved real-observation records without a matching preregistered change. **Open exercise drift**: simulated records under the same conditions.\n\n**Exercise history** includes resolved records and rollbacks: 3 changes + 3 rollbacks = 6 records. **Backup failures** counts devices whose latest attempt failed; unchanged configurations are successful backups.\n\nCovers lab devices with backup attempts; the current default interval is 15 minutes. Unowned does not prove unauthorized activity. Missing data is not zero. Cards show state at the selected end time; history is not the number of new records within the selected range."
+        "content": "[Open configuration management: backups, comparison & recovery ↗](http://192.168.20.169:8080/config/ui?lang=en)\n\n**Open unowned drift**: unresolved real-observation records without a matching preregistered change. **Open exercise drift**: simulated records under the same conditions.\n\n**Exercise history** includes resolved records and rollbacks: 3 changes + 3 rollbacks = 6 records. **Backup failures** counts devices whose latest attempt failed; unchanged configurations are successful backups.\n\nCovers lab devices with backup attempts; daily backup time, timezone and devices are configurable. Unowned does not prove unauthorized activity. Missing data is not zero. Cards show state at the selected end time; history is not the number of new records within the selected range."
       }
     },
     {

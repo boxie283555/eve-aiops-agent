@@ -4,15 +4,39 @@ from __future__ import annotations
 import asyncio
 import sqlite3
 from typing import Literal
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Header
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 from . import config_history as history
+from . import config_management as management
 
 
 class BackupRequest(BaseModel):
     devices: list[str] = Field(default_factory=list, max_length=100)
     exercise_id: str | None = Field(default=None, min_length=1, max_length=100)
     phase: Literal['observation','baseline','change','rollback'] = 'observation'
+    actor: str = Field(default='operator',min_length=1,max_length=100)
+
+
+class DailySchedule(BaseModel):
+    enabled: bool = True
+    time: str = Field(pattern=r'^\d{2}:\d{2}$')
+    timezone: str = Field(min_length=1,max_length=100)
+    devices: list[str] = Field(default_factory=list,max_length=100)
+    actor: str = Field(min_length=1,max_length=100)
+
+
+class RestorePreview(BaseModel):
+    device: str
+    version_id: str
+    actor: str = Field(min_length=1,max_length=100)
+    change_ref: str = Field(min_length=1,max_length=100)
+    exercise_id: str | None = Field(default=None,min_length=1,max_length=100)
+
+
+class RestoreExecution(BaseModel):
+    preview_id: str = Field(min_length=1,max_length=100)
+    confirm_device: str = Field(min_length=1,max_length=100)
 
 
 class Resolution(BaseModel):
@@ -29,8 +53,63 @@ class PlannedChange(BaseModel):
     contexts: list[str] = Field(min_length=1,max_length=100)
 
 
-def router(settings):
+def router(settings, schedule_changed=None):
     routes=APIRouter(prefix='/config',tags=['Configuration history'])
+
+    @routes.get('/ui',response_class=HTMLResponse)
+    def page():
+        from .config_view import CONFIG_PAGE
+        return CONFIG_PAGE
+
+    @routes.get('/devices')
+    async def devices():
+        try:rows=await asyncio.to_thread(history.current_lab_devices,settings)
+        except ValueError as exc:raise HTTPException(400,str(exc)) from None
+        return {'scope':'lab','devices':[{'id':d.id,'name':d.name,'host':d.host,'platform':d.platform,
+                 'site':d.site,'restore_supported':management.restore_supported(d)} for d in rows]}
+
+    @routes.get('/schedule')
+    def schedule():return management.schedule_info()
+
+    @routes.put('/schedule')
+    async def set_schedule(request: DailySchedule):
+        value=request.model_dump(exclude={'actor'})
+        try:
+            result=await asyncio.to_thread(management.save_schedule,settings,value,request.actor)
+            if schedule_changed:schedule_changed()
+            return result
+        except ValueError as exc:raise HTTPException(400,str(exc)) from None
+
+    @routes.get('/history')
+    def observations(device_id: str, start: float | None = None, end: float | None = None,
+                     limit: int = Query(100,ge=1,le=1000), offset: int = Query(0,ge=0)):
+        try:return management.history(device_id,start,end,limit,offset)
+        except ValueError as exc:raise HTTPException(400,str(exc)) from None
+
+    @routes.get('/compare')
+    def compare(device_id: str, before_at: float, after_at: float):
+        try:return management.compare(device_id,before_at,after_at)
+        except ValueError as exc:raise HTTPException(400,str(exc)) from None
+
+    @routes.get('/audit')
+    def audit(device_id: str | None = None, limit: int = Query(100,ge=1,le=1000), offset: int = Query(0,ge=0)):
+        return management.list_audit(device_id,limit,offset)
+
+    @routes.post('/restore/preview')
+    async def preview(request: RestorePreview):
+        try:return await asyncio.to_thread(management.preview_restore,settings,request.device,request.version_id,
+                                           request.actor,request.change_ref,request.exercise_id)
+        except ValueError as exc:raise HTTPException(409,str(exc)) from None
+        except Exception:raise HTTPException(502,'Restore preview failed; inspect operation audit') from None
+
+    @routes.post('/restore/execute')
+    async def execute(request: RestoreExecution, x_config_restore_token: str | None = Header(default=None)):
+        if not management.authorize_restore(x_config_restore_token):
+            management.audit('restore_execute','unauthenticated',status='denied',preview_id=request.preview_id)
+            raise HTTPException(403,'Recovery operator token required')
+        try:return await asyncio.to_thread(management.execute_restore,settings,request.preview_id,request.confirm_device)
+        except ValueError as exc:raise HTTPException(409,str(exc)) from None
+        except Exception:raise HTTPException(502,'Recovery requires inspection; check operation audit and EOS timer') from None
 
     @routes.post('/backup')
     async def backup(request: BackupRequest | None = None):
@@ -38,7 +117,7 @@ def router(settings):
         if request.phase in {'change','rollback'} and not request.exercise_id:
             raise HTTPException(400,'Exercise change/rollback requires an exercise_id')
         try:
-            result=await asyncio.to_thread(history.backup,settings,request.devices,request.exercise_id,request.phase)
+            result=await asyncio.to_thread(management.tracked_backup,settings,request.devices,request.exercise_id,request.phase,request.actor)
         except ValueError as exc:
             raise HTTPException(400,str(exc)) from None
         if result['status']=='busy':raise HTTPException(409,'Configuration backup already running')

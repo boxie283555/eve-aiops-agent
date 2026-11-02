@@ -67,8 +67,32 @@ def connect():
       CREATE TABLE IF NOT EXISTS changes (
         id TEXT PRIMARY KEY, device_id TEXT, owner TEXT, starts_at REAL, ends_at REAL,
         contexts TEXT, created_at REAL);
+      CREATE TABLE IF NOT EXISTS backup_observations (
+        id TEXT PRIMARY KEY, device_id TEXT, device TEXT, version_id TEXT,
+        observed_at REAL, status TEXT, source TEXT, error TEXT);
+      CREATE INDEX IF NOT EXISTS observations_device_time ON backup_observations(device_id,observed_at);
+      CREATE TABLE IF NOT EXISTS config_settings (key TEXT PRIMARY KEY, value TEXT);
+      CREATE TABLE IF NOT EXISTS config_audit (
+        seq INTEGER PRIMARY KEY AUTOINCREMENT, id TEXT UNIQUE, created_at REAL,
+        action TEXT, actor TEXT, device_id TEXT, status TEXT, details TEXT);
+      CREATE TABLE IF NOT EXISTS restore_previews (
+        id TEXT PRIMARY KEY, created_at REAL, expires_at REAL, device_id TEXT,
+        version_id TEXT, baseline_fingerprint TEXT, actor TEXT, change_ref TEXT,
+        status TEXT, details TEXT);
     ''')
     try:
+        if not db.execute("SELECT 1 FROM config_settings WHERE key='observations_migrated'").fetchone():
+            with db:
+                db.execute('BEGIN IMMEDIATE')
+                if not db.execute("SELECT 1 FROM config_settings WHERE key='observations_migrated'").fetchone():
+                    # Only reconstruct times for which durable evidence already exists.
+                    db.execute('''INSERT OR IGNORE INTO backup_observations
+                        SELECT 'legacy-first-'||id,device_id,device,id,created_at,'saved','legacy',NULL FROM versions''')
+                    db.execute('''INSERT OR IGNORE INTO backup_observations
+                        SELECT 'legacy-last-'||v.id,device_id,device,v.id,o.last_observed_at,'unchanged','legacy',NULL
+                        FROM versions v JOIN version_observations o ON o.version_id=v.id
+                        WHERE o.last_observed_at>v.created_at''')
+                    db.execute("INSERT INTO config_settings VALUES ('observations_migrated','true')")
         with db:
             yield db
     finally:
@@ -149,7 +173,7 @@ def differences(before, after):
     return changes
 
 
-def record_backup(device, raw, exercise_id=None, phase='observation'):
+def record_backup(device, raw, exercise_id=None, phase='observation', source='manual'):
     model = normalize_config(raw, device.platform)
     serialized = json.dumps(model, sort_keys=True, ensure_ascii=False)
     fingerprint = digest(serialized)
@@ -165,6 +189,8 @@ def record_backup(device, raw, exercise_id=None, phase='observation'):
             db.execute('''INSERT INTO version_observations(version_id,last_observed_at) VALUES (?,?)
                 ON CONFLICT(version_id) DO UPDATE SET last_observed_at=excluded.last_observed_at''',
                 (previous['id'],stamp))
+            db.execute('INSERT INTO backup_observations VALUES (?,?,?,?,?,?,?,?)',
+                       (uuid.uuid4().hex,device.id,device.name,previous['id'],stamp,'unchanged',source,None))
             return {'device':device.name,'status':'unchanged','version_id':previous['id'],'last_observed_at':stamp}
         version = uuid.uuid4().hex
         folder = Path(str(uuid.UUID(device.id)))
@@ -179,6 +205,8 @@ def record_backup(device, raw, exercise_id=None, phase='observation'):
         baseline = (previous['last_observed_at'] if previous['last_observed_at'] is not None
                     else previous['created_at']) if previous else None
         db.execute('INSERT INTO version_observations VALUES (?,?,?)',(version,stamp,baseline))
+        db.execute('INSERT INTO backup_observations VALUES (?,?,?,?,?,?,?,?)',
+                   (uuid.uuid4().hex,device.id,device.name,version,stamp,'saved',source,None))
         return {'device':device.name,'status':'saved','version_id':version,'raw_file':raw_file,
                 'fingerprint':fingerprint,'last_observed_at':stamp}
 
@@ -255,18 +283,20 @@ def fetch_config(device, settings):
         return conn.send_command('show running-config',read_timeout=30)
 
 
-def backup(settings, requested=None, exercise_id=None, phase='observation'):
+def backup(settings, requested=None, exercise_id=None, phase='observation', source='manual'):
     if not BACKUP_LOCK.acquire(blocking=False):
         return {'status':'busy','devices':[]}
     try:
         devices=current_lab_devices(settings,requested)
         def collect(device):
             try:
-                return record_backup(device,fetch_config(device,settings),exercise_id,phase)
+                return record_backup(device,fetch_config(device,settings),exercise_id,phase,source)
             except Exception as exc:
                 with connect() as db:
                     db.execute('INSERT OR REPLACE INTO attempts VALUES (?,?,?,?,?)',
                                (device.id,device.name,time.time(),0,type(exc).__name__))
+                    db.execute('INSERT INTO backup_observations VALUES (?,?,?,?,?,?,?,?)',
+                               (uuid.uuid4().hex,device.id,device.name,None,time.time(),'error',source,type(exc).__name__))
                 return {'device':device.name,'status':'error','error':type(exc).__name__}
         # Initialize schema before worker threads contend for it.
         with connect():pass

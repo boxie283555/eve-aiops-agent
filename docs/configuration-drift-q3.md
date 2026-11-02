@@ -12,7 +12,7 @@
 - `GET /config/drift?unowned=true`：保留全部无主记录，包括已处理与演练。支持 `status=open|resolved`、`origin=observed|exercise`、`limit`。
 - `POST /config/drift/{id}/resolve`：`{"actor":"operator","reason":"已核实并恢复"}`。处理结果不可改写原始归属、版本和差异。
 
-独立后台任务默认每 900 秒备份并检测；`AIOPS_CONFIG_BACKUP_INTERVAL` 可调，最低 300 秒。最多两个并发设备，同一进程备份不重入，手动冲突返回 409。任务不等待或调用全设备指标采集，不发送邮件。重启后首个定时任务等待一个周期；可以立即 POST 验证。
+独立后台任务默认每日 **02:00 Asia/Shanghai** 备份并检测。在 `/config/ui` 可修改时间、IANA 时区、设备范围或暂停计划；设置持久化到 SQLite，保存后立即重排 Cron 任务，重启后仍生效。空设备列表表示届时所有当前 lab 设备；显式设备列表仍在每次执行前重新检查 Site。旧的 `AIOPS_CONFIG_BACKUP_INTERVAL` 不再控制备份频率。最多两个并发设备，同一进程备份/恢复不重入，手动冲突返回 409。任务不等待或调用全设备指标采集。进程暂停造成一小时以内的计划延迟可合并执行一次；停机跨过计划时间后重启不补跑过去日期，可手动补备份。
 
 原文与规范化 JSON 按 UUID/版本 ID 保存，SQLite 保存索引、检测进度、归属和处理记录。备份文件先原子写入，之后提交索引；中断可能留孤立文件，但不会把未写完文件设为基线。检测在事务内完成并校验模型 SHA256；失败不覆盖成功基线。设备管理地址或平台改变时建立新基线，不将不同设备的配置比较为漂移。
 
@@ -52,3 +52,29 @@ CLI 按缩进保留父子层级，在接口、ACL、BGP 等配置块内保留命
 ## 验证范围与后续
 
 当前具备备份、结构化差异、持续检测、预登记关联及处理记录闭环。测试包括重启持久化基础、幂等、三类变化、秘密脱敏、规则顺序、损坏模型、失败基线保护、范围校验和指标来源隔离。真实目标仍需观察并核实至少三次现场发生、无匹配变更单的漂移。后续可对接 ITSM 身份/审批验证、备份加密与保留策略、非 lab 经授权推广和更完整的多厂商语义归一化。现有 API 沿用项目内网部署方式，尚未新增统一身份认证。
+
+
+## 配置管理页面与 API
+
+Grafana 四个中英文视图的 Q3 区均链接到 `http://192.168.20.169:8080/config/ui`，英文使用 `?lang=en`。页面支持设备多选立即备份、每日计划、单设备历史分页/时间筛选、双时间比对、恢复预览和操作审计；没有自动刷新，操作后更新相关记录。
+
+- `GET /config/devices`：当前 lab 清单及恢复试点能力。
+- `GET/PUT /config/schedule`：`enabled/time/timezone/devices`；写入另需填写 `actor`。时间格式 `HH:MM`。
+- `GET /config/history?device_id=UUID&start=秒&end=秒&limit=50&offset=0`：逐次成功/失败备份记录；相同内容不重复保存配置文件。
+- `GET /config/compare?device_id=UUID&before_at=秒&after_at=秒`：分别选择指定时间当时或之前最近一次成功观察，返回实际采样时间和脱敏结构化差异。无历史覆盖、时间倒置或设备地址/平台基线变化会拒绝比较。相同版本比较为空差异。
+- `GET /config/audit?limit=50&offset=0`：备份、计划、预览、恢复审计。操作人是用户声明，不是身份认证结果。记录含来源、目标/安全版本、变更引用、结果或脱敏错误类型。
+
+迁移只补入已有版本创建时间和已有最后成功观察时间，不制造旧周期的备份记录。新备份的观察记录与版本在同一事务提交，失败记录不会成为时间比对基线。
+
+## 恢复试点
+
+预览面向当前 lab；**执行默认仅开放 lab 的 `p1-host` / Arista EOS**。`AIOPS_CONFIG_RESTORE_DEVICES` 可由服务器管理员设置名称或 UUID 白名单，但其他厂商恢复尚未实现。恢复作用于 running-config，不写 startup-config。
+
+1. 页面选择设备与历史版本，填写操作人和变更引用，点击预览。`POST /config/restore/preview` 接收 `device/version_id/actor/change_ref`，读取当前配置并自动备份，返回脱敏差异和有效期 10 分钟的预览 ID。
+2. 输入完整设备名和恢复操作密钥，调用 `POST /config/restore/execute`，请求为 `preview_id/confirm_device`，密钥通过 `X-Config-Restore-Token` 请求头传入。首次启动自动生成私有 `config_history/restore-token`（0600）；服务器管理员可通过 `sudo docker exec eve-aiops-agent cat /app/data/config_history/restore-token` 获取，不能放在 URL 或工单中。页面不存储密钥。普通备份、比对沿用现有内网访问方式；此共享密钥不替代完整身份/权限系统。
+3. 执行前重新核实 Nautobot Site、UUID、地址、平台、白名单、目标原文及模型 SHA256、预览有效期及当前配置指纹。预览一次性消费；不符合条件需重新预览。
+4. 自动登记 `restore-预览ID` 操作引用并生成恢复前安全备份，防止将本次已登记恢复误判为无主；外部变更编号同时写入审计，仍不表示已接入审批系统。恢复成功或失败后关闭该操作的登记窗口，避免后续无关变更被归到本次恢复。
+5. EOS 配置文件暂存为权限受限的 flash 文件，在独立配置会话内 `rollback flash:...`，检查完整候选配置，并再次确认运行配置没有并发变化。使用 `commit timer 00:05:00`，重新建立管理连接验证完整配置、核对待确认会话归属后，再执行 `configure session pending-timer commit` 确认，最后备份与检测漂移。
+6. 提交前失败会中止本操作的候选会话。提交后的异常记录为 `verification_required`，由设备确认倒计时保护；审计不会在未观察到回退时声称回退成功。应核查运行配置及 EOS 会话状态后再操作。进程中断留下的 `running` 审计也需要人工核查。
+
+当前验证范围以 lab 试点为准，不能据此宣称 PA / NX-OS 恢复或全网配置恢复已经验收。

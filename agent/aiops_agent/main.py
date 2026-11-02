@@ -18,7 +18,7 @@ from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from .collector import Collector
 from .config_api import router as config_router
-from .config_history import backup as backup_configuration
+from .config_management import tracked_backup, get_schedule, apply_daily_schedule, restore_token
 from .inventory import load_inventory, inventory_status
 from .health import network_health, prometheus_health
 from .health_view import HEALTH_PAGE
@@ -46,7 +46,7 @@ MRTG_TELEMETRY_METRICS_URL = os.getenv("AIOPS_TELEGRAF_METRICS_URL", "http://tel
 MRTG_TELEMETRY_CACHE: dict[tuple[str, str, str], tuple[float, float]] = {}
 
 app = FastAPI(title="EVE AIOps Agent", version="0.1.0")
-app.include_router(config_router(settings))
+app.include_router(config_router(settings,lambda: apply_daily_schedule(scheduler,_config_backup_once)))
 
 
 def _hour_minute(value: str) -> tuple[int, int]:
@@ -118,7 +118,9 @@ def pa_interface_traffic() -> dict:
 
 async def _config_backup_once() -> None:
     try:
-        await asyncio.to_thread(backup_configuration, settings)
+        plan=await asyncio.to_thread(get_schedule)
+        if plan['enabled']:
+            await asyncio.to_thread(tracked_backup,settings,plan['devices'],actor='scheduler',source='daily')
     except Exception as exc:
         logger.warning("Configuration backup failed (%s)", type(exc).__name__)
 
@@ -167,8 +169,8 @@ async def startup() -> None:
                       replace_existing=True, max_instances=1, next_run_time=datetime.now())
     scheduler.add_job(_pa_traffic_once, "interval", seconds=PA_TRAFFIC_INTERVAL, id="collect_pa_traffic",
                       replace_existing=True, max_instances=1, next_run_time=datetime.now())
-    scheduler.add_job(_config_backup_once, "interval", seconds=max(300, int(os.getenv("AIOPS_CONFIG_BACKUP_INTERVAL", "900"))),
-                      id="config_backup", replace_existing=True, max_instances=1)
+    await asyncio.to_thread(restore_token)
+    apply_daily_schedule(scheduler,_config_backup_once)
     scheduler.start()
 
 
