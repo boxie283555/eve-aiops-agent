@@ -14,7 +14,7 @@ def inject(dashboard, lang='both'):
     for p in panels:
         if p['gridPos']['y'] >= (old_end if existing else anchor):
             p['gridPos']['y'] += anchor+11-old_end if existing else 11
-    panels.append(dict(id=9300,type='row',title=tr('Q3 · 配置备份与漂移','Q3 · Configuration and drift'),
+    panels.append(dict(id=9300,type='row',title=tr('配置备份与漂移','Configuration and drift'),
                        gridPos=dict(x=0,y=anchor,w=24,h=1),collapsed=False,panels=[]))
     rows=[
         ('未处理无主漂移','Open unowned drift','sum(aiops_config_drift_records{device=~"$device",origin="observed",status="open",unowned="true"})',True),
