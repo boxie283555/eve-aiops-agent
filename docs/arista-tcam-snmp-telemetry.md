@@ -42,15 +42,15 @@ Arista 发布的 EOS 4.37.0F OpenConfig 模型包含：
 - [Arista EOS 4.37.0F：资源利用率模型](https://github.com/aristanetworks/yang/blob/master/EOS-4.37.0F/openconfig/public/release/models/platform/openconfig-platform-common.yang)
 - [Arista EOS 4.37.0F：平台不支持项声明](https://github.com/aristanetworks/yang/blob/master/EOS-4.37.0F/release/openconfig/models/not-supported/arista-platform-notsupported-deviations.yang)
 
-## 本次核查结论（2026-11-02）
+## 前期 vEOS 核查（2026-11-02）
 
 用户确认 TCAM 验证对象必须是物理 Arista 交换机；vEOS 不支持物理 TCAM。当前 lab 的 Arista 为 vEOS-lab，因此停止在这些设备上继续尝试 TCAM 采集。
 
-本次确认的是官方 OID 与 YANG 模型定义，**尚未在物理交换机上验证返回值**。不能据 vEOS 的 CLI 空表、SNMP 空实例或 gNMI 连接结果推断物理交换机不支持。Telemetry 也不能在 vEOS 上补出不存在的硬件资源。
+前期仅确认官方 OID 与 YANG 模型定义；后续物理设备实测结果见下文。不能据 vEOS 的 CLI 空表、SNMP 空实例或 gNMI 连接结果推断物理交换机不支持。Telemetry 也不能在 vEOS 上补出不存在的硬件资源。
 
 此前对 lab `p1-host` 的临时服务尝试已撤销，归一化运行配置与测试前完全一致。最近一次记录为 `TCAM-PROTOCOL-PROBE-1793591656`：试验变更已预登记，两条试验漂移均为有主且已关闭；没有处理原有其他漂移。试验过程中 gNMI 显示服务未启用，故该尝试也不构成成功的 Telemetry 数据验证。
 
-已知认证失败的 7 台物理交换机遵照用户要求暂不诊断。继续实测需要一台可访问、获准测试的物理 Arista，并先确认当前 Nautobot Site 为 `lab`；本次未改动生产采集源、Grafana 查询或其他设备配置。
+此前因物理设备不在默认 lab 测试范围内，未主动测试。用户随后明确要求在物理设备上验证，授权了下文 DUT-7368 的只读测试；这不改变其他设备的默认测试范围。已知认证失败的 7 台物理交换机未重试认证。
 
 物理设备验证顺序：
 
@@ -58,3 +58,39 @@ Arista 发布的 EOS 4.37.0F OpenConfig 模型包含：
 2. 用已配置的只读 SNMP 验证 sysUpTime，再遍历上述资源表；基础 OID 成功但资源表为空，才继续检查 MIB 支持、SNMP view、设备功能和资源代理状态。超时不能直接判为“不支持”。
 3. 对照同一 resource/feature/forwarding-element 的 CLI 与 SNMP 值。至少采样两个时间点，确认更新、标签及容量口径。
 4. 如果该型号/EOS 没有可用 SNMP 资源实例，再验证 gNMI Capabilities、基础路径和 ASIC 资源路径；确认数据后才接 Telegraf SAMPLE 订阅与指标映射。
+
+
+## 物理设备与 SSH 隧道验证结果（2026-11-02）
+
+**确认可用：通过现有 SSH 隧道登录 DUT-7368，再读取设备本机 SNMP MIB，能够取得真实硬件资源数据。** 本次完成能力验证，持续采集程序仍使用原有实现。
+
+- 当前 Nautobot 设备：DUT-7368，UUID `b6ac4141-c38e-4a7b-adcf-cc937244a334`，Site `public-wan`。
+- 物理型号 / EOS：`7368-F` / `4.35.5M`；进入现有 SSH Tunnel 的地址为 `123.58.11.222:3016`。
+- 用户明确要求物理设备测试，并确认通信封装在 SSH Tunnel 内；本次仅查询该可登录设备，未修改设备配置。
+- 2026-11-02 12:06:02、12:08:20（Asia/Shanghai）两次完成采样。sysUpTime 从 `317937336` 增加到 `317951728` ticks，所列资源值在两次采样间相同。
+- used/free/max 三列各返回 **71 个实例**。第二次采样按完整 `(resource, feature, forwarding-element)` 索引与 `show hardware capacity | json` 的 71 行逐项核对，**全部一致**。
+
+| 资源 | Feature | 芯片 | 已用 | 空闲 | 最大容量 | 使用率 |
+| --- | --- | --- | ---: | ---: | ---: | ---: |
+| IFP | 总览（空字符串） | Switchcard1/0 | 286 | 2786 | 3072 | 9.31% |
+| EFP | 总览（空字符串） | Switchcard1/0 | 3 | 509 | 512 | 0.59% |
+| VFP | 总览（空字符串） | Switchcard1/0 | 25 | 487 | 512 | 4.88% |
+| IFP | Slice-1 | Switchcard1/0 | 107 | 149 | 256 | 41.80% |
+
+使用率按 `used/(used+free)*100` 计算。这里的 71 行包含其他 ASIC 资源，不能全部标记为 TCAM。
+
+通过上述 SSH 会话执行的只读命令：
+
+```text
+show snmp mib get 1.3.6.1.2.1.1.3.0
+show snmp mib walk 1.3.6.1.4.1.30065.3.22.1.1.1.4
+show snmp mib walk 1.3.6.1.4.1.30065.3.22.1.1.1.5
+show snmp mib walk 1.3.6.1.4.1.30065.3.22.1.1.1.7
+show hardware capacity | json
+```
+
+**传输方式要明确区分：** 上述实测是 SSH 传输 CLI 查询、本机读取 SNMP MIB；不是采集服务器直接向公网发送 UDP SNMP。当前 Nautobot 中 8 台物理设备的 SNMP endpoint 都为 `123.58.11.222:161`，直接读取 sysName/sysUpTime 超时，未确认该 endpoint 对应哪个设备；不能据此判断 SSH Tunnel 中的设备 OID 不可用。普通 SSH 端口转发也不能直接替代 UDP 转发。接入时可复用已存在的 SSH 会话读取 MIB，或在设备管理网内部部署 SNMP 采集器。
+
+设备上 gNMI 已运行于 `mgt` VRF 的 TCP 6030，配置了 TLS profile；本次没有读取其资源路径，不能宣称 gNMI TCAM 已验证，也没有为此改变现有服务。SNMP MIB 路径已证明可用，无需为了本次能力验证额外启用 Telemetry。
+
+同时发现已有 CLI 文本解析存在列错位：当前 IFP 的 `344` 是 highWatermark，却被已有解析器当作百分比；同一资源真实 `usedPercent` 为 EOS 显示的整数 `9`，由条目数计算为 `9.31%`。后续接入时应采用明确的 MIB 列或 JSON 字段映射，保留 Feature 和 Chip，避免总览与 Slice 明细被去重覆盖。本次未修改线上解析器或将新数据接入 Grafana。
