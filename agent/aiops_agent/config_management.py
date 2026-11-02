@@ -159,11 +159,13 @@ def backup_status():
 
 
 def backup_preview(version_id):
-    row,model=load_version(version_id)
-    # Use rows, not redacted dictionary keys, so distinct secret-bearing contexts survive.
-    blocks=[{'context':key,'configuration':value} for key,value in sorted(model.items())]
-    blocks=json.loads(re.sub(r'<sensitive:[a-f0-9]{64}>','<redacted>',json.dumps(blocks)))
-    return {'version':version_metadata(row),'redacted':True,'blocks':blocks}
+    from .config_redaction import redacted_file_text
+    row,_=load_version(version_id)
+    with (h.root_path()/row['raw_file']).open(encoding='utf-8',newline='') as handle:
+        raw=handle.read()
+    if h.digest(raw)!=row['raw_hash']:raise ValueError('Backup file integrity check failed')
+    return {'version':version_metadata(row),'redacted':True,
+            'content':redacted_file_text(raw,row['platform'])}
 
 
 def compare_versions(device_id, before_id, after_id):
