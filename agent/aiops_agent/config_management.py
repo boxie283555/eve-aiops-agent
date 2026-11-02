@@ -194,6 +194,33 @@ def compare(device_id, before_at, after_at):
             'requested_before_at':before_at,'requested_after_at':after_at}
 
 
+def compare_current(settings, device_id, version_id, actor):
+    """Read running configuration once; persist only audit metadata, never a snapshot."""
+    key=audit('compare_current',actor,device_id,version_id=version_id)
+    if not h.BACKUP_LOCK.acquire(blocking=False):
+        finish_audit(key,'busy');raise ValueError('Configuration operation already running')
+    try:
+        device=h.current_lab_devices(settings,[device_id])[0]
+        target,model,_=checked_target(device,version_id)
+        with h.connect() as db:
+            observation=db.execute('SELECT last_observed_at FROM version_observations WHERE version_id=?',
+                                   (version_id,)).fetchone()
+        before={**version_metadata(target),
+                'observed_at':observation['last_observed_at'] if observation else target['created_at']}
+        started=time.time()
+        current=h.fetch_config(device,settings)
+        observed=time.time()
+        changes=h.differences(model,h.normalize_config(current,device.platform))
+        finish_audit(key,'ok',device=device.name,read_started_at=started,observed_at=observed,
+                     changed_context_count=len(changes))
+        return {'mode':'current','device_id':device.id,'device':device.name,'before':before,
+                'after':{'observed_at':observed,'read_started_at':started,'scope':'running-config'},
+                'changes':changes,'redacted':True,'persisted':False,'audit_id':key}
+    except Exception as exc:
+        finish_audit(key,'error',error=type(exc).__name__);raise
+    finally:h.BACKUP_LOCK.release()
+
+
 def restore_supported(device):
     # Initial execution rollout is deliberately limited to the user's selected lab pilot.
     allowed={v.strip() for v in os.getenv('AIOPS_CONFIG_RESTORE_DEVICES','p1-host').split(',') if v.strip()}

@@ -39,6 +39,12 @@ class RestoreExecution(BaseModel):
     confirm_device: str = Field(min_length=1,max_length=100)
 
 
+class CurrentComparison(BaseModel):
+    device: str = Field(min_length=1,max_length=100)
+    version_id: str = Field(min_length=1,max_length=100)
+    actor: str = Field(min_length=1,max_length=100)
+
+
 class Resolution(BaseModel):
     actor: str = Field(min_length=1,max_length=100)
     reason: str = Field(min_length=1,max_length=1000)
@@ -101,6 +107,16 @@ def router(settings, schedule_changed=None):
 
     @routes.get('/backup-status')
     def backup_status():return management.backup_status()
+
+    @routes.post('/compare/current')
+    async def compare_current(request: CurrentComparison):
+        try:
+            return await asyncio.to_thread(management.compare_current,settings,request.device,
+                                           request.version_id,request.actor)
+        except ValueError:
+            raise HTTPException(409,'Comparison unavailable: check lab scope, backup integrity and configuration operation audit') from None
+        except Exception:
+            raise HTTPException(502,'Could not read or compare current configuration; inspect operation audit') from None
 
     @routes.get('/audit')
     def audit(device_id: str | None = None, limit: int = Query(100,ge=1,le=1000), offset: int = Query(0,ge=0)):

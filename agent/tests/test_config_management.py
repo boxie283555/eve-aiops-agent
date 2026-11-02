@@ -67,6 +67,75 @@ class ManagementTests(unittest.TestCase):
         self.assertEqual(m.compare(self.device.id,100,250)['after']['observed_at'],100)
         self.assertNotIn('secret must not escape',json.dumps(m.list_audit()))
 
+    def test_current_compare_is_forward_redacted_and_does_not_save_evidence(self):
+        first=self.save(stamp=100);self.save(stamp=200)
+        tables=['versions','version_observations','backup_observations','attempts','drifts','restore_previews','changes']
+        def snapshot():
+            with h.connect() as db:
+                return {t:[tuple(r) for r in db.execute('SELECT * FROM '+t)] for t in tables}
+        before=snapshot();files={p.relative_to(self.temp.name) for p in Path(self.temp.name).rglob('*')}
+        current=CHANGED.replace('confidential','new-private-secret')
+        with patch.object(h,'current_lab_devices',return_value=[self.device]),\
+                patch.object(h,'fetch_config',return_value=current) as fetch,\
+                patch.object(h,'record_backup') as record,patch.object(h,'detect_drift') as detect,\
+                patch.object(m,'apply_eos_restore') as apply:
+            result=m.compare_current(self.settings,self.device.id,first['version_id'],'tester')
+            fetch.assert_called_once_with(self.device,self.settings)
+            record.assert_not_called();detect.assert_not_called();apply.assert_not_called()
+        self.assertEqual(result['before']['created_at'],100)
+        self.assertEqual(result['before']['observed_at'],200)
+        self.assertGreaterEqual(result['after']['observed_at'],result['after']['read_started_at'])
+        change=next(c for c in result['changes'] if c['context']=='interface Ethernet1')
+        self.assertIn('original',json.dumps(change['before']));self.assertIn('modified',json.dumps(change['after']))
+        self.assertFalse(result['persisted']);self.assertIn('<redacted>',json.dumps(result))
+        self.assertNotIn('confidential',json.dumps(result));self.assertNotIn('new-private-secret',json.dumps(result))
+        self.assertEqual(before,snapshot())
+        self.assertEqual(files,{p.relative_to(self.temp.name) for p in Path(self.temp.name).rglob('*')})
+        audit=m.list_audit()['records'][0]
+        self.assertEqual(audit['action'],'compare_current');self.assertEqual(audit['status'],'ok')
+        self.assertNotIn('description',json.dumps(audit));self.assertNotIn('new-private-secret',json.dumps(audit))
+
+    def test_current_compare_scope_identity_corruption_and_lock_block_device_reads(self):
+        first=self.save()
+        with patch.object(h,'fetch_config') as fetch:
+            with patch.object(h,'current_lab_devices',side_effect=ValueError('outside lab')):
+                with self.assertRaises(ValueError):m.compare_current(self.settings,self.device.id,first['version_id'],'tester')
+            with patch.object(h,'current_lab_devices',return_value=[self.device]):
+                self.device.host='192.0.2.99'
+                with self.assertRaises(ValueError):m.compare_current(self.settings,self.device.id,first['version_id'],'tester')
+                self.device.host='192.0.2.10'
+                (Path(self.temp.name)/first['raw_file']).write_text('corrupt')
+                with self.assertRaises(ValueError):m.compare_current(self.settings,self.device.id,first['version_id'],'tester')
+            h.BACKUP_LOCK.acquire()
+            try:
+                with self.assertRaisesRegex(ValueError,'already running'):
+                    m.compare_current(self.settings,self.device.id,first['version_id'],'tester')
+            finally:h.BACKUP_LOCK.release()
+            fetch.assert_not_called()
+        self.assertFalse(h.BACKUP_LOCK.locked())
+
+    def test_current_compare_api_noop_failure_redaction_and_panos(self):
+        first=self.save();app=FastAPI();app.include_router(router(self.settings));client=TestClient(app)
+        body={'device':self.device.id,'version_id':first['version_id'],'actor':'tester'}
+        with patch.object(h,'current_lab_devices',return_value=[self.device]):
+            with patch.object(h,'fetch_config',return_value=BASE):
+                result=client.post('/config/compare/current',json=body)
+                self.assertEqual(result.status_code,200);self.assertEqual(result.json()['changes'],[])
+            for error in [TimeoutError('private-secret'),ValueError('private-secret')]:
+                with patch.object(h,'fetch_config',side_effect=error):
+                    result=client.post('/config/compare/current',json=body)
+                    self.assertIn(result.status_code,[409,502]);self.assertNotIn('private-secret',result.text)
+                    self.assertNotIn('private-secret',json.dumps(m.list_audit()))
+                    self.assertFalse(h.BACKUP_LOCK.locked())
+            self.device.platform='paloalto_panos'
+            xml='<config><shared><address><entry name="test"><ip-netmask>192.0.2.1</ip-netmask></entry></address></shared></config>'
+            target=self.save(xml)
+            with patch.object(h,'fetch_config',return_value=xml.replace('192.0.2.1','192.0.2.2')):
+                result=m.compare_current(self.settings,self.device.id,target['version_id'],'tester')
+                self.assertTrue(result['changes']);self.assertEqual(result['mode'],'current')
+        self.assertEqual(client.get('/config/compare/current').status_code,405)
+        self.assertEqual(client.post('/config/compare/current',json={}).status_code,422)
+
     def test_legacy_migration_uses_only_known_times_and_is_idempotent(self):
         self.save(stamp=100);self.save(stamp=200)
         with h.connect() as db:
