@@ -18,6 +18,7 @@ from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from .collector import Collector
 from .config_api import router as config_router
+from .firewall_api import router as firewall_router
 from .config_management import tracked_backup, get_schedule, apply_daily_schedule, restore_token
 from .inventory import load_inventory, inventory_status
 from .health import network_health, prometheus_health
@@ -47,6 +48,7 @@ MRTG_TELEMETRY_CACHE: dict[tuple[str, str, str], tuple[float, float]] = {}
 
 app = FastAPI(title="EVE AIOps Agent", version="0.1.0")
 app.include_router(config_router(settings,lambda: apply_daily_schedule(scheduler,_config_backup_once)))
+app.include_router(firewall_router(settings))
 
 
 def _hour_minute(value: str) -> tuple[int, int]:
@@ -135,6 +137,8 @@ async def _compare_once() -> None:
 
 @app.on_event("startup")
 async def startup() -> None:
+    from .firewall_execution import recover_interrupted
+    await asyncio.to_thread(recover_interrupted)
     settings.snapshots_path.mkdir(parents=True, exist_ok=True)
     settings.reports_path.mkdir(parents=True, exist_ok=True)
     scheduler.add_job(
@@ -356,7 +360,7 @@ def tools_view() -> str:
 </head>
 <body>
   <header>
-    <h1>AI Networking OPS Tools</h1>
+    <h1>AI Networking OPS Tools</h1><p><a href="/firewall/">防火墙策略中心 / Firewall Policy</a> · <a href="/config/ui">配置与漂移 / Configuration & Drift</a></p>
   </header>
   <main>
     <section>

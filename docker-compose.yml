@@ -1,4 +1,16 @@
 services:
+  firewall-policy:
+    build: ./firewall-policy
+    container_name: eve-aiops-firewall-policy
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 512m
+    cpus: 1.0
+    expose:
+      - "8081"
+
   agent:
     build:
       context: ./agent

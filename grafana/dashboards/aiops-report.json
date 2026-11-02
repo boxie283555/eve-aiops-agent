@@ -35,6 +35,12 @@
       "targetBlank": true,
       "icon": "external link",
       "tags": []
+    },
+    {
+      "title": "防火墙策略中心 ↗",
+      "type": "link",
+      "url": "http://192.168.20.169:8080/firewall/?lang=zh",
+      "targetBlank": true
     }
   ],
   "panels": [

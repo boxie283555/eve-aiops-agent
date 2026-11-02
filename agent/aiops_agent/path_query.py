@@ -29,6 +29,7 @@ def find_path(
     destination_port=None,
     application=None,
     ingress_interface=None,
+    policy_replay_ids=frozenset(),
 ):
     devices = {d["id"]: d for d in snapshot.devices if site == "all" or d.get("site") == site}
     interfaces = {i["id"]: i for i in snapshot.interfaces if i["device_id"] in devices}
@@ -532,9 +533,16 @@ def find_path(
                     raise ValueError("PA egress interface is down or stale")
                 return [(r["interface"], r["id"]) for r in rows]
             evidence = devices[did].get("pa_policy")
-            if evidence and not fresh(evidence):
+            # Explicit internal Q4 replay only; ordinary path queries still reject
+            # stale policy. Backup timestamps are retained, never made current.
+            replayed = (did in policy_replay_ids and evidence
+                        and evidence.get("evidence_source") == "q3_backup_replay")
+            if evidence and not replayed and not fresh(evidence):
                 evidence = None
             decision = inspect_firewall(evidence, packet, interfaces.get(context[0], {}).get("name", ""), pa_routes)
+            if replayed:
+                decision.update(evidence_level="backup_replay", snapshot_id=evidence.get("snapshot_id"),
+                                policy_basis="selected_backup_on_current_topology")
             path = path + [step({**decision, "device":devices[did]["name"], "device_id":did,
                 "vrf":vrf_name, "interface":interfaces.get(context[0],{}).get("name"),
                 "verification_flow":packet.data()}, "firewall_policy")]

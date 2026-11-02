@@ -35,6 +35,12 @@
       "targetBlank": true,
       "icon": "external link",
       "tags": []
+    },
+    {
+      "title": "Firewall Policy ↗",
+      "type": "link",
+      "url": "http://192.168.20.169:8080/firewall/?lang=en",
+      "targetBlank": true
     }
   ],
   "panels": [
