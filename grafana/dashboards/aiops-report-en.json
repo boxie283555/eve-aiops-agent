@@ -818,12 +818,325 @@
       ]
     },
     {
+      "id": 9306,
+      "type": "table",
+      "title": "Open unowned drift · device details",
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(label_replace((sum by(device) (aiops_config_drift_records{device=~\"$device\",origin=\"observed\",status=\"open\",unowned=\"true\"}) > 0), \"reason\", \"no_matching_registered_change\", \"device\", \".*\")) and on() (aiops_config_history_available == 1) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "refId": "B",
+          "expr": "((max by(device) (aiops_config_drift_last_detected_timestamp_seconds{device=~\"$device\",origin=\"observed\"}) * 1000) and on(device) (sum by(device) (aiops_config_drift_records{device=~\"$device\",origin=\"observed\",status=\"open\",unowned=\"true\"}) > 0)) and on() (aiops_config_history_available == 1) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "description": "Devices behind the corresponding card, respecting device filters and the selected end time. An empty table means no matching issue only when the card is zero; missing data is not healthy. Click a device for backup history.",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "—",
+          "custom": {
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Latest detection"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dateTimeAsIso"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Explanation"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "no_matching_registered_change": {
+                        "text": "No matching preregistered change; unresolved"
+                      },
+                      "authentication": {
+                        "text": "Authentication failed"
+                      },
+                      "timeout": {
+                        "text": "Connection or read timeout"
+                      },
+                      "connection": {
+                        "text": "Connection error"
+                      },
+                      "api_error": {
+                        "text": "Device API request failed"
+                      },
+                      "invalid_response": {
+                        "text": "Configuration response or validation failed"
+                      },
+                      "storage_permission": {
+                        "text": "Backup storage permission denied"
+                      },
+                      "storage_error": {
+                        "text": "Backup database error"
+                      },
+                      "unknown": {
+                        "text": "Unclassified error; inspect operation audit"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Device"
+            },
+            "properties": [
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "View device backup history",
+                    "url": "http://192.168.20.169:8080/config/ui?lang=en&device=${__value.raw:percentencode}",
+                    "targetBlank": true
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "md",
+        "footer": {
+          "show": false
+        }
+      },
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "device",
+            "mode": "outer"
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "device",
+                "Value #A",
+                "Value #B",
+                "reason"
+              ]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "device": "Device",
+              "Value #A": "Open records",
+              "Value #B": "Latest detection",
+              "reason": "Explanation"
+            },
+            "indexByName": {
+              "device": 0,
+              "Value #A": 1,
+              "Value #B": 2,
+              "reason": 3
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 9307,
+      "type": "table",
+      "title": "Latest backup failures · device details",
+      "gridPos": {
+        "x": 12,
+        "y": 20,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(((max by(device) (aiops_config_backup_last_attempt_timestamp_seconds{device=~\"$device\"}) * 1000) * on(device) group_left(reason) max by(device,reason) (aiops_config_backup_failure_info{device=~\"$device\"})) and on(device) (max by(device) (aiops_config_backup_success{device=~\"$device\"}) == 0)) and on() (aiops_config_history_available == 1) and on() (up{job=\"eve-aiops-agent\"} == 1)",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "description": "Devices behind the corresponding card, respecting device filters and the selected end time. An empty table means no matching issue only when the card is zero; missing data is not healthy. Click a device for backup history.",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "—",
+          "custom": {
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Failed attempt time"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dateTimeAsIso"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Failure reason"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "no_matching_registered_change": {
+                        "text": "No matching preregistered change; unresolved"
+                      },
+                      "authentication": {
+                        "text": "Authentication failed"
+                      },
+                      "timeout": {
+                        "text": "Connection or read timeout"
+                      },
+                      "connection": {
+                        "text": "Connection error"
+                      },
+                      "api_error": {
+                        "text": "Device API request failed"
+                      },
+                      "invalid_response": {
+                        "text": "Configuration response or validation failed"
+                      },
+                      "storage_permission": {
+                        "text": "Backup storage permission denied"
+                      },
+                      "storage_error": {
+                        "text": "Backup database error"
+                      },
+                      "unknown": {
+                        "text": "Unclassified error; inspect operation audit"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Device"
+            },
+            "properties": [
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "View device backup history",
+                    "url": "http://192.168.20.169:8080/config/ui?lang=en&device=${__value.raw:percentencode}",
+                    "targetBlank": true
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "md",
+        "footer": {
+          "show": false
+        }
+      },
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "device",
+                "Value",
+                "reason"
+              ]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "device": "Device",
+              "Value": "Failed attempt time",
+              "reason": "Failure reason"
+            },
+            "indexByName": {
+              "device": 0,
+              "Value": 1,
+              "reason": 2
+            }
+          }
+        }
+      ]
+    },
+    {
       "id": 9305,
       "type": "text",
       "title": "Metric definitions and scope",
       "gridPos": {
         "x": 0,
-        "y": 20,
+        "y": 28,
         "w": 24,
         "h": 6
       },
@@ -838,7 +1151,7 @@
       "type": "stat",
       "gridPos": {
         "x": 0,
-        "y": 26,
+        "y": 34,
         "w": 6,
         "h": 4
       },
@@ -896,7 +1209,7 @@
       "type": "stat",
       "gridPos": {
         "x": 6,
-        "y": 26,
+        "y": 34,
         "w": 6,
         "h": 4
       },
@@ -970,7 +1283,7 @@
       "type": "stat",
       "gridPos": {
         "x": 12,
-        "y": 26,
+        "y": 34,
         "w": 6,
         "h": 4
       },
@@ -1044,7 +1357,7 @@
       "type": "stat",
       "gridPos": {
         "x": 18,
-        "y": 26,
+        "y": 34,
         "w": 6,
         "h": 4
       },
@@ -1118,7 +1431,7 @@
       "type": "table",
       "gridPos": {
         "x": 0,
-        "y": 30,
+        "y": 38,
         "w": 24,
         "h": 11
       },
@@ -1339,7 +1652,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 41,
+        "y": 49,
         "w": 12,
         "h": 8
       },
@@ -1425,7 +1738,7 @@
       "type": "bargauge",
       "gridPos": {
         "x": 12,
-        "y": 41,
+        "y": 49,
         "w": 12,
         "h": 8
       },
@@ -1491,7 +1804,7 @@
       "type": "row",
       "gridPos": {
         "x": 0,
-        "y": 49,
+        "y": 57,
         "w": 24,
         "h": 1
       },
@@ -1513,7 +1826,7 @@
       "type": "table",
       "gridPos": {
         "x": 0,
-        "y": 50,
+        "y": 58,
         "w": 12,
         "h": 11
       },
@@ -1596,7 +1909,7 @@
       "type": "text",
       "gridPos": {
         "x": 12,
-        "y": 50,
+        "y": 58,
         "w": 12,
         "h": 7
       },
@@ -1619,7 +1932,7 @@
       "type": "stat",
       "gridPos": {
         "x": 12,
-        "y": 57,
+        "y": 65,
         "w": 4,
         "h": 4
       },
@@ -1693,7 +2006,7 @@
       "type": "stat",
       "gridPos": {
         "x": 16,
-        "y": 57,
+        "y": 65,
         "w": 4,
         "h": 4
       },
@@ -1767,7 +2080,7 @@
       "type": "stat",
       "gridPos": {
         "x": 20,
-        "y": 57,
+        "y": 65,
         "w": 4,
         "h": 4
       },
@@ -1841,7 +2154,7 @@
       "type": "stat",
       "gridPos": {
         "x": 0,
-        "y": 61,
+        "y": 69,
         "w": 6,
         "h": 4
       },
@@ -1913,7 +2226,7 @@
       "type": "stat",
       "gridPos": {
         "x": 6,
-        "y": 61,
+        "y": 69,
         "w": 6,
         "h": 4
       },
@@ -1971,7 +2284,7 @@
       "type": "stat",
       "gridPos": {
         "x": 12,
-        "y": 61,
+        "y": 69,
         "w": 6,
         "h": 4
       },
@@ -2029,7 +2342,7 @@
       "type": "stat",
       "gridPos": {
         "x": 18,
-        "y": 61,
+        "y": 69,
         "w": 6,
         "h": 4
       },
@@ -2087,7 +2400,7 @@
       "type": "row",
       "gridPos": {
         "x": 0,
-        "y": 65,
+        "y": 73,
         "w": 24,
         "h": 1
       },
@@ -2109,7 +2422,7 @@
       "type": "bargauge",
       "gridPos": {
         "x": 0,
-        "y": 66,
+        "y": 74,
         "w": 8,
         "h": 9
       },
@@ -2192,7 +2505,7 @@
       "type": "bargauge",
       "gridPos": {
         "x": 8,
-        "y": 66,
+        "y": 74,
         "w": 8,
         "h": 9
       },
@@ -2275,7 +2588,7 @@
       "type": "bargauge",
       "gridPos": {
         "x": 16,
-        "y": 66,
+        "y": 74,
         "w": 8,
         "h": 9
       },
@@ -2358,7 +2671,7 @@
       "type": "table",
       "gridPos": {
         "x": 0,
-        "y": 75,
+        "y": 83,
         "w": 12,
         "h": 10
       },
@@ -2539,7 +2852,7 @@
       "type": "table",
       "gridPos": {
         "x": 12,
-        "y": 75,
+        "y": 83,
         "w": 12,
         "h": 10
       },
@@ -2622,7 +2935,7 @@
       "type": "table",
       "gridPos": {
         "x": 0,
-        "y": 85,
+        "y": 93,
         "w": 12,
         "h": 9
       },
@@ -2708,7 +3021,7 @@
       "type": "table",
       "gridPos": {
         "x": 12,
-        "y": 85,
+        "y": 93,
         "w": 12,
         "h": 9
       },
@@ -2800,7 +3113,7 @@
       "type": "table",
       "gridPos": {
         "x": 0,
-        "y": 94,
+        "y": 102,
         "w": 12,
         "h": 10
       },
@@ -2938,7 +3251,7 @@
       "type": "table",
       "gridPos": {
         "x": 12,
-        "y": 94,
+        "y": 102,
         "w": 12,
         "h": 10
       },
@@ -3021,7 +3334,7 @@
       "type": "row",
       "gridPos": {
         "x": 0,
-        "y": 104,
+        "y": 112,
         "w": 24,
         "h": 1
       },
@@ -3043,7 +3356,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 105,
+        "y": 113,
         "w": 12,
         "h": 8
       },
@@ -3129,7 +3442,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 105,
+        "y": 113,
         "w": 12,
         "h": 8
       },
@@ -3215,7 +3528,7 @@
       "type": "bargauge",
       "gridPos": {
         "x": 0,
-        "y": 113,
+        "y": 121,
         "w": 12,
         "h": 10
       },
@@ -3281,7 +3594,7 @@
       "type": "table",
       "gridPos": {
         "x": 12,
-        "y": 113,
+        "y": 121,
         "w": 12,
         "h": 10
       },
@@ -3367,7 +3680,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 123,
+        "y": 131,
         "w": 12,
         "h": 8
       },
@@ -3453,7 +3766,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 123,
+        "y": 131,
         "w": 12,
         "h": 8
       },
@@ -3539,7 +3852,7 @@
       "type": "row",
       "gridPos": {
         "x": 0,
-        "y": 131,
+        "y": 139,
         "w": 24,
         "h": 1
       },
@@ -3561,7 +3874,7 @@
       "type": "stat",
       "gridPos": {
         "x": 0,
-        "y": 132,
+        "y": 140,
         "w": 6,
         "h": 4
       },
@@ -3619,7 +3932,7 @@
       "type": "stat",
       "gridPos": {
         "x": 6,
-        "y": 132,
+        "y": 140,
         "w": 6,
         "h": 4
       },
@@ -3677,7 +3990,7 @@
       "type": "stat",
       "gridPos": {
         "x": 12,
-        "y": 132,
+        "y": 140,
         "w": 6,
         "h": 4
       },
@@ -3735,7 +4048,7 @@
       "type": "stat",
       "gridPos": {
         "x": 18,
-        "y": 132,
+        "y": 140,
         "w": 6,
         "h": 4
       },
@@ -3793,7 +4106,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 136,
+        "y": 144,
         "w": 12,
         "h": 8
       },
@@ -3867,7 +4180,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 136,
+        "y": 144,
         "w": 12,
         "h": 8
       },
@@ -3941,7 +4254,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 144,
+        "y": 152,
         "w": 12,
         "h": 8
       },
@@ -4015,7 +4328,7 @@
       "type": "text",
       "gridPos": {
         "x": 12,
-        "y": 144,
+        "y": 152,
         "w": 12,
         "h": 8
       },
@@ -4038,7 +4351,7 @@
       "type": "row",
       "gridPos": {
         "x": 0,
-        "y": 152,
+        "y": 160,
         "w": 24,
         "h": 1
       },
@@ -4060,7 +4373,7 @@
       "type": "stat",
       "gridPos": {
         "x": 0,
-        "y": 153,
+        "y": 161,
         "w": 8,
         "h": 4
       },
@@ -4118,7 +4431,7 @@
       "type": "stat",
       "gridPos": {
         "x": 8,
-        "y": 153,
+        "y": 161,
         "w": 8,
         "h": 4
       },
@@ -4176,7 +4489,7 @@
       "type": "stat",
       "gridPos": {
         "x": 16,
-        "y": 153,
+        "y": 161,
         "w": 8,
         "h": 4
       },
@@ -4234,7 +4547,7 @@
       "type": "bargauge",
       "gridPos": {
         "x": 0,
-        "y": 157,
+        "y": 165,
         "w": 12,
         "h": 10
       },
@@ -4300,7 +4613,7 @@
       "type": "bargauge",
       "gridPos": {
         "x": 12,
-        "y": 157,
+        "y": 165,
         "w": 12,
         "h": 10
       },
@@ -4366,7 +4679,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 167,
+        "y": 175,
         "w": 12,
         "h": 8
       },
@@ -4452,7 +4765,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 167,
+        "y": 175,
         "w": 12,
         "h": 8
       },
@@ -4526,7 +4839,7 @@
       "type": "table",
       "gridPos": {
         "x": 0,
-        "y": 175,
+        "y": 183,
         "w": 12,
         "h": 10
       },
@@ -4632,7 +4945,7 @@
       "type": "table",
       "gridPos": {
         "x": 12,
-        "y": 175,
+        "y": 183,
         "w": 12,
         "h": 10
       },
@@ -4721,7 +5034,7 @@
       "type": "text",
       "gridPos": {
         "x": 0,
-        "y": 185,
+        "y": 193,
         "w": 24,
         "h": 4
       },
@@ -4744,7 +5057,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 189,
+        "y": 197,
         "w": 12,
         "h": 10
       },
@@ -4818,7 +5131,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 189,
+        "y": 197,
         "w": 12,
         "h": 10
       },

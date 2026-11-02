@@ -353,7 +353,7 @@ class DriftCollector:
             db=sqlite3.connect((root_path()/'history.sqlite3').as_uri()+'?mode=ro', uri=True, timeout=1)
             try:
                 db.row_factory=sqlite3.Row
-                groups=db.execute('SELECT device,origin,status,unowned,count(*) AS n FROM drifts GROUP BY device,origin,status,unowned').fetchall()
+                groups=db.execute('SELECT device,origin,status,unowned,count(*) AS n,MAX(detected_at) AS latest FROM drifts GROUP BY device,origin,status,unowned').fetchall()
                 devices=db.execute('SELECT * FROM attempts').fetchall()
             finally:
                 db.close()
@@ -373,8 +373,37 @@ class DriftCollector:
                         labels=(device['device'],origin,status,unowned)
                         metric.add_metric(list(labels),counts.get(labels,0))
         yield metric
+        metric=GaugeMetricFamily('aiops_config_drift_last_detected_timestamp_seconds',
+                                 'Latest detection among currently open unowned drift records.',labels=['device','origin'])
+        for row in groups:
+            if row['status']=='open' and row['unowned']:
+                metric.add_metric([row['device'],row['origin']],row['latest'])
+        yield metric
+        metric=GaugeMetricFamily('aiops_config_backup_failure_info',
+                                 'Latest failed backup attempt with a bounded error category.',labels=['device','reason'])
+        for device in devices:
+            if not device['success']:
+                metric.add_metric([device['device'],backup_failure_reason(device['error'])],1)
+        yield metric
         for name,description,column in [('success','Latest configuration backup attempt succeeded.','success'),
                                         ('last_attempt_timestamp_seconds','Last configuration backup attempt.','attempted_at')]:
             metric=GaugeMetricFamily('aiops_config_backup_'+name,description,labels=['device'])
             for device in devices:metric.add_metric([device['device']],device[column])
             yield metric
+
+
+def backup_failure_reason(error):
+    # Only exception class names are persisted by backup(). Never expose an
+    # arbitrary error message or a device response as a metric label.
+    categories={
+        'NetmikoAuthenticationException':'authentication', 'AuthenticationException':'authentication',
+        'NetmikoTimeoutException':'timeout', 'ReadTimeout':'timeout', 'TimeoutError':'timeout',
+        'ConnectTimeout':'timeout', 'ReadTimeoutError':'timeout',
+        'ConnectionError':'connection', 'SSHException':'connection', 'ConnectError':'connection',
+        'ConnectionRefusedError':'connection', 'ConnectionResetError':'connection',
+        'HTTPError':'api_error', 'HTTPStatusError':'api_error',
+        'ValueError':'invalid_response', 'ParseError':'invalid_response',
+        'PermissionError':'storage_permission', 'OperationalError':'storage_error',
+        'DatabaseError':'storage_error',
+    }
+    return categories.get(error,'unknown')

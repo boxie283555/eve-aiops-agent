@@ -233,6 +233,36 @@ class HistoryTests(unittest.TestCase):
                 client.return_value.devices.return_value=[altered]
                 with self.assertRaises(ValueError):h.current_lab_devices(settings,[self.device.name])
 
+    def test_problem_metrics_identify_devices_and_clear_on_recovery(self):
+        registry=CollectorRegistry();registry.register(h.DriftCollector())
+        self.save();h.detect_drift()
+        self.save(BASE.replace('original','observed-change'));h.detect_drift()
+        observed=h.list_drifts(origin='observed')['records'][0]
+        self.save(BASE.replace('original','exercise-change'),'exercise','change');h.detect_drift()
+        latest='aiops_config_drift_last_detected_timestamp_seconds'
+        self.assertEqual(registry.get_sample_value(latest,{'device':self.device.name,'origin':'observed'}),observed['detected_at'])
+        self.assertIsNotNone(registry.get_sample_value(latest,{'device':self.device.name,'origin':'exercise'}))
+        with h.connect() as db:
+            db.execute('INSERT OR REPLACE INTO attempts VALUES (?,?,?,?,?)',
+                       (self.device.id,self.device.name,12345,0,'NetmikoTimeoutException'))
+        failure='aiops_config_backup_failure_info'
+        self.assertEqual(registry.get_sample_value(failure,{'device':self.device.name,'reason':'timeout'}),1)
+        self.assertEqual(registry.get_sample_value('aiops_config_backup_last_attempt_timestamp_seconds',{'device':self.device.name}),12345)
+        h.resolve_drift(observed['id'],'tester','handled')
+        self.assertIsNone(registry.get_sample_value(latest,{'device':self.device.name,'origin':'observed'}))
+        self.assertIsNotNone(registry.get_sample_value(latest,{'device':self.device.name,'origin':'exercise'}))
+        self.save(BASE.replace('original','exercise-change'))
+        self.assertIsNone(registry.get_sample_value(failure,{'device':self.device.name,'reason':'timeout'}))
+
+    def test_failure_reason_labels_do_not_expose_arbitrary_errors(self):
+        self.save()
+        with h.connect() as db:
+            db.execute('UPDATE attempts SET success=0,error=?',('password=private-error-secret',))
+        registry=CollectorRegistry();registry.register(h.DriftCollector())
+        text=generate_latest(registry).decode()
+        self.assertNotIn('private-error-secret',text)
+        self.assertEqual(registry.get_sample_value('aiops_config_backup_failure_info',{'device':self.device.name,'reason':'unknown'}),1)
+
     def test_api_filters_resolve_and_no_raw_configuration(self):
         from fastapi import FastAPI
         from fastapi.testclient import TestClient
