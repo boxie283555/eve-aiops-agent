@@ -59,6 +59,9 @@ def inject(dashboard, lang='both'):
     }
     def detail(pid,title,x,queries,labels,time_field):
         device_label=labels['device'];reason_label=labels['reason']
+        drift_link=pid==9306
+        link_path='/config/drift/ui' if drift_link else '/config/ui'
+        link_title=tr('查看配置变化','View configuration changes') if drift_link else tr('查看设备备份历史','View device backup history')
         p=dict(id=pid,type='table',title=title,gridPos=dict(x=x,y=anchor+5,w=12,h=8),
             datasource={'type':'prometheus','uid':'Prometheus'},
             targets=[dict(refId=ref,expr='('+expr+')'+gate,instant=True,range=False,format='table') for ref,expr in queries],
@@ -67,11 +70,14 @@ def inject(dashboard, lang='both'):
             fieldConfig={'defaults':{'noValue':'—','custom':{'cellOptions':{'type':'auto'}}},'overrides':[
                 {'matcher':{'id':'byName','options':labels[time_field]},'properties':[{'id':'unit','value':'dateTimeAsIso'}]},
                 {'matcher':{'id':'byName','options':reason_label},'properties':[{'id':'mappings','value':[{'type':'value','options':{k:{'text':v} for k,v in reason_labels.items()}}]}]},
-                {'matcher':{'id':'byName','options':device_label},'properties':[{'id':'links','value':[{'title':tr('查看设备备份历史','View device backup history'),'url':'http://192.168.20.169:8080/config/ui?lang='+('en' if lang=='en' else 'zh')+'&device=${__value.raw:percentencode}','targetBlank':True}]}]},
+                {'matcher':{'id':'byName','options':device_label},'properties':[{'id':'links','value':[{'title':link_title,'url':'http://192.168.20.169:8080'+link_path+'?lang='+('en' if lang=='en' else 'zh')+'&device=${__value.raw:percentencode}','targetBlank':True}]}]},
             ]},options={'showHeader':True,'cellHeight':'md','footer':{'show':False}},
             transformations=([{'id':'joinByField','options':{'byField':'device','mode':'outer'}}] if len(queries)>1 else [])+[
                 {'id':'filterFieldsByName','options':{'include':{'names':list(labels)}}},
                 {'id':'organize','options':{'renameByName':labels,'indexByName':{k:i for i,k in enumerate(labels)}}}])
+        if drift_link:
+            p['description']=tr('点击设备名直接查看其未处理无主漂移，默认展开最新一条。比对固定使用该漂移绑定的前后版本。此表遵循 Grafana 所选时间终点，详情页展示记录当前处理状态。',
+                'Click a device to open its unowned drift, newest open record first. Comparison uses the versions bound to that drift. This table follows the selected Grafana end time; the detail page shows current handling state.')
         panels.append(p)
     detail(9306,tr('未处理无主漂移 · 设备明细','Open unowned drift · device details'),0,[
         ('A','label_replace(('+drift+'), "reason", "no_matching_registered_change", "device", ".*")'),

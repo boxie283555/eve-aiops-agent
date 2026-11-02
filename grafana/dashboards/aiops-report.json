@@ -847,7 +847,7 @@
           "format": "table"
         }
       ],
-      "description": "列出上方卡片对应的设备，遵循设备筛选与所选时间终点。没有行时请同时核对卡片；卡片为 0 才表示没有对应问题，无数据不等于正常。点击设备名查看其备份历史。",
+      "description": "点击设备名直接查看其未处理无主漂移，默认展开最新一条。比对固定使用该漂移绑定的前后版本。此表遵循 Grafana 所选时间终点，详情页展示记录当前处理状态。",
       "fieldConfig": {
         "defaults": {
           "noValue": "—",
@@ -925,8 +925,8 @@
                 "id": "links",
                 "value": [
                   {
-                    "title": "查看设备备份历史",
-                    "url": "http://192.168.20.169:8080/config/ui?lang=zh&device=${__value.raw:percentencode}",
+                    "title": "查看配置变化",
+                    "url": "http://192.168.20.169:8080/config/drift/ui?lang=zh&device=${__value.raw:percentencode}",
                     "targetBlank": true
                   }
                 ]

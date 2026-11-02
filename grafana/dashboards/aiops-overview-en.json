@@ -820,7 +820,7 @@
           "format": "table"
         }
       ],
-      "description": "Devices behind the corresponding card, respecting device filters and the selected end time. An empty table means no matching issue only when the card is zero; missing data is not healthy. Click a device for backup history.",
+      "description": "Click a device to open its unowned drift, newest open record first. Comparison uses the versions bound to that drift. This table follows the selected Grafana end time; the detail page shows current handling state.",
       "fieldConfig": {
         "defaults": {
           "noValue": "—",
@@ -898,8 +898,8 @@
                 "id": "links",
                 "value": [
                   {
-                    "title": "View device backup history",
-                    "url": "http://192.168.20.169:8080/config/ui?lang=en&device=${__value.raw:percentencode}",
+                    "title": "View configuration changes",
+                    "url": "http://192.168.20.169:8080/config/drift/ui?lang=en&device=${__value.raw:percentencode}",
                     "targetBlank": true
                   }
                 ]

@@ -42,6 +42,7 @@ class RestoreExecution(BaseModel):
 class Resolution(BaseModel):
     actor: str = Field(min_length=1,max_length=100)
     reason: str = Field(min_length=1,max_length=1000)
+    reference: str | None = Field(default=None,max_length=100)
 
 
 class PlannedChange(BaseModel):
@@ -139,13 +140,26 @@ def router(settings, schedule_changed=None):
 
     @routes.get('/drift')
     def drift(unowned: bool | None = None, status: Literal['open','resolved'] | None = None,
-              origin: Literal['observed','exercise'] | None = None, limit: int = Query(default=100,ge=1,le=1000)):
-        return history.list_drifts(unowned,status,origin,limit)
+              origin: Literal['observed','exercise'] | None = None, limit: int = Query(default=100,ge=1,le=1000),
+              device: str | None = None, offset: int = Query(default=0,ge=0)):
+        return history.list_drifts(unowned,status,origin,limit,device,offset)
+
+    @routes.get('/drift/ui',response_class=HTMLResponse)
+    def drift_page():
+        from .drift_view import DRIFT_PAGE
+        return DRIFT_PAGE
+
+    @routes.get('/drift/{drift_id}')
+    def drift_details(drift_id: str, full: bool = False):
+        try:return history.drift_detail(drift_id,full)
+        except KeyError:raise HTTPException(404,'Drift not found') from None
+        except (ValueError,OSError):raise HTTPException(409,'Drift backup evidence unavailable or failed integrity validation') from None
 
     @routes.post('/drift/{drift_id}/resolve')
     def resolve(drift_id: str, request: Resolution):
-        try:return history.resolve_drift(drift_id,request.actor,request.reason)
+        try:return history.resolve_drift(drift_id,request.actor,request.reason,request.reference)
         except KeyError:raise HTTPException(404,'Drift not found') from None
+        except ValueError as exc:raise HTTPException(400,str(exc)) from None
 
     @routes.post('/changes')
     async def change(request: PlannedChange):

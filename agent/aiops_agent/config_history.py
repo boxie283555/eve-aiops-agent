@@ -309,26 +309,76 @@ def backup(settings, requested=None, exercise_id=None, phase='observation', sour
         BACKUP_LOCK.release()
 
 
-def list_drifts(unowned=None, status=None, origin=None, limit=100):
+def list_drifts(unowned=None, status=None, origin=None, limit=100, device=None, offset=0):
     clauses=[];args=[]
     for key,value in [('unowned',unowned),('status',status),('origin',origin)]:
         if value is not None:
             clauses.append(key+'=?');args.append(value)
+    if device:
+        clauses.append('(device=? OR device_id=?)');args.extend([device,device])
     where=' WHERE '+' AND '.join(clauses) if clauses else ''
     with connect() as db:
         count=db.execute('SELECT count(*) FROM drifts'+where,args).fetchone()[0]
-        rows=[dict(r) for r in db.execute('SELECT * FROM drifts'+where+' ORDER BY detected_at DESC LIMIT ?',args+[limit])]
+        rows=[dict(r) for r in db.execute('SELECT * FROM drifts'+where+' ORDER BY detected_at DESC,id DESC LIMIT ? OFFSET ?',args+[limit,offset])]
     for row in rows:
         row['changes']=json.loads(row['changes']);row['unowned']=bool(row['unowned'])
     return {'total':count,'records':rows}
 
 
-def resolve_drift(drift_id, actor, reason):
+def drift_detail(drift_id, full=False):
     with connect() as db:
-        if not db.execute('SELECT id FROM drifts WHERE id=?',(drift_id,)).fetchone():
-            raise KeyError('Drift not found')
-        db.execute("UPDATE drifts SET status='resolved',resolved_at=?,resolved_by=?,resolution=? WHERE id=? AND status='open'",
-                   (time.time(),actor,reason,drift_id))
+        row=db.execute('SELECT * FROM drifts WHERE id=?',(drift_id,)).fetchone()
+        if not row:raise KeyError('Drift not found')
+        result=dict(row)
+        versions=[]
+        for key in ('before_id','after_id'):
+            version=db.execute('SELECT * FROM versions WHERE id=?',(row[key],)).fetchone()
+            if not version or version['device_id']!=row['device_id']:
+                raise ValueError('Drift backup evidence is missing or mismatched')
+            versions.append(dict(version))
+        boundary=db.execute('SELECT baseline_observed_at FROM version_observations WHERE version_id=?',
+                            (row['after_id'],)).fetchone()
+    if (versions[0]['host'],versions[0]['platform'])!=(versions[1]['host'],versions[1]['platform']):
+        raise ValueError('Drift backup baselines differ')
+    result['changes']=json.loads(result['changes']);result['unowned']=bool(result['unowned'])
+    # The BEFORE time was frozen when the AFTER version was saved. A later
+    # unchanged backup of either version must not move this event's boundary.
+    before_at=boundary['baseline_observed_at'] if boundary else None
+    result['before']={'id':versions[0]['id'],'created_at':versions[0]['created_at'],
+                      'observed_at':before_at if before_at is not None else versions[0]['created_at'],
+                      'observation_basis':'frozen_boundary' if before_at is not None else 'version_creation'}
+    result['after']={'id':versions[1]['id'],'created_at':versions[1]['created_at'],'observed_at':versions[1]['created_at']}
+    if full:
+        models=[]
+        for version in versions:
+            content=(root_path()/version['model_file']).read_text()
+            if digest(content)!=version['fingerprint']:raise ValueError('Backup model integrity check failed')
+            models.append(json.loads(content))
+        public=lambda value:json.loads(re.sub(r'<sensitive:[a-f0-9]{64}>','<redacted>',json.dumps(value)))
+        # Build rows before redacting keys: different secret-bearing context
+        # keys can both become <redacted> and must not overwrite each other.
+        result['comparison']=[{'context':public(key),'category':category(key),
+                               'before':public(models[0].get(key)),'after':public(models[1].get(key))}
+                              for key in sorted(set(models[0])|set(models[1]))]
+    return result
+
+
+def resolve_drift(drift_id, actor, reason, reference=None):
+    if not actor.strip() or not reason.strip():raise ValueError('Operator and resolution are required')
+    with connect() as db:
+        db.execute('BEGIN IMMEDIATE')
+        row=db.execute('SELECT device_id,status FROM drifts WHERE id=?',(drift_id,)).fetchone()
+        if not row:raise KeyError('Drift not found')
+        if row['status']=='open':
+            stamp=time.time()
+            resolution=('['+reference.strip()+'] ' if reference and reference.strip() else '')+reason
+            db.execute("UPDATE drifts SET status='resolved',resolved_at=?,resolved_by=?,resolution=? WHERE id=?",
+                       (stamp,actor,resolution,drift_id))
+            # A handling reference records the review, never retroactively
+            # rewrites ownership or claims preregistered approval.
+            db.execute('INSERT INTO config_audit(id,created_at,action,actor,device_id,status,details) VALUES (?,?,?,?,?,?,?)',
+                       (uuid.uuid4().hex,stamp,'drift_resolve',actor,row['device_id'],'resolved',
+                        json.dumps({'drift_id':drift_id,'reason':reason,'reference':reference},ensure_ascii=False)))
     return {'status':'resolved','id':drift_id}
 
 
