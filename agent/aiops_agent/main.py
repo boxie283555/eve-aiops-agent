@@ -20,6 +20,7 @@ from .collector import Collector
 from .config_api import router as config_router
 from .firewall_api import router as firewall_router
 from .config_management import tracked_backup, get_schedule, apply_daily_schedule, restore_token
+from . import config_watch
 from .inventory import load_inventory, inventory_status
 from .health import network_health, prometheus_health
 from .health_view import HEALTH_PAGE
@@ -128,6 +129,13 @@ async def _config_backup_once() -> None:
         logger.warning("Configuration backup failed (%s)", type(exc).__name__)
 
 
+async def _config_watch_once() -> None:
+    try:
+        await asyncio.to_thread(config_watch.run_once, settings)
+    except Exception as exc:
+        logger.warning("Configuration watch failed (%s)", type(exc).__name__)
+
+
 async def _snapshot_once() -> None:
     await asyncio.to_thread(collect_and_snapshot, settings, collector)
 
@@ -176,6 +184,10 @@ async def startup() -> None:
                       replace_existing=True, max_instances=1, next_run_time=datetime.now())
     await asyncio.to_thread(restore_token)
     apply_daily_schedule(scheduler,_config_backup_once)
+    if config_watch.enabled():
+        scheduler.add_job(_config_watch_once, "interval", seconds=config_watch.interval_seconds(),
+                          id="config_watch", replace_existing=True, max_instances=1, coalesce=True,
+                          next_run_time=datetime.now())
     scheduler.start()
 
 

@@ -72,6 +72,9 @@ def connect():
         observed_at REAL, status TEXT, source TEXT, error TEXT);
       CREATE INDEX IF NOT EXISTS observations_device_time ON backup_observations(device_id,observed_at);
       CREATE TABLE IF NOT EXISTS config_settings (key TEXT PRIMARY KEY, value TEXT);
+      CREATE TABLE IF NOT EXISTS config_watch_devices (
+        device_id TEXT PRIMARY KEY, device TEXT, last_attempt_at REAL, last_success_at REAL,
+        version_id TEXT, status TEXT, error TEXT);
       CREATE TABLE IF NOT EXISTS config_audit (
         seq INTEGER PRIMARY KEY AUTOINCREMENT, id TEXT UNIQUE, created_at REAL,
         action TEXT, actor TEXT, device_id TEXT, status TEXT, details TEXT);
@@ -184,8 +187,14 @@ def record_backup(device, raw, exercise_id=None, phase='observation', source='ma
         previous = db.execute('''SELECT v.*, o.last_observed_at FROM versions v
             LEFT JOIN version_observations o ON o.version_id=v.id
             WHERE device_id=? ORDER BY seq DESC LIMIT 1''',(device.id,)).fetchone()
-        db.execute('INSERT OR REPLACE INTO attempts VALUES (?,?,?,?,?)',(device.id,device.name,stamp,1,None))
+        watching = source == 'drift_watch'
+        if not watching:
+            db.execute('INSERT OR REPLACE INTO attempts VALUES (?,?,?,?,?)',(device.id,device.name,stamp,1,None))
         if previous and previous['fingerprint'] == fingerprint and previous['host'] == device.host and previous['platform'] == device.platform:
+            if watching:
+                # Frequent checks keep one status row; do not flood backup history
+                # or turn a failed daily backup into an apparent successful backup.
+                return {'device':device.name,'status':'unchanged','version_id':previous['id'],'last_observed_at':stamp}
             db.execute('''INSERT INTO version_observations(version_id,last_observed_at) VALUES (?,?)
                 ON CONFLICT(version_id) DO UPDATE SET last_observed_at=excluded.last_observed_at''',
                 (previous['id'],stamp))
@@ -204,6 +213,11 @@ def record_backup(device, raw, exercise_id=None, phase='observation', source='ma
         # Freeze the BEFORE boundary now; later observations must not reattribute this transition.
         baseline = (previous['last_observed_at'] if previous['last_observed_at'] is not None
                     else previous['created_at']) if previous else None
+        if previous:
+            observed = db.execute('SELECT last_success_at FROM config_watch_devices WHERE device_id=? AND version_id=?',
+                                  (device.id,previous['id'])).fetchone()
+            if observed and observed['last_success_at'] is not None:
+                baseline = max(baseline, observed['last_success_at'])
         db.execute('INSERT INTO version_observations VALUES (?,?,?)',(version,stamp,baseline))
         db.execute('INSERT INTO backup_observations VALUES (?,?,?,?,?,?,?,?)',
                    (uuid.uuid4().hex,device.id,device.name,version,stamp,'saved',source,None))
@@ -211,13 +225,13 @@ def record_backup(device, raw, exercise_id=None, phase='observation', source='ma
                 'fingerprint':fingerprint,'last_observed_at':stamp}
 
 
-def detect_drift():
+def detect_drift(device_id=None):
     created = []
     with connect() as db:
         db.execute('BEGIN IMMEDIATE')
         for current in db.execute('''SELECT v.*, o.baseline_observed_at FROM versions v
                 LEFT JOIN version_observations o ON o.version_id=v.id
-                WHERE checked=0 ORDER BY seq''').fetchall():
+                WHERE checked=0 AND (? IS NULL OR v.device_id=?) ORDER BY seq''',(device_id,device_id)).fetchall():
             previous = db.execute('SELECT * FROM versions WHERE device_id=? AND seq<? ORDER BY seq DESC LIMIT 1',
                                   (current['device_id'],current['seq'])).fetchone()
             if previous and previous['host']==current['host'] and previous['platform']==current['platform']:
@@ -405,6 +419,7 @@ class DriftCollector:
                 db.row_factory=sqlite3.Row
                 groups=db.execute('SELECT device,origin,status,unowned,count(*) AS n,MAX(detected_at) AS latest FROM drifts GROUP BY device,origin,status,unowned').fetchall()
                 devices=db.execute('SELECT * FROM attempts').fetchall()
+                observed_names={r[0] for r in db.execute('SELECT device FROM versions UNION SELECT device FROM attempts')}
             finally:
                 db.close()
         except (sqlite3.Error, ValueError):
@@ -416,11 +431,11 @@ class DriftCollector:
         metric=GaugeMetricFamily('aiops_config_drift_records','Persisted drift records by source, ownership and handling state.',
                                  labels=['device','origin','status','unowned'])
         counts={(r['device'],r['origin'],r['status'],str(bool(r['unowned'])).lower()):r['n'] for r in groups}
-        for device in devices:
+        for name in sorted(observed_names):
             for origin in ('observed','exercise'):
                 for status in ('open','resolved'):
                     for unowned in ('true','false'):
-                        labels=(device['device'],origin,status,unowned)
+                        labels=(name,origin,status,unowned)
                         metric.add_metric(list(labels),counts.get(labels,0))
         yield metric
         metric=GaugeMetricFamily('aiops_config_drift_last_detected_timestamp_seconds',

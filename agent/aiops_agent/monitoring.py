@@ -20,6 +20,7 @@ from typing import Literal
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import HTMLResponse
 from .inventory import device_classification
+from .config_watch import live_status
 
 RANGES = {'1h': 3600, '6h': 21600, '24h': 86400, '7d': 604800, '30d': 2592000}
 METRICS = [
@@ -296,6 +297,21 @@ def summarize(records, health, evidence, now=None, ttl=600):
                 trend=dict(timestamps=timeline,series=trends,sources=sources))
 
 
+def apply_live_drift(result, live):
+    result['drift_live'] = live
+    result['summary']['drift'] = live['total']
+    result['issues'] = [r for r in result['issues'] if r['kind'] not in {'drift','drift_watch'}]
+    counts = {r['id']:r['count'] for r in live['devices']}
+    for row in result['devices']:
+        row['drift'] = counts.get(row['id']) if live['available'] else None
+        if row['drift']:
+            result['issues'].append(dict(kind='drift',device=row['name'],id=row['id'],count=row['drift']))
+    for row in live['watch_devices']:
+        if row['state'] in {'error','stale'}:
+            result['issues'].append(dict(kind='drift_watch',device=row['device'],id=row['id'],
+                                         reason=row['reason'] or 'stale_or_missing'))
+
+
 def router(collector, health_provider):
     routes = APIRouter(tags=['Monitoring workspace'])
     reader = EvidenceReader()
@@ -304,6 +320,17 @@ def router(collector, health_provider):
     def page():
         from .monitoring_view import MONITOR_PAGE
         return MONITOR_PAGE
+
+    @routes.get('/api/monitor/drift')
+    def drift(site: str = Query('all',max_length=100), device: str = Query('all',max_length=100)):
+        records = inventory_records(collector)
+        if site != 'all':
+            if site not in {r['site'] for r in records}:raise HTTPException(404,'Unknown site')
+            records = [r for r in records if r['site']==site]
+        if device != 'all':
+            records = [r for r in records if r['name']==device]
+            if not records:raise HTTPException(404,'Unknown device in selected site')
+        return live_status(records)
 
     @routes.get('/api/monitor')
     async def data(site: str = Query('all',max_length=100), device: str = Query('all',max_length=100),
@@ -319,6 +346,7 @@ def router(collector, health_provider):
         evidence = await reader.read(site, device, period)
         health = await asyncio.to_thread(health_provider)
         result = summarize(records,health,evidence,ttl=int(os.getenv('AIOPS_TOPOLOGY_TTL_SECONDS','600')))
+        apply_live_drift(result, await asyncio.to_thread(live_status,records))
         result.update(site=site,device=device,period=period,options=dict(sites=sites,devices=options))
         return result
 
