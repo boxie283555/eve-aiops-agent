@@ -126,7 +126,7 @@ def load_inventory(path: str = "/app/inventory/devices.yml", *, allow_fallback=T
                 site=str(merged.get("site", "unknown")),
                 host=str(merged["host"]),
                 platform=str(merged.get("platform", "cisco_nxos")),
-                port=int(merged.get("port", 22)),
+                port=int(merged.get("port") or (22 if merged.get("use_ssh", True) else 23)),
                 use_ssh=bool(merged.get("use_ssh", True)),
                 use_snmp=bool(merged.get("use_snmp", False)),
                 snmp_community_env=merged.get("snmp_community_env"),

@@ -158,7 +158,7 @@ class NautobotClient:
                     "host": primary_ip,
                     "platform": platform_name or "cisco_nxos",
                     "manufacturer": manufacturer,
-                    "port": int(custom_fields.get("connection_port") or 22),
+                    "port": int(custom_fields.get("connection_port") or (22 if _bool(custom_fields.get("use_ssh")) else 23)),
                     "use_ssh": _bool(custom_fields.get("use_ssh")),
                     "use_snmp": _bool(custom_fields.get("use_snmp")),
                     "snmp_community_env": custom_fields.get("snmp_community_env") or "AIOPS_SNMP_COMMUNITY",

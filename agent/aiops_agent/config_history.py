@@ -1,5 +1,6 @@
 """Persistent configuration versions and auditable, redacted structured drift."""
 from __future__ import annotations
+from .transport import cli_driver
 
 import hashlib
 import json
@@ -293,7 +294,7 @@ def fetch_config(device, settings):
     from .collector import Collector
     from netmiko import ConnectHandler
     user,password,secret=Collector(settings,[])._device_credentials(device)
-    with ConnectHandler(device_type=device.platform,host=device.host,port=device.port,
+    with ConnectHandler(device_type=cli_driver(device),host=device.host,port=device.port,
                         username=user,password=password,secret=secret or '',conn_timeout=15,auth_timeout=15,banner_timeout=15) as conn:
         return conn.send_command('show running-config',read_timeout=30)
 

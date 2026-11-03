@@ -1,5 +1,6 @@
 """Bounded, auditable lab onboarding; inventory registration precedes device I/O."""
 from __future__ import annotations
+from .transport import cli_driver
 import hashlib
 import ipaddress
 import json
@@ -76,7 +77,7 @@ def recover():
             db.execute('UPDATE jobs SET status=?,payload=? WHERE id=?',('interrupted',json.dumps(job),job['id']))
 
 
-def expand(text):
+def expand(text, default_port=22):
     """Candidate address expansion only. Never sends network packets."""
     endpoints=[]
     for token in re.split(r'[\s,;]+',text.strip()):
@@ -84,12 +85,12 @@ def expand(text):
         if '/' in token:
             net=ipaddress.ip_network(token,strict=False)
             if net.version!=4 or net.num_addresses>256:raise ValueError('IPv4 ranges must be /24 or smaller')
-            values=[(str(ip),22) for ip in net.hosts()]
+            values=[(str(ip),default_port) for ip in net.hosts()]
         else:
             host,sep,port=token.partition(':')
             ip=ipaddress.ip_address(host)
             if ip.version!=4:raise ValueError('Use IPv4 management addresses')
-            values=[(str(ip),int(port) if sep else 22)]
+            values=[(str(ip),int(port) if sep else default_port)]
         for host,port in values:
             ip=ipaddress.ip_address(host)
             if ip.is_loopback or ip.is_multicast or ip.is_unspecified or ip.is_link_local or not 1<=port<=65535:
@@ -144,15 +145,16 @@ class Discovery:
         locations=[r for r in rows('dcim/locations/') if r['name']=='lab']
         types=rows('dcim/device-types/');platforms=rows('dcim/platforms/');roles=rows('extras/roles/')
         return {'scope':'lab','profiles':self.profiles(inv),
-                'devices':[{'id':d['id'],'name':d['name'],'host':d['host'],'port':d['port'],'platform':d['platform']} for d in inv if d['site']=='lab'],
+                'devices':[{'id':d['id'],'name':d['name'],'host':d['host'],'port':d['port'],'transport':'ssh' if d.get('use_ssh',True) else 'telnet','platform':d['platform']} for d in inv if d['site']=='lab'],
                 'locations':[{'id':r['id'],'name':r['name']} for r in locations],
                 'types':[{'id':r['id'],'name':r.get('model') or r.get('display'),'manufacturer':c._related_name(r.get('manufacturer'))} for r in types],
                 'platforms':[{'id':r['id'],'name':r['name'],'driver':r.get('network_driver')} for r in platforms if r.get('network_driver') in SUPPORTED],
                 'roles':[{'id':r['id'],'name':r['name']} for r in roles if 'dcim.device' in r.get('content_types',[])],
                 'nautobot_url':self.settings.nautobot_url}
 
-    def plan(self,targets,device_ids,actor):
-        inv=self.inventory();endpoints=expand(targets)
+    def plan(self,targets,device_ids,actor,transport='ssh'):
+        if transport not in ('ssh','telnet'):raise ValueError('Choose SSH or Telnet')
+        inv=self.inventory();endpoints=expand(targets,23 if transport=='telnet' else 22)
         for ident in device_ids:
             d=next((d for d in inv if d['id']==ident and d['site']=='lab'),None)
             if not d:raise ValueError('Selected device is not in current lab inventory')
@@ -163,7 +165,7 @@ class Discovery:
             status,d=classify(host,port,inv)
             job['candidates'].append({'id':uuid.uuid4().hex,'host':host,'port':port,'inventory_status':status,
                 'device_id':d['id'] if d else None,'name':d['name'] if d else 'new-'+host.replace('.','-'),
-                'platform':d['platform'] if d else None})
+                'platform':d['platform'] if d else None,'transport':('ssh' if d.get('use_ssh',True) else 'telnet') if d else transport})
         save(job);audit(job['id'],actor,'plan',{'targets':len(endpoints)})
         return job
 
@@ -194,7 +196,7 @@ class Discovery:
             c=self.client();statuses=c._get_all('extras/statuses/?limit=100')
             maintenance=next(r['id'] for r in statuses if r['name']=='Maintenance' and 'dcim.device' in r['content_types'])
             fields={r['key'] for r in c._get_all('extras/custom-fields/?limit=100')}
-            required={'management_ip','connection_port','aiops_monitoring_enabled','username_env','password_env','secret_env'}
+            required={'management_ip','connection_port','aiops_monitoring_enabled','use_ssh','username_env','password_env','secret_env'}
             if not required<=fields:raise ValueError('Provision Agent connection and lifecycle custom fields first')
             existing_names={d['name'].lower() for d in inv};proposed=set()
             for row in selected:
@@ -204,9 +206,11 @@ class Discovery:
                 if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,63}',name) or name.lower() in existing_names|proposed:raise ValueError('Device names must be valid and unique')
                 proposed.add(name.lower())
             # Nautobot bulk create is atomic; one request avoids partial registration.
+            from types import SimpleNamespace
+            for r in selected:cli_driver(SimpleNamespace(platform=p['platform'],use_ssh=r.get('transport','ssh')=='ssh'))
             payload=[{'name':names[r['id']],'location':location,'platform':platform,'role':role,'device_type':device_type,
                       'status':maintenance,'custom_fields':{'management_ip':r['host'],'connection_port':r['port'],
-                         'aiops_monitoring_enabled':False,**p['refs']}} for r in selected]
+                         'aiops_monitoring_enabled':False,'use_ssh':r.get('transport','ssh')=='ssh',**p['refs']}} for r in selected]
             audit(job_id,actor,'register_requested',{'candidates':[r['id'] for r in selected]})
             created=c._request('POST','dcim/devices/',payload)
             byname={d['name']:d for d in created}
@@ -247,7 +251,7 @@ class Discovery:
     def _probe(self,candidate):
         # Fresh authoritative scope check immediately precedes each device connection.
         d=self.current(candidate)
-        result={'status':'ok','observed_at':now(),'device_id':d.id,'host':d.host,'port':d.port,'platform':d.platform,'lldp':[]}
+        result={'status':'ok','observed_at':now(),'device_id':d.id,'host':d.host,'port':d.port,'platform':d.platform,'transport':'ssh' if d.use_ssh else 'telnet','lldp':[]}
         if d.platform=='paloalto_panos':
             api=PanosAPI(d,self.settings)
             root=api.call(type='op',cmd='<show><system><info/></system></show>')
@@ -268,7 +272,7 @@ class Discovery:
             if not u or not p:raise ValueError('Configured credentials unavailable')
             conn=None
             try:
-                conn=ConnectHandler(device_type=d.platform,host=d.host,port=d.port,username=u,password=p,secret=s or '',timeout=12,conn_timeout=12,auth_timeout=12,banner_timeout=12)
+                conn=ConnectHandler(device_type=cli_driver(d),host=d.host,port=d.port,username=u,password=p,secret=s or '',timeout=12,conn_timeout=12,auth_timeout=12,banner_timeout=12)
                 def read(command):return conn.send_command_timing(command,last_read=1,read_timeout=25)
                 version=read('show version')
                 if not command_ok(version):raise ValueError('Identity command unavailable')
@@ -324,7 +328,7 @@ class Discovery:
         return probe
 
     def match_probe(self,probe,d):
-        if (probe.get('host'),probe.get('port'),probe.get('platform'))!=(d.host,d.port,d.platform):
+        if (probe.get('host'),probe.get('port'),probe.get('platform'),probe.get('transport','ssh'))!=(d.host,d.port,d.platform,'ssh' if d.use_ssh else 'telnet'):
             raise ValueError('Device connection identity changed; discover again')
 
     def baselines(self,job_id,ids,actor,apply=False,review_id=None):

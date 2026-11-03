@@ -1,4 +1,5 @@
 from __future__ import annotations
+from .transport import cli_driver, UnsupportedTransport
 
 import time
 import os
@@ -267,7 +268,7 @@ class Collector:
         structured_outputs: dict[str, Any] = {}
         try:
             connection = ConnectHandler(
-                device_type=device.platform,
+                device_type=cli_driver(device),
                 host=device.host,
                 port=device.port,
                 username=username,
@@ -434,7 +435,7 @@ class Collector:
                     }
                 ),
             )
-        except (NetmikoAuthenticationException, NetmikoTimeoutException, OSError) as exc:
+        except (NetmikoAuthenticationException, NetmikoTimeoutException, OSError, UnsupportedTransport) as exc:
             return DeviceResult(
                 device=device,
                 ok=False,

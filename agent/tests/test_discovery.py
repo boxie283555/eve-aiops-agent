@@ -25,7 +25,7 @@ class Client:
  def _get(self,path):return copy.deepcopy(self.raw[path.strip('/').split('/')[-1]])
  def _get_all(self,path):
   if path.startswith('extras/statuses'):return [{'id':'maintenance','name':'Maintenance','content_types':['dcim.device']},{'id':'connected','name':'Connected','content_types':['dcim.cable']}]
-  if path.startswith('extras/custom-fields'):return [{'key':k} for k in ['management_ip','connection_port','aiops_monitoring_enabled','username_env','password_env','secret_env','aiops_bgp_baseline','aiops_igp_baseline']]
+  if path.startswith('extras/custom-fields'):return [{'key':k} for k in ['management_ip','use_ssh','connection_port','aiops_monitoring_enabled','username_env','password_env','secret_env','aiops_bgp_baseline','aiops_igp_baseline']]
   if path.startswith('dcim/interfaces'):return []
   return []
  def _request(self,method,path,payload):
@@ -33,7 +33,7 @@ class Client:
   if path=='dcim/devices/' and method=='POST':
    created=[]
    for p in payload:
-    ident=p['name'];r=record(ident,p['custom_fields']['management_ip']);r['port']=p['custom_fields']['connection_port'];self.rows.append(r)
+    ident=p['name'];r=record(ident,p['custom_fields']['management_ip']);r['port']=p['custom_fields']['connection_port'];r['use_ssh']=p['custom_fields']['use_ssh'];self.rows.append(r)
     self.raw[ident]={**p,'id':ident,'status':{'name':'Maintenance'},'location':{'name':'lab'}};created.append(copy.deepcopy(self.raw[ident]))
    return created
   if path=='dcim/devices/' and method=='PATCH':
@@ -147,6 +147,36 @@ class DiscoveryTests(unittest.TestCase):
   j=self.plan();r=self.probe_result(j);self.c.rows[0]['platform']='paloalto_panos'
   with self.assertRaises(ValueError):self.s.baselines(j['id'],[r['id']],'tester')
   self.assertFalse(self.c.writes)
+ def test_telnet_plan_register_and_probe_use_same_transport(self):
+  j=self.s.plan('192.0.2.20 192.0.2.21:2323',[],'tester','telnet')
+  self.assertEqual([c['port'] for c in j['candidates']],[23,2323])
+  r=j['candidates'][0]
+  j=self.s.register(j['id'],[{'id':r['id'],'name':'new-telnet'}],'p','lab','eos','role','type','tester')
+  self.assertFalse(self.c.writes[-1][2][0]['custom_fields']['use_ssh'])
+  conn=MagicMock();conn.send_command_timing.return_value='Arista vEOS'
+  with patch('aiops_agent.discovery.ConnectHandler',return_value=conn) as connect:
+   result=self.s._probe(j['candidates'][0])
+  self.assertEqual(connect.call_args.kwargs['device_type'],'arista_eos_telnet')
+  self.assertEqual(connect.call_args.kwargs['port'],23)
+  self.assertEqual(result['transport'],'telnet')
+ def test_known_transport_comes_from_inventory(self):
+  self.c.rows[0]['use_ssh']=False
+  j=self.s.plan('192.0.2.1:22',[],'tester','ssh')
+  self.assertEqual(j['candidates'][0]['transport'],'telnet')
+  conn=MagicMock();conn.send_command_timing.return_value='Arista vEOS'
+  with patch('aiops_agent.discovery.ConnectHandler',return_value=conn) as connect:self.s._probe(j['candidates'][0])
+  self.assertEqual(connect.call_args.kwargs['device_type'],'arista_eos_telnet')
+  self.assertEqual(connect.call_args.kwargs['port'],22)
+ def test_transport_change_invalidates_probe_evidence(self):
+  j=self.plan();r=self.probe_result(j);self.c.rows[0]['use_ssh']=False
+  with self.assertRaises(ValueError):self.s.baselines(j['id'],[r['id']],'tester')
+  self.assertFalse(self.c.writes)
+ def test_unsupported_telnet_driver_rejected_before_registration(self):
+  opts=self.s.options();opts['profiles'][0]['platform']='cisco_nxos';opts['platforms'][0]['driver']='cisco_nxos';self.s.options=lambda:opts
+  j=self.s.plan('192.0.2.20',[],'tester','telnet');r=j['candidates'][0]
+  with self.assertRaisesRegex(ValueError,'Telnet is not supported'):
+   self.s.register(j['id'],[{'id':r['id'],'name':'new'}],'p','lab','eos','role','type','tester')
+  self.assertFalse(self.c.writes)
  def test_api_json_scope_and_origin(self):
   from fastapi import FastAPI
   from fastapi.testclient import TestClient
@@ -158,3 +188,6 @@ class DiscoveryTests(unittest.TestCase):
   r=client.post('/discovery/jobs',json={'targets':'192.0.2.1','actor':'tester'});self.assertEqual(r.status_code,200)
   self.assertEqual(client.get('/discovery/jobs/'+r.json()['id']).status_code,200)
   self.assertIn('Network discovery',client.get('/discovery').text)
+  r=client.post('/discovery/jobs',json={'targets':'192.0.2.20','actor':'tester','transport':'telnet'})
+  self.assertEqual(r.json()['candidates'][0]['port'],23)
+  self.assertEqual(client.post('/discovery/jobs',json={'targets':'192.0.2.20','actor':'tester','transport':'ftp'}).status_code,422)

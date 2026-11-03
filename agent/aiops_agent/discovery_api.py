@@ -1,6 +1,7 @@
 """Network discovery wizard API; no implicit recursive scans."""
 from __future__ import annotations
 from urllib.parse import urlsplit
+from typing import Literal
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
@@ -9,6 +10,7 @@ from .discovery_view import PAGE
 
 
 class Plan(BaseModel):
+    transport: Literal['ssh','telnet'] = 'ssh'
     targets: str = Field(default='',max_length=16384)
     device_ids: list[str] = Field(default_factory=list,max_length=256)
     actor: str = Field(min_length=1,max_length=100)
@@ -56,7 +58,7 @@ def router(settings,collector):
     def jobs():return history()
     @routes.post('/jobs')
     def plan(body:Plan,request:Request):
-        origin(request);return run(service.plan,body.targets,body.device_ids,body.actor)
+        origin(request);return run(service.plan,body.targets,body.device_ids,body.actor,body.transport)
     @routes.get('/jobs/{job_id}')
     def job(job_id:str):return run(get,job_id)
     @routes.get('/jobs/{job_id}/audit')

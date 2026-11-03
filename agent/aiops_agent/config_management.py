@@ -1,5 +1,6 @@
 """Daily backup management, timestamp comparison and guarded lab EOS recovery."""
 from __future__ import annotations
+from .transport import cli_driver
 
 import base64
 import hmac
@@ -284,7 +285,7 @@ def eos_connection(device, settings):
     from .collector import Collector
     from netmiko import ConnectHandler
     user,password,secret=Collector(settings,[])._device_credentials(device)
-    return ConnectHandler(device_type=device.platform,host=device.host,port=device.port,username=user,
+    return ConnectHandler(device_type=cli_driver(device),host=device.host,port=device.port,username=user,
                           password=password,secret=secret or '',conn_timeout=15,auth_timeout=15,banner_timeout=15)
 
 
