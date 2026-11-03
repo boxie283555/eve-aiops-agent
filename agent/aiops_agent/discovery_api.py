@@ -24,6 +24,17 @@ class Entry(BaseModel):
     id: str = Field(max_length=64)
     name: str = Field(min_length=1,max_length=64)
 
+class ConnectionEntry(BaseModel):
+    id: str = Field(min_length=1,max_length=64)
+    transport: Literal['ssh','telnet']
+    port: int = Field(ge=1,le=65535)
+    expected_transport: Literal['ssh','telnet']
+    expected_port: int = Field(ge=1,le=65535)
+
+class Connections(BaseModel):
+    entries: list[ConnectionEntry] = Field(min_length=1,max_length=32)
+    actor: str = Field(min_length=1,max_length=100)
+
 class Registration(BaseModel):
     entries: list[Entry] = Field(min_length=1,max_length=32)
     profile_id: str = Field(max_length=64)
@@ -38,7 +49,7 @@ def router(settings,collector):
     routes=APIRouter(prefix='/discovery',tags=['Network discovery'])
     service=Discovery(settings,collector)
     def failure(fn,args,exc):
-        if fn.__name__ in {'register','probe','enable','baselines','cables'} and args:
+        if fn.__name__ in {'register','connections','probe','enable','baselines','cables'} and args:
             try:audit(args[0],'system',fn.__name__+'_failed',{'error':type(exc).__name__})
             except Exception:pass
     def run(fn,*args):
@@ -64,6 +75,9 @@ def router(settings,collector):
     @routes.get('/jobs/{job_id}/audit')
     def job_audit(job_id:str):
         with database() as db:return [dict(r) for r in db.execute('SELECT at,actor,action,details FROM audit WHERE job_id=? ORDER BY id',(job_id,))]
+    @routes.post('/jobs/{job_id}/connections')
+    def connections(job_id:str,body:Connections,request:Request):
+        origin(request);return run(service.connections,job_id,[e.model_dump() for e in body.entries],body.actor)
     @routes.post('/jobs/{job_id}/register')
     def register(job_id:str,body:Registration,request:Request):
         origin(request);return run(service.register,job_id,[e.model_dump() for e in body.entries],body.profile_id,body.location,body.platform,body.role,body.device_type,body.actor)

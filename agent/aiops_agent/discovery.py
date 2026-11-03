@@ -181,6 +181,55 @@ class Discovery:
         if status!='known' or d['id']!=candidate.get('device_id'):raise ValueError('Current inventory identity or lab scope changed')
         return device(d)
 
+    def connections(self,job_id,entries,actor):
+        """Save per-candidate connection edits; only registered lab rows write inventory."""
+        with MUTATIONS:
+            job=get(job_id)
+            if job['status']=='running' or PROBE_SLOT.locked():raise ValueError('Wait for discovery completion before editing connections')
+            selected=self.selected(job,[e['id'] for e in entries])
+            changes={e['id']:e for e in entries};c=self.client();inv=c.devices();updates=[];review=[]
+            for row in selected:
+                edit=changes[row['id']]
+                if edit['transport'] not in ('ssh','telnet') or not 1<=edit['port']<=65535:raise ValueError('Invalid CLI transport or port')
+                before={'port':row['port'],'transport':row.get('transport','ssh')}
+                if (edit['expected_port'],edit['expected_transport'])!=(before['port'],before['transport']):raise ValueError('Connection settings changed; reload the job before editing')
+                if row['inventory_status'] not in ('known','unregistered'):raise ValueError('Candidate is conflicting or outside lab')
+                status,current=classify(row['host'],row['port'],inv)
+                if row.get('device_id'):
+                    if status!='known' or current['id']!=row['device_id']:raise ValueError('Current inventory identity or lab scope changed')
+                    d=device(current)
+                    if ('ssh' if d.use_ssh else 'telnet')!=before['transport']:raise ValueError('Nautobot transport changed; create a new preview')
+                    from dataclasses import replace
+                    cli_driver(replace(d,use_ssh=edit['transport']=='ssh'))
+                elif status!='unregistered':raise ValueError('Candidate inventory changed; create a new preview')
+                target_status,target=classify(row['host'],edit['port'],inv)
+                if target_status!='unregistered' and not (target_status=='known' and target['id']==row.get('device_id')):
+                    raise ValueError('Requested endpoint is registered, conflicting or outside lab')
+                after={'port':edit['port'],'transport':edit['transport']}
+                if before==after:continue
+                if row.get('device_id'):updates.append({'id':row['device_id'],'custom_fields':{'use_ssh':edit['transport']=='ssh','connection_port':edit['port']}})
+                review.append({'candidate':row['id'],'device':row['name'],'device_id':row.get('device_id'),'before':before,'after':after})
+            endpoints=[(r['host'],changes[r['id']]['port'] if r['id'] in changes else r['port']) for r in job['candidates']]
+            if len(set(endpoints))!=len(endpoints):raise ValueError('Candidate endpoints would overlap; use a distinct port or a new preview')
+            if not review:return job
+            if updates:
+                available={f['key'] for f in c._get_all('extras/custom-fields/?limit=100')}
+                if not {'use_ssh','connection_port'}<=available:raise ValueError('Provision CLI connection custom fields first')
+            audit(job_id,actor,'connections_requested',{'changes':review})
+            if updates:
+                c._request('PATCH','dcim/devices/',updates)
+                for update in updates:
+                    raw=c._get('dcim/devices/'+update['id']+'/').get('custom_fields') or {}
+                    if any(raw.get(k)!=v for k,v in update['custom_fields'].items()):raise ValueError('Connection readback failed; inspect Nautobot and create a new preview')
+            changed={r['candidate'] for r in review}
+            for row in selected:
+                if row['id'] not in changed:continue
+                row.update(port=changes[row['id']]['port'],transport=changes[row['id']]['transport'])
+                row.pop('probe',None)
+            job.pop('baseline_review',None);job['status']='planned';save(job)
+            audit(job_id,actor,'connections_saved',{'changes':review})
+            return job
+
     def register(self,job_id,entries,profile_id,location,platform,role,device_type,actor):
         if not MUTATIONS.acquire(False):raise ValueError('Another inventory operation is running')
         try:

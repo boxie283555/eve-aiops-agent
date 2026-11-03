@@ -37,7 +37,11 @@ class Client:
     self.raw[ident]={**p,'id':ident,'status':{'name':'Maintenance'},'location':{'name':'lab'}};created.append(copy.deepcopy(self.raw[ident]))
    return created
   if path=='dcim/devices/' and method=='PATCH':
-   for p in payload:self.raw[p['id']]['custom_fields'].update(copy.deepcopy(p['custom_fields']))
+   for p in payload:
+    self.raw[p['id']]['custom_fields'].update(copy.deepcopy(p['custom_fields']))
+    row=next(r for r in self.rows if r['id']==p['id'])
+    for field,key in [('port','connection_port'),('use_ssh','use_ssh')]:
+     if key in p['custom_fields']:row[field]=p['custom_fields'][key]
    return payload
   return {'id':'cable'}
 
@@ -177,6 +181,54 @@ class DiscoveryTests(unittest.TestCase):
   with self.assertRaisesRegex(ValueError,'Telnet is not supported'):
    self.s.register(j['id'],[{'id':r['id'],'name':'new'}],'p','lab','eos','role','type','tester')
   self.assertFalse(self.c.writes)
+ def connection_edit(self,row,transport='telnet',port=23):
+  return {'id':row['id'],'transport':transport,'port':port,'expected_port':row['port'],'expected_transport':row.get('transport','ssh')}
+ def test_per_device_connections_mixed_known_and_new(self):
+  j=self.plan('192.0.2.1 192.0.2.20 192.0.2.21:2222');r=self.probe_result(j)
+  j=get(j['id']);j['baseline_review']={'id':'old'};save(j)
+  edits=[self.connection_edit(j['candidates'][0]),self.connection_edit(j['candidates'][1],port=2323)]
+  result=self.s.connections(j['id'],edits,'tester')
+  self.assertEqual([(c['transport'],c['port']) for c in result['candidates']],[('telnet',23),('telnet',2323),('ssh',2222)])
+  self.assertEqual(self.c.writes[-1][2],[{'id':'switch','custom_fields':{'use_ssh':False,'connection_port':23}}])
+  self.assertNotIn('probe',result['candidates'][0]);self.assertNotIn('baseline_review',result)
+  self.assertFalse(self.s.current(result['candidates'][0]).use_ssh)
+ def test_new_candidate_connection_edit_does_not_register_or_probe(self):
+  j=self.plan('192.0.2.20');r=j['candidates'][0]
+  with patch('aiops_agent.discovery.ConnectHandler') as connect:
+   result=self.s.connections(j['id'],[self.connection_edit(r)],'tester')
+  self.assertFalse(self.c.writes);connect.assert_not_called()
+  self.assertEqual(result['candidates'][0]['port'],23)
+  self.s.register(j['id'],[{'id':r['id'],'name':'new-telnet'}],'p','lab','eos','role','type','tester')
+  self.assertFalse(self.c.writes[-1][2][0]['custom_fields']['use_ssh'])
+ def test_connection_edits_reject_scope_changes_stale_values_and_collisions(self):
+  j=self.plan();r=j['candidates'][0];edit=self.connection_edit(r)
+  self.c.rows[0]['site']='other'
+  with self.assertRaises(ValueError):self.s.connections(j['id'],[edit],'tester')
+  self.c.rows[0]['site']='lab';self.c.rows[0]['use_ssh']=False
+  with self.assertRaises(ValueError):self.s.connections(j['id'],[edit],'tester')
+  self.c.rows[0]['use_ssh']=True
+  with self.assertRaises(ValueError):self.s.connections(j['id'],[{**edit,'expected_port':99}],'tester')
+  self.c.rows.append({**record('occupied'),'port':23})
+  with self.assertRaises(ValueError):self.s.connections(j['id'],[edit],'tester')
+  self.assertFalse(self.c.writes)
+ def test_connection_batch_preflight_prevents_partial_write(self):
+  j=self.plan('192.0.2.1 192.0.2.20:22 192.0.2.20:23')
+  with self.assertRaises(ValueError):self.s.connections(j['id'],[self.connection_edit(r) for r in j['candidates'][:2]],'tester')
+  self.assertFalse(self.c.writes)
+  self.c.rows[0]['platform']='cisco_nxos'
+  with self.assertRaises(ValueError):self.s.connections(j['id'],[self.connection_edit(j['candidates'][0])],'tester')
+  self.assertFalse(self.c.writes)
+ def test_connections_blocked_while_discovering_and_noops_keep_evidence(self):
+  j=self.plan();r=self.probe_result(j)
+  result=self.s.connections(j['id'],[self.connection_edit(r,'ssh',22)],'tester')
+  self.assertIn('probe',result['candidates'][0]);self.assertFalse(self.c.writes)
+  j['status']='running';save(j)
+  with self.assertRaises(ValueError):self.s.connections(j['id'],[self.connection_edit(r)],'tester')
+ def test_connections_readback_failure_does_not_claim_success(self):
+  j=self.plan();r=j['candidates'][0];original=self.c._get
+  self.c._get=lambda path:{'custom_fields':{}}
+  with self.assertRaisesRegex(ValueError,'readback failed'):self.s.connections(j['id'],[self.connection_edit(r)],'tester')
+  self.assertEqual(get(j['id'])['candidates'][0]['port'],22)
  def test_api_json_scope_and_origin(self):
   from fastapi import FastAPI
   from fastapi.testclient import TestClient
@@ -187,6 +239,10 @@ class DiscoveryTests(unittest.TestCase):
   self.assertEqual(client.post('/discovery/jobs',json={'targets':'192.0.2.1','actor':'tester'},headers={'Origin':'http://evil.invalid'}).status_code,403)
   r=client.post('/discovery/jobs',json={'targets':'192.0.2.1','actor':'tester'});self.assertEqual(r.status_code,200)
   self.assertEqual(client.get('/discovery/jobs/'+r.json()['id']).status_code,200)
+  j=r.json();body={'actor':'tester','entries':[self.connection_edit(j['candidates'][0])]}
+  url='/discovery/jobs/'+j['id']+'/connections'
+  self.assertEqual(client.post(url,json=body,headers={'Origin':'http://evil.invalid'}).status_code,403)
+  self.assertEqual(client.post(url,json=body).status_code,200)
   self.assertIn('Network discovery',client.get('/discovery').text)
   r=client.post('/discovery/jobs',json={'targets':'192.0.2.20','actor':'tester','transport':'telnet'})
   self.assertEqual(r.json()['candidates'][0]['port'],23)
