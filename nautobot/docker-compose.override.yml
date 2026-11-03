@@ -1,10 +1,15 @@
 services:
   nautobot:
     image: eve-aiops-nautobot:${NAUTOBOT_VERSION:-2.4.10}-napalm
-    build:
+    build: &nautobot-build
       context: .
       dockerfile: Dockerfile
       args:
         NAUTOBOT_VERSION: ${NAUTOBOT_VERSION:-2.4.10}
+    env_file:
+      - .env.napalm
+  nautobot-worker:
+    image: eve-aiops-nautobot:${NAUTOBOT_VERSION:-2.4.10}-napalm
+    build: *nautobot-build
     env_file:
       - .env.napalm

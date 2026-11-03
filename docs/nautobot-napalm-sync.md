@@ -26,7 +26,7 @@ lab 设备具有 Primary IPv4、管理接口 IP 关联及 Secrets Group。新增
 ```sh
 cd /opt/eve-aiops-agent/nautobot
 docker compose --env-file .env build nautobot
-docker compose --env-file .env up -d --no-deps nautobot
+docker compose --env-file .env up -d --no-deps nautobot nautobot-worker
 docker exec -i eve-aiops-nautobot nautobot-server shell \
   < ../scripts/nautobot/enable_lab_napalm.py
 ```
@@ -79,3 +79,23 @@ Prometheus 指标：
 
 离线测试只使用 lab 样本及合成数据。线上验收仅对 lab 设备发起 NAPALM 请求，
 其他设备只查看正常采集的汇总健康状态。
+
+## 批量编辑 Pending 与后台任务
+
+批量编辑由 Celery worker 异步执行。部署须同时运行 `nautobot` 网页服务和
+`nautobot-worker` 后台服务，并使用相同数据库、Redis、镜像及 media 卷。
+worker 启动跳过数据库初始化和超级用户重置，默认并发 2，自动重启并带 ping 健康检查。
+
+若 Job 一直 Pending，先检查 worker 是否运行和队列是否有消费者；不要反复提交
+相同的编辑。补齐 worker 后，原来已排队的任务会继续执行，无需重新提交。
+在 Nautobot 的 Job Results 中确认 Success，再检查设备实际状态；Agent 会在下一轮
+清单热加载后应用。worker 不需要为本功能连接任何网络设备。
+
+2026-11-03 修复时，线上缺少 worker，队列中有 1 个批量编辑任务和 18 个自定义字段
+初始化任务；修复保留原队列，不删除或伪造任务状态。部署前备份数据库、队列及 Compose 文件。
+
+验收结果：原任务 `e48793ed-fe99-4205-80ce-f5d136fa710f` 于 2026-11-03
+11:41:20 CST 成功完成，原队列清空，worker 健康检查通过。用户选中的 8 台设备
+变为 Offline，Agent 热加载后显示 8 台暂停采集/排除评分、10 台继续采集/评分；
+无需重启 Agent 或重新提交编辑。此任务同时关闭了 Enable collection 并开启了
+Exclude from health，因此恢复设备时需同时检查这两个自定义字段。

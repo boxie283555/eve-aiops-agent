@@ -1,3 +1,13 @@
+x-nautobot-environment: &nautobot-environment
+  NAUTOBOT_DB_HOST: nautobot-db
+  NAUTOBOT_DB_NAME: ${NAUTOBOT_DB_NAME:-nautobot}
+  NAUTOBOT_DB_USER: ${NAUTOBOT_DB_USER:-nautobot}
+  NAUTOBOT_DB_PASSWORD: ${NAUTOBOT_DB_PASSWORD:?set NAUTOBOT_DB_PASSWORD}
+  NAUTOBOT_REDIS_HOST: nautobot-redis
+  NAUTOBOT_REDIS_PORT: 6379
+  NAUTOBOT_SECRET_KEY: ${NAUTOBOT_SECRET_KEY:?set NAUTOBOT_SECRET_KEY}
+  NAUTOBOT_ALLOWED_HOSTS: ${NAUTOBOT_ALLOWED_HOSTS:-*}
+
 services:
   nautobot-db:
     image: postgres:16-alpine
@@ -32,14 +42,7 @@ services:
       nautobot-redis:
         condition: service_started
     environment:
-      NAUTOBOT_DB_HOST: nautobot-db
-      NAUTOBOT_DB_NAME: ${NAUTOBOT_DB_NAME:-nautobot}
-      NAUTOBOT_DB_USER: ${NAUTOBOT_DB_USER:-nautobot}
-      NAUTOBOT_DB_PASSWORD: ${NAUTOBOT_DB_PASSWORD:?set NAUTOBOT_DB_PASSWORD}
-      NAUTOBOT_REDIS_HOST: nautobot-redis
-      NAUTOBOT_REDIS_PORT: 6379
-      NAUTOBOT_SECRET_KEY: ${NAUTOBOT_SECRET_KEY:?set NAUTOBOT_SECRET_KEY}
-      NAUTOBOT_ALLOWED_HOSTS: ${NAUTOBOT_ALLOWED_HOSTS:-*}
+      <<: *nautobot-environment
       NAUTOBOT_CREATE_SUPERUSER: ${NAUTOBOT_CREATE_SUPERUSER:-true}
       NAUTOBOT_SUPERUSER_NAME: ${NAUTOBOT_SUPERUSER_NAME:-admin}
       NAUTOBOT_SUPERUSER_EMAIL: ${NAUTOBOT_SUPERUSER_EMAIL:-admin@example.local}
@@ -49,6 +52,29 @@ services:
       - "${NAUTOBOT_PORT:-8081}:8080"
     volumes:
       - nautobot-media:/opt/nautobot/media
+
+  nautobot-worker:
+    image: networktocode/nautobot:${NAUTOBOT_VERSION:-2.4.10}
+    container_name: eve-aiops-nautobot-worker
+    restart: unless-stopped
+    command: ["nautobot-server", "celery", "worker", "--loglevel=INFO", "--concurrency=2", "--hostname=nautobot-worker@%h"]
+    depends_on:
+      nautobot-db:
+        condition: service_healthy
+      nautobot-redis:
+        condition: service_started
+    environment:
+      <<: *nautobot-environment
+      NAUTOBOT_DOCKER_SKIP_INIT: "true"
+      NAUTOBOT_CREATE_SUPERUSER: "false"
+    volumes:
+      - nautobot-media:/opt/nautobot/media
+    healthcheck:
+      test: ["CMD-SHELL", "nautobot-server celery inspect ping --destination=nautobot-worker@$$HOSTNAME --timeout=5"]
+      interval: 60s
+      timeout: 60s
+      start_period: 120s
+      retries: 3
 
 volumes:
   nautobot-db-data:
