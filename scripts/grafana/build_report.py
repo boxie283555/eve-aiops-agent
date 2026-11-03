@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Generate the Chinese and English reports from one definition (stdlib only)."""
 from add_config_drift import inject as inject_config_drift
+from device_visibility import inject as inject_visibility
 import argparse
 import json
 from pathlib import Path
@@ -263,7 +264,7 @@ def build(lang):
                        {'title':tr('完整运维视图 ↗','Operations dashboard ↗'),'type':'link','url':'/d/eve-aiops-overview'+('-en' if lang=='en' else '')+'/ai-networking-ops','includeVars':True,'keepTime':True,'targetBlank':True,'icon':'dashboard','tags':[]},
                        {'title':tr('物理拓扑 ↗','Physical topology ↗'),'type':'link','url':'http://192.168.20.169:8080/topology','targetBlank':True,'icon':'external link','tags':[]}],
                 panels=panels,refresh='1m',schemaVersion=40,tags=['aiops','report','aiops-report-language'],templating={'list':[variable]},time={'from':'now-24h','to':'now'},timepicker={},timezone='browser',title=tr('中文 · 网络运行简报','English · Network Operations Report'),uid='eve-aiops-report'+('' if lang=='zh' else '-en'),version=2,weekStart='')
-    return inject_config_drift(dashboard, lang)
+    return inject_visibility(inject_config_drift(dashboard, lang), lang)
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--check',action='store_true');args=parser.parse_args()

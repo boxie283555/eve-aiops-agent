@@ -21,7 +21,7 @@ from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import HTMLResponse
 from .inventory import device_classification
 from .config_watch import live_status
-from .lifecycle import policy
+from .lifecycle import policy, operational_status
 
 RANGES = {'1h': 3600, '6h': 21600, '24h': 86400, '7d': 604800, '30d': 2592000}
 METRICS = [
@@ -91,16 +91,19 @@ def inventory_records(collector):
     return rows
 
 
-def selectors(site, device):
+def selectors(site, device, names=None):
     # Equality, not regex: punctuation in inventory names has no query semantics.
     labels = ['job="eve-aiops-agent"']
     if site != 'all':labels.append('site='+json.dumps(site))
     if device != 'all':labels.append('device='+json.dumps(device))
+    if names is not None:
+        import re
+        labels.append('device=~'+json.dumps('|'.join(re.escape(n) for n in names) if names else '__aiops_no_devices__'))
     return 'aiops_device_up{'+','.join(labels)+'}'
 
 
-def expressions(site, device):
-    scope = selectors(site, device)
+def expressions(site, device, names=None):
+    scope = selectors(site, device, names)
     current = ('{__name__=~"'+'|'.join(METRICS)+'",job="eve-aiops-agent"}'
                ' and on(device) '+scope)
     valid = '('+scope+' == 1) and on(device) (aiops_collect_success == 1)'
@@ -133,8 +136,8 @@ class EvidenceReader:
         self.cache = OrderedDict()
         self.slots = None
 
-    async def read(self, site, device, period):
-        key = (site, device, period)
+    async def read(self, site, device, period, names=None):
+        key = (site, device, period, tuple(names) if names is not None else None)
         if self.slots is None:self.slots = asyncio.Semaphore(2)
         cached = self.cache.get(key)
         if cached and time.monotonic()-cached[0] < 25:
@@ -147,7 +150,7 @@ class EvidenceReader:
             end = int(time.time())
             step = max(30, math.ceil(RANGES[period]/240))
             start = end-RANGES[period]
-            current, trend = expressions(site, device)
+            current, trend = expressions(site, device, names)
             specs = [('current', 'query', {'query':current, 'time':end}),
                      ('global', 'query', {'query':GLOBAL_QUERY, 'time':end}),
                      ('trend', 'query_range', {'query':trend, 'start':start, 'end':end, 'step':step})]
@@ -325,33 +328,36 @@ def router(collector, health_provider, inventory_provider=None):
         from .monitoring_view import MONITOR_PAGE
         return MONITOR_PAGE
 
+    def select(site, device, include_inactive):
+        all_records = inventory_records(collector)
+        sites = sorted({r['site'] for r in all_records if r['site']})
+        if site != 'all' and site not in sites:raise HTTPException(404,'Unknown site')
+        scoped = [r for r in all_records if site=='all' or r['site']==site]
+        if device!='all' and not any(r['name']==device for r in scoped):
+            raise HTTPException(404,'Unknown device in selected site')
+        visible = [r for r in scoped if include_inactive or operational_status(r.get('status','Active'))]
+        hidden = len(scoped)-len(visible)
+        # A device can leave the visible scope while the page is open.
+        if device!='all' and not any(r['name']==device for r in visible):device='all'
+        options = [dict(name=r['name'],id=r['id'],site=r['site']) for r in visible]
+        return ([r for r in visible if device=='all' or r['name']==device],sites,options,device,hidden)
+
     @routes.get('/api/monitor/drift')
-    def drift(site: str = Query('all',max_length=100), device: str = Query('all',max_length=100)):
-        records = inventory_records(collector)
-        if site != 'all':
-            if site not in {r['site'] for r in records}:raise HTTPException(404,'Unknown site')
-            records = [r for r in records if r['site']==site]
-        if device != 'all':
-            records = [r for r in records if r['name']==device]
-            if not records:raise HTTPException(404,'Unknown device in selected site')
+    def drift(site: str = Query('all',max_length=100), device: str = Query('all',max_length=100),
+              include_inactive: bool = False):
+        records,_,_,_,_ = select(site,device,include_inactive)
         return live_status(records)
 
     @routes.get('/api/monitor')
     async def data(site: str = Query('all',max_length=100), device: str = Query('all',max_length=100),
-                   period: Literal['1h','6h','24h','7d','30d'] = '24h'):
-        all_records = inventory_records(collector)
-        sites = sorted({r['site'] for r in all_records if r['site']})
-        if site != 'all' and site not in sites:raise HTTPException(404, 'Unknown site')
-        records = [r for r in all_records if site=='all' or r['site']==site]
-        options = [dict(name=r['name'],id=r['id'],site=r['site']) for r in records]
-        if device!='all':
-            records = [r for r in records if r['name']==device]
-            if not records:raise HTTPException(404, 'Unknown device in selected site')
-        evidence = await reader.read(site, device, period)
+                   period: Literal['1h','6h','24h','7d','30d'] = '24h', include_inactive: bool = False):
+        records,sites,options,device,hidden = select(site,device,include_inactive)
+        evidence = await reader.read(site, device, period, tuple(sorted(r['name'] for r in records)))
         health = await asyncio.to_thread(health_provider)
         result = summarize(records,health,evidence,ttl=int(os.getenv('AIOPS_TOPOLOGY_TTL_SECONDS','600')))
         apply_live_drift(result, await asyncio.to_thread(live_status,records))
-        result.update(site=site,device=device,period=period,options=dict(sites=sites,devices=options))
+        result.update(site=site,device=device,period=period,include_inactive=include_inactive,
+                      hidden_devices=hidden,options=dict(sites=sites,devices=options))
         if inventory_provider:result['inventory']=inventory_provider()
         return result
 

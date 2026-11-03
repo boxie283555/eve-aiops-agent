@@ -10,6 +10,7 @@ import json
 from pathlib import Path
 from add_config_drift import inject
 from tcam_status import inject as inject_tcam
+from device_visibility import inject as inject_visibility
 
 ROOT=Path(__file__).resolve().parents[2]
 TITLES='''9001|网络健康评估分 · 100|Network health points · 100
@@ -192,7 +193,8 @@ def build(source,lang):
         'Samples byte counters every 60 seconds and calculates bit/s from consecutive samples. Requires two initial samples; failed or expired (180 seconds) observations are absent. Hardware means physical/aggregate ports; logical means subinterfaces. Layers overlap and must not be added. Covers lab PA devices.')
     labels={'manufacturer':('厂商','Manufacturer'),'device_type':('设备类型','Device type'),'device':('设备','Device'),
             'interface':('接口','Interface'),'hardware_group':('硬件分组','Hardware group')}
-    for v in d['templating']['list']:v['label']=labels[v['name']][lang=='en']
+    for v in d['templating']['list']:
+        if v['name'] in labels:v['label']=labels[v['name']][lang=='en']
     d['title']=choose('中文 · 网络运维总览','English · Network Operations Overview')
     d['uid']='eve-aiops-overview'+('-en' if lang=='en' else '')
     d['id']=None
@@ -203,7 +205,7 @@ def build(source,lang):
                 {'title':choose('接口流量明细 ↗','Interface traffic details ↗'),'type':'link','url':'http://192.168.20.169:8080/mrtg','targetBlank':True},
                 {'title':choose('网络运行简报 ↗','Operations report ↗'),'type':'link','url':'/d/eve-aiops-report'+('-en' if lang=='en' else '')+'/report',
                  'includeVars':True,'keepTime':True,'targetBlank':False}]
-    return inject(inject_tcam(d,lang),lang)
+    return inject_visibility(inject(inject_tcam(d,lang),lang),lang)
 
 
 def main():

@@ -23,7 +23,7 @@ from .config_management import tracked_backup, get_schedule, apply_daily_schedul
 from . import config_watch
 from .inventory import load_inventory, inventory_status
 from .inventory_runtime import InventoryRuntime, interval_seconds as inventory_refresh_interval
-from .lifecycle import can_collect, policy as lifecycle_policy
+from .lifecycle import can_collect, policy as lifecycle_policy, prometheus_inventory
 from .health import network_health, prometheus_health
 from .health_view import HEALTH_PAGE
 from .nautobot import NautobotClient, NautobotError
@@ -220,7 +220,7 @@ def healthz() -> str:
 
 @app.get("/metrics")
 def prometheus_metrics() -> Response:
-    return Response(generate_latest() + prometheus_health(health_score()), media_type=CONTENT_TYPE_LATEST)
+    return Response(generate_latest() + prometheus_health(health_score()) + prometheus_inventory(collector.snapshot()[0]), media_type=CONTENT_TYPE_LATEST)
 
 
 @app.get("/api/inventory/status")
