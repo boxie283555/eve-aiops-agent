@@ -5,6 +5,18 @@ from .panos_traffic import add_rates, TrafficCollector
 from .config_history import DriftCollector
 
 
+def remove_device(name):
+    """Remove current exporter children, never historical Prometheus samples."""
+    for gauge in list(globals().values()):
+        if not isinstance(gauge,(Gauge,Counter)) or 'device' not in gauge._labelnames:continue
+        keys=set()
+        for family in gauge.collect():
+            for sample in family.samples:
+                if sample.labels.get('device')==name:
+                    keys.add(tuple(sample.labels[k] for k in gauge._labelnames))
+        for key in keys:gauge.remove(*key)
+
+
 class InterfaceRateGauge(Gauge):
     def collect(self):
         for metric in super().collect():

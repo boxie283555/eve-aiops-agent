@@ -91,7 +91,7 @@ def live_status(records, now=None):
         for record in records:
             key=record['id'];count=counts.get(key,{})
             rows.append(dict(id=key,device=record['name'],count=count.get('count',0),detected_at=count.get('detected_at')))
-            if record.get('site')!='lab':continue
+            if record.get('site')!='lab' or not record.get('monitoring_enabled',True):continue
             row=watched.get(key,{})
             stamp=row.get('last_success_at')
             state=('disabled' if not enabled() else 'error' if row.get('status')=='error' else

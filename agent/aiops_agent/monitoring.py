@@ -21,6 +21,7 @@ from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import HTMLResponse
 from .inventory import device_classification
 from .config_watch import live_status
+from .lifecycle import policy
 
 RANGES = {'1h': 3600, '6h': 21600, '24h': 86400, '7d': 604800, '30d': 2592000}
 METRICS = [
@@ -59,9 +60,9 @@ def timestamp(value):
 
 def inventory_records(collector):
     """Explicit public metadata; never serialize a Device or an exception."""
-    results = dict(collector.latest_results)
+    devices,results = collector.snapshot() if hasattr(collector,"snapshot") else (list(collector.devices),dict(collector.latest_results))
     rows = []
-    for device in list(collector.devices):
+    for device in devices:
         result = results.get(device.name)
         manufacturer, kind = device_classification(device)
         error = (result.error or '').lower() if result else ''
@@ -86,7 +87,7 @@ def inventory_records(collector):
         rows.append(dict(id=device.id, name=device.name, host=device.host, site=device.site,
                          manufacturer=manufacturer, device_type=kind,
                          collected_at=result.collected_at if result else None,
-                         collection_ok=result.ok if result else None, reason=reason, valid_metrics=sorted(allowed)))
+                         collection_ok=result.ok if result else None, reason=reason, valid_metrics=sorted(allowed),**policy(device)))
     return rows
 
 
@@ -194,6 +195,7 @@ def summarize(records, health, evidence, now=None, ttl=600):
         observed_up = one('aiops_device_up')
         row['state'] = ('unknown' if not source_ok or not fresh or observed_up is None else
                         'ok' if observed_up == 1 and row['collection_ok'] is True else 'failed')
+        if not row.get('monitoring_enabled',True):row['state']='paused'
         usable = row['state'] == 'ok' and one('aiops_collect_success') == 1
         row['age_seconds'] = max(0,now-stamp) if stamp is not None else None
         h = health_by_name.get(name, {})
@@ -245,7 +247,7 @@ def summarize(records, health, evidence, now=None, ttl=600):
         failures = values('aiops_config_backup_failure_info')
         row['backup_reason'] = failures[0][0].get('reason') if row['backup']==0 and failures else None
         row['backup_attempt'] = one('aiops_config_backup_last_attempt_timestamp_seconds') if config_ok else None
-        if row['state'] != 'ok':issues.append(dict(device=name,id=row['id'],kind='collection',reason=row.get('reason') if row['state']=='failed' else 'stale_or_missing'))
+        if row['state'] != 'ok' and row.get('health_included',True):issues.append(dict(device=name,id=row['id'],kind='collection',reason=row.get('reason') if row['state']=='failed' else 'stale_or_missing'))
         if row['drift']:issues.append(dict(device=name,id=row['id'],kind='drift',count=row['drift']))
         if row['backup']==0:issues.append(dict(device=name,id=row['id'],kind='backup',reason=row['backup_reason']))
         for key in ['cpu','memory','tcam']:
@@ -255,13 +257,14 @@ def summarize(records, health, evidence, now=None, ttl=600):
         nums = [r[key] for r in devices if r.get(key) is not None]
         return sum(nums) if nums else None
     def mean(key):
-        nums = [r[key] for r in devices if r.get(key) is not None]
+        nums = [r[key] for r in devices if r.get(key) is not None and r.get('health_included',True)]
         return sum(nums)/len(nums) if nums else None
     # Match health v1: devices lacking all evidence earn no score, rather than
     # silently dropping them from the equal-device mean.
     coverage = mean('coverage')
-    score = (sum(r['score'] or 0 for r in devices)/len(devices)
-             if source_ok and coverage and devices else None)
+    scored = [r for r in devices if r.get('health_included',True)]
+    score = (sum(r['score'] or 0 for r in scored)/len(scored)
+             if source_ok and coverage and scored else None)
     timeline = list(range(evidence['start'], evidence['end']+1, evidence['step']))
     trends = {}
     sources = {key: [None] * len(timeline) for key in ('rx', 'tx')}
@@ -285,8 +288,9 @@ def summarize(records, health, evidence, now=None, ttl=600):
                 errors=evidence['errors'], devices=sorted(devices,key=lambda d:(d['manufacturer'],d['device_type'],d['name'])),
                 interfaces=sorted(interfaces,key=lambda p:max(p.get('rx_bps',0),p.get('tx_bps',0)),reverse=True),
                 issues=issues, versions=[dict(version=k,count=v) for k,v in sorted(versions.items(),key=lambda item:-item[1])],
-                summary=dict(total=len(devices),online=sum(r['state']=='ok' for r in devices) if source_ok else None,
-                             failed=sum(r['state']=='failed' for r in devices) if source_ok else None,
+                summary=dict(total=len(devices),monitored=sum(r.get('monitoring_enabled',True) for r in devices),
+                             health_included=len(scored),health_excluded=len(devices)-len(scored),online=sum(r['state']=='ok' for r in devices) if source_ok else None,
+                             failed=sum(r['state']=='failed' and r.get('health_included',True) for r in devices) if source_ok else None,
                              unknown=sum(r['state']=='unknown' for r in devices),score=score,coverage=coverage,
                              deduction=mean('deduction'),unassessed=mean('unassessed'),drift=total('drift'),
                              backup_failures=sum(r['backup']==0 for r in devices) if any(r['backup'] is not None for r in devices) else None,
@@ -312,7 +316,7 @@ def apply_live_drift(result, live):
                                          reason=row['reason'] or 'stale_or_missing'))
 
 
-def router(collector, health_provider):
+def router(collector, health_provider, inventory_provider=None):
     routes = APIRouter(tags=['Monitoring workspace'])
     reader = EvidenceReader()
 
@@ -348,6 +352,7 @@ def router(collector, health_provider):
         result = summarize(records,health,evidence,ttl=int(os.getenv('AIOPS_TOPOLOGY_TTL_SECONDS','600')))
         apply_live_drift(result, await asyncio.to_thread(live_status,records))
         result.update(site=site,device=device,period=period,options=dict(sites=sites,devices=options))
+        if inventory_provider:result['inventory']=inventory_provider()
         return result
 
     return routes

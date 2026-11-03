@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import time
 import os
+import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
@@ -16,6 +17,7 @@ from netmiko import ConnectHandler, NetmikoAuthenticationException, NetmikoTimeo
 
 from . import metrics
 from .inventory import Device, device_classification
+from .lifecycle import can_collect
 from .parser import (
     BgpSummaryEntry,
     ArpEntry,
@@ -148,8 +150,40 @@ class Collector:
         self.settings = settings
         self.devices = devices
         self.latest_results: dict[str, DeviceResult] = {}
+        self.inventory_lock = threading.RLock()
+        self.collection_lock = threading.Lock()
         for device in devices:
             self._publish_classification(device)
+
+    def snapshot(self):
+        with self.inventory_lock:
+            return list(self.devices), dict(self.latest_results)
+
+    def reconcile(self, devices):
+        """Atomically apply an authoritative inventory; never accept retired in-flight results."""
+        with self.inventory_lock:
+            old={d.id or d.name:d for d in self.devices}
+            new={d.id or d.name:d for d in devices}
+            def connection(d):
+                return (d.name,d.host,d.platform,d.port,d.use_ssh,d.use_snmp,d.snmp,
+                        d.username_env,d.password_env,d.secret_env,d.snmp_community_env)
+            results={}
+            for key,prior in old.items():
+                current=new.get(key)
+                if (current is None or not can_collect(current) or connection(current)!=connection(prior)
+                        or (current.site,current.role,current.manufacturer)!=(prior.site,prior.role,prior.manufacturer)):
+                    metrics.remove_device(prior.name)
+                if current and can_collect(current) and connection(current)==connection(prior):
+                    result=self.latest_results.get(prior.name)
+                    if result:results[current.name]=replace(result,device=current)
+            self.devices=list(devices)
+            self.latest_results=results
+            for device in devices:self._publish_classification(device)
+
+    def _collect_current(self, device):
+        with self.inventory_lock:
+            if device not in self.devices or not can_collect(device):return None
+        return self.collect_device(device)
 
     def _publish_classification(self, device: Device) -> None:
         manufacturer, device_type = device_classification(device)
@@ -162,21 +196,33 @@ class Collector:
         metrics.DEVICE_CLASSIFICATION_INFO.labels(**labels).set(1)
 
     def collect_all(self) -> dict[str, DeviceResult]:
+        # The daily snapshot and metric schedule share this collector.
+        if not self.collection_lock.acquire(blocking=False):return self.snapshot()[1]
+        try:return self._collect_all()
+        finally:self.collection_lock.release()
+
+    def _collect_all(self) -> dict[str, DeviceResult]:
         results: dict[str, DeviceResult] = {}
         workers = max(1, self.settings.max_parallel_devices)
         with ThreadPoolExecutor(max_workers=workers) as executor:
-            future_map = {executor.submit(self.collect_device, device): device for device in self.devices}
+            devices,_=self.snapshot()
+            future_map = {executor.submit(self._collect_current, device): device for device in devices if can_collect(device)}
             for future in as_completed(future_map):
                 result = future.result()
-                results[result.device.name] = result
-                self.latest_results[result.device.name] = result
-                self._publish_metrics(result)
+                if result is None:continue
+                with self.inventory_lock:
+                    if result.device not in self.devices or not can_collect(result.device):continue
+                    results[result.device.name] = result
+                    self.latest_results[result.device.name] = result
+                    self._publish_metrics(result)
         results = self._enrich_nve_peer_hostnames(results)
         for result in results.values():
             if result.nve:
-                self._publish_metrics(result)  # Successful NVE label enrichment only.
-        self.latest_results = results
-        return results
+                with self.inventory_lock:
+                    if result.device in self.devices and can_collect(result.device):
+                        self.latest_results[result.device.name]=result
+                        self._publish_metrics(result)
+        return self.snapshot()[1]
 
     def _enrich_nve_peer_hostnames(self, results: dict[str, DeviceResult]) -> dict[str, DeviceResult]:
         vtep_hostnames = self._vtep_hostname_map(results)

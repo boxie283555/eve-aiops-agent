@@ -129,7 +129,7 @@ class SyncTests(unittest.TestCase):
     def test_primary_ip_reference_and_lab_platform_driver(self):
         client = NautobotClient("http://unused", "test")
         payloads = {
-            "dcim/devices/?limit=0": {
+            "dcim/devices/?limit=100": {
                 "results": [
                     {
                         "id": "lab-device",

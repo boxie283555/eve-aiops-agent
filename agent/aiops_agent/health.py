@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 
 from .collector import COMMANDS_BY_PLATFORM
 from .model import interface_name
+from .lifecycle import policy
 
 VERSION = "1.0"
 WEIGHTS = {"collection": 40, "interfaces": 20, "cpu": 10, "memory": 10,
@@ -137,7 +138,9 @@ def device_health(device, result, snapshot, now, ttl):
 def network_health(devices, results, snapshot, site="all", now=None, ttl=600):
     now = now or datetime.now(timezone.utc)
     selected = [d for d in devices if site == "all" or d.site == site]
-    rows = [device_health(d, results.get(d.name), snapshot, now, ttl) for d in selected]
+    included = [d for d in selected if policy(d,now)['health_included']]
+    excluded = [dict(device=d.name,id=d.id,site=d.site,**policy(d,now)) for d in selected if not policy(d,now)['health_included']]
+    rows = [device_health(d, results.get(d.name), snapshot, now, ttl) for d in included]
     mean = lambda key: round(sum(r[key] for r in rows) / len(rows), 1) if rows else None
     coverage = mean("coverage_percent")
     score = mean("score")
@@ -145,7 +148,8 @@ def network_health(devices, results, snapshot, site="all", now=None, ttl=600):
             "score": score if coverage else None, "coverage_percent": coverage,
             "deduction_points": mean("deduction_points"), "unassessed_points": mean("unassessed_points"),
             "state": "unknown" if not coverage else "partial" if coverage < 100 else "assessed",
-            "device_count": len(rows), "devices": rows,
+            "device_count": len(rows), "devices": rows,"inventory_count":len(selected),
+            "excluded_count":len(excluded),"excluded_devices":excluded,
             "method": "Equal-device mean of weighted verified health points. Missing evidence earns no points; this is not an SLA.",
             "limits": ["Current observations, not sustained incident or packet-delivery proof",
                        "No latency/loss, bandwidth saturation, error-counter deltas, threat-policy or application probes in v1",

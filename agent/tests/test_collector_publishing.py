@@ -6,7 +6,7 @@ from aiops_agent.collector import Collector, DeviceResult
 
 class PublishingTests(unittest.TestCase):
     def test_each_result_published_once(self):
-        devices = [SimpleNamespace(name="good"), SimpleNamespace(name="bad")]
+        devices = [SimpleNamespace(name="good",host="192.0.2.1"), SimpleNamespace(name="bad",host="192.0.2.2")]
         collector = Collector(SimpleNamespace(max_parallel_devices=1), devices)
         results = [
             DeviceResult(devices[0], True, 1),

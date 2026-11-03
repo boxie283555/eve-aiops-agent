@@ -83,6 +83,8 @@ def build_snapshot(
             ):
                 aliases.add(raw.strip())
         row = {
+            "monitoring_enabled": spec.get("monitoring_enabled",True),
+            "lifecycle_status": spec.get("status","Active"),
             "id": did,
             "name": name,
             "aliases": sorted(aliases),
@@ -100,6 +102,8 @@ def build_snapshot(
             "datasets": getattr(result, "dataset_status", {}) if result else {},
             "forwarding": getattr(result, "forwarding", None) if result else None,
         }
+        if not row["monitoring_enabled"]:
+            row.update(up=None,error="administratively_disabled",freshness="stale")
         device_rows[name] = row
         snapshot.devices.append(row)
         for dataset in ("interfaces", "routes"):
@@ -350,6 +354,7 @@ def build_snapshot(
     def link(a, b, ai, bi, source, dataset, confirmation="confirmed", evidence=None):
         if a not in device_rows or b not in device_rows or a == b:
             return
+        if not device_rows[a].get('monitoring_enabled',True) or not device_rows[b].get('monitoring_enabled',True):return
         ia = interface(a, ai)
         ib = interface(b, bi)
         physical = ia["kind"] == ib["kind"] == "physical" and not any(

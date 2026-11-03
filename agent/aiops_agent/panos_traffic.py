@@ -38,11 +38,13 @@ class TrafficStore:
         self.lock = threading.Lock()
         self.records = {}
         self.scope_error = None
+        self.allowed = None
 
     def scope(self, devices):
         with self.lock:
             self.scope_error = None
             allowed = {(d.id, d.host, d.name) for d in devices}
+            self.allowed = allowed
             self.records = {k: r for k, r in self.records.items()
                             if (k, r['host'], r['device']) in allowed}
 
@@ -53,6 +55,7 @@ class TrafficStore:
                 for row in self.records.values():
                     row.update(status='error', error=error, interfaces={})
             else:
+                if self.allowed is not None and (device.id,device.host,device.name) not in self.allowed:return
                 self.records[device.id] = dict(device_id=device.id, device=device.name, host=device.host,
                                               status='error', error=error, interfaces={})
 
@@ -60,6 +63,7 @@ class TrafficStore:
         mono = time.monotonic() if mono is None else mono
         wall = time.time() if wall is None else wall
         with self.lock:
+            if self.allowed is not None and (device.id,device.host,device.name) not in self.allowed:return
             previous = self.records.get(device.id, {})
             elapsed = mono - previous.get('_mono', mono)
             continuous = (previous.get('host') == device.host and previous.get('device') == device.name

@@ -61,12 +61,16 @@ class NautobotClient:
         """Follow bounded pages without making a large limit=0 response."""
         rows = []
         seen = set()
+        expected = None
         while path:
             if path in seen:
                 raise NautobotError("Repeated Nautobot pagination cursor")
             seen.add(path)
             page = self._get(path)
-            rows.extend(page.get("results", []))
+            if not isinstance(page.get('results'),list):
+                raise NautobotError('Incomplete Nautobot list response')
+            if expected is None and isinstance(page.get('count'),int):expected=page['count']
+            rows.extend(page['results'])
             next_url = page.get("next")
             if not next_url:
                 break
@@ -74,6 +78,8 @@ class NautobotClient:
             if parsed.netloc and parsed.netloc != urllib.parse.urlsplit(self.base_url).netloc:
                 raise NautobotError("Unexpected Nautobot pagination host")
             path = parsed.path.split("/api/", 1)[-1] + ("?" + parsed.query if parsed.query else "")
+        if expected is not None and expected != len(rows):
+            raise NautobotError('Incomplete Nautobot pagination')
         return rows
 
     def _related_object(self, value: Any) -> dict[str, Any]:
@@ -107,17 +113,18 @@ class NautobotClient:
             return "unknown"
 
     def devices(self) -> list[dict[str, Any]]:
-        payload = self._get("dcim/devices/?limit=0")
-        results = payload.get("results", [])
+        results = self._get_all("dcim/devices/?limit=100")
         devices: list[dict[str, Any]] = []
+        ids, names = set(), set()
         for item in results:
+            if not item.get('id') or not item.get('name') or item['id'] in ids or item['name'] in names:
+                raise NautobotError('Invalid or duplicate device identity')
+            ids.add(item['id']);names.add(item['name'])
             custom_fields = item.get("custom_fields") or {}
             primary = item.get("primary_ip4") or item.get("primary_ip6")
             primary_ip = _address(primary) or _address(custom_fields.get("management_ip"))
             if not primary_ip and primary:
                 primary_ip = _address(self._related_object(primary))
-            if not primary_ip:
-                continue
             role = item.get("role") or {}
             site = item.get("site") or item.get("location") or {}
             platform = self._related_object(item.get("platform") or {})
@@ -138,6 +145,12 @@ class NautobotClient:
                 {
                     "name": item.get("name") or item.get("display") or item.get("id"),
                     "id": item.get("id"),
+                    "status": self._related_name(self._related_object(item.get('status') or {})),
+                    "monitoring_enabled": _bool(custom_fields.get('aiops_monitoring_enabled'),True),
+                    "health_excluded": _bool(custom_fields.get('aiops_health_excluded'),False),
+                    "exclusion_reason": custom_fields.get('aiops_exclusion_reason') or '',
+                    "exclusion_owner": custom_fields.get('aiops_exclusion_owner') or '',
+                    "exclusion_until": custom_fields.get('aiops_exclusion_until') or None,
                     "role": self._related_name(role),
                     "site": self._related_name(site),
                     "host": primary_ip,

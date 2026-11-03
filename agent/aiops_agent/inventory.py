@@ -42,6 +42,12 @@ class Device:
     snmp: SnmpTarget = SnmpTarget()
     id: str | None = None
     manufacturer: str = ""
+    status: str = "Active"
+    monitoring_enabled: bool = True
+    health_excluded: bool = False
+    exclusion_reason: str = ""
+    exclusion_owner: str = ""
+    exclusion_until: str | None = None
 
 
 def device_classification(device: Device) -> tuple[str, str]:
@@ -64,7 +70,7 @@ def device_classification(device: Device) -> tuple[str, str]:
     return manufacturer, device_type
 
 
-def load_inventory(path: str = "/app/inventory/devices.yml") -> list[Device]:
+def load_inventory(path: str = "/app/inventory/devices.yml", *, allow_fallback=True) -> list[Device]:
     global _last_load_status
     project_config = load_project_config()
     nautobot = project_config.get("nautobot", {})
@@ -82,9 +88,13 @@ def load_inventory(path: str = "/app/inventory/devices.yml") -> list[Device]:
         if not nautobot_url or not nautobot_token:
             raise NautobotError("Nautobot inventory requires URL and token; YAML was not loaded")
         try:
-            raw = {"devices": NautobotClient(nautobot_url, nautobot_token).devices()}
+            # Inventory reads may overlap asynchronous bulk interface sync. Give
+            # Nautobot the same 30s minimum used by that sync; hot reload runs
+            # independently and cannot block metric collection.
+            timeout = max(30.0, float(os.getenv("NAUTOBOT_TIMEOUT_SECONDS") or nautobot.get("timeout_seconds", 5.0)))
+            raw = {"devices": NautobotClient(nautobot_url, nautobot_token, timeout).devices()}
         except NautobotError:
-            if not fallback:
+            if not fallback or not allow_fallback:
                 raise
             raw = _load_yaml_inventory(path, project_config)
             effective_source = "yaml_fallback"
@@ -102,6 +112,12 @@ def load_inventory(path: str = "/app/inventory/devices.yml") -> list[Device]:
                 name=str(merged["name"]),
                 id=merged.get("id"),
                 manufacturer=str(merged.get("manufacturer") or ""),
+                status=str(merged.get("status") or "Active"),
+                monitoring_enabled=merged.get("monitoring_enabled",True),
+                health_excluded=merged.get("health_excluded",False),
+                exclusion_reason=str(merged.get("exclusion_reason") or ""),
+                exclusion_owner=str(merged.get("exclusion_owner") or ""),
+                exclusion_until=merged.get("exclusion_until") or None,
                 role=str(merged.get("role", "unknown")),
                 site=str(merged.get("site", "unknown")),
                 host=str(merged["host"]),

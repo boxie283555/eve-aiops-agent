@@ -22,6 +22,8 @@ from .firewall_api import router as firewall_router
 from .config_management import tracked_backup, get_schedule, apply_daily_schedule, restore_token
 from . import config_watch
 from .inventory import load_inventory, inventory_status
+from .inventory_runtime import InventoryRuntime, interval_seconds as inventory_refresh_interval
+from .lifecycle import can_collect, policy as lifecycle_policy
 from .health import network_health, prometheus_health
 from .health_view import HEALTH_PAGE
 from .nautobot import NautobotClient, NautobotError
@@ -39,6 +41,7 @@ settings = load_settings()
 devices = load_inventory()
 active_inventory_status = inventory_status()
 collector = Collector(settings, devices)
+inventory_runtime = InventoryRuntime(collector,active_inventory_status)
 scheduler = AsyncIOScheduler(timezone="Asia/Shanghai")
 interface_sync_task: asyncio.Task[None] | None = None
 interface_sync_status = {"status": "not_run", "last_attempt_at": None,
@@ -70,11 +73,23 @@ async def _collect_loop_once() -> None:
         except NautobotError:
             # Runtime topology remains usable when Nautobot is temporarily down.
             design = None
-    snapshot = await asyncio.to_thread(build_snapshot, collector.latest_results, design, load_snapshot())
+    current,results=collector.snapshot()
+    # Retain lifecycle nodes even if the Nautobot topology read fails. No
+    # design links are inferred from inventory metadata or stale results.
+    design = design or {}
+    design_rows = {r['id']:r for r in design.get('devices',[])}
+    design['devices'] = [{**design_rows.get(d.id,{}), 'id':d.id, 'name':d.name,
+                          'host':d.host, 'site':d.site, 'role':d.role, 'platform':d.platform,
+                          **lifecycle_policy(d)} for d in current]
+    snapshot = await asyncio.to_thread(build_snapshot, results, design, load_snapshot())
     await asyncio.to_thread(save_snapshot, snapshot)
     if settings.nautobot_url and settings.nautobot_token:
         if interface_sync_task is None or interface_sync_task.done():
             interface_sync_task = asyncio.create_task(_sync_interfaces_background())
+
+
+async def _inventory_refresh_once() -> None:
+    await asyncio.to_thread(inventory_runtime.refresh)
 
 
 async def _sync_interfaces_background() -> None:
@@ -83,7 +98,7 @@ async def _sync_interfaces_background() -> None:
     try:
         updated = await asyncio.to_thread(
             NautobotClient(settings.nautobot_url or "", settings.nautobot_token or "", max(30.0, settings.nautobot_timeout_seconds)).sync_interface_states,
-            list(collector.latest_results.values()),
+            list(collector.snapshot()[1].values()),
         )
         completed = time.time()
         interface_sync_status.update(status="ok", last_success_at=completed, updated_interfaces=updated)
@@ -150,6 +165,8 @@ async def startup() -> None:
     await asyncio.to_thread(recover_interrupted)
     settings.snapshots_path.mkdir(parents=True, exist_ok=True)
     settings.reports_path.mkdir(parents=True, exist_ok=True)
+    scheduler.add_job(_inventory_refresh_once,'interval',seconds=inventory_refresh_interval(),
+                      id='inventory_refresh',replace_existing=True,max_instances=1,coalesce=True)
     scheduler.add_job(
         _collect_loop_once,
         "interval",
@@ -208,17 +225,17 @@ def prometheus_metrics() -> Response:
 
 @app.get("/api/inventory/status")
 def active_inventory() -> dict:
-    return {**active_inventory_status, "device_count": len(collector.devices),
-            "refresh_policy": "Loaded at Agent startup; restart Agent after inventory changes"}
+    return inventory_runtime.snapshot()
 
 
 @app.get("/api/health/score")
 def health_score(site: str = "all") -> dict:
-    return network_health(list(collector.devices), dict(collector.latest_results), load_snapshot(), site,
+    current,results=collector.snapshot()
+    return network_health(current, results, load_snapshot(), site,
                           ttl=int(os.getenv("AIOPS_TOPOLOGY_TTL_SECONDS", "600")))
 
 
-app.include_router(monitoring_router(collector, health_score))
+app.include_router(monitoring_router(collector, health_score, inventory_runtime.snapshot))
 
 
 @app.get("/health", response_class=HTMLResponse)
@@ -257,26 +274,24 @@ def structured_state() -> dict[str, object]:
                 "vxlan": [asdict(peer) for peer in result.nve],
                 "structured_commands": sorted(result.structured_outputs.keys()),
             }
-            for result in sorted(collector.latest_results.values(), key=lambda item: item.device.name)
+            for result in sorted(collector.snapshot()[1].values(), key=lambda item: item.device.name)
         ]
     }
 
 
 @app.get("/api/devices")
 def devices_api() -> list[dict[str, object]]:
-    """Return the latest device state for the network operations UI."""
-    return [
-        {
-            "device": result.device.name,
-            "host": result.device.host,
-            "role": result.device.role,
-            "site": result.device.site,
-            "up": result.ok,
-            "error": result.error,
-            "duration_seconds": result.duration_seconds,
-        }
-        for result in sorted(collector.latest_results.values(), key=lambda item: item.device.name)
-    ]
+    """Current inventory, including administratively paused and pending assets."""
+    devices, results = collector.snapshot()
+    rows = []
+    for device in sorted(devices,key=lambda d:d.name):
+        result = results.get(device.name)
+        lifecycle = lifecycle_policy(device)
+        rows.append(dict(device=device.name,id=device.id,host=device.host,role=device.role,site=device.site,
+                         up=result.ok if result else None,
+                         error=result.error if result else ('not_collected' if lifecycle['monitoring_enabled'] else 'administratively_disabled'),
+                         duration_seconds=result.duration_seconds if result else None,**lifecycle))
+    return rows
 
 
 @app.get("/api/interfaces")
@@ -286,7 +301,7 @@ def interfaces_api(
 ) -> list[dict[str, object]]:
     """Return interface state without requiring a device login."""
     rows: list[dict[str, object]] = []
-    for result in collector.latest_results.values():
+    for result in collector.snapshot()[1].values():
         if device and result.device.name != device:
             continue
         for interface in result.interfaces:
@@ -508,7 +523,7 @@ def topology_anomalies() -> dict[str, object]:
 @app.get("/tools/options")
 def tools_options(site: str = "all") -> dict[str, object]:
     snapshot = load_snapshot()
-    inventory = snapshot.devices if snapshot else [asdict(d) for d in devices]
+    inventory = snapshot.devices if snapshot else [asdict(d) for d in collector.snapshot()[0]]
     selected = [d for d in inventory if site == "all" or d.get("site") == site]
     ids = {d.get("id") for d in selected}
     return {
@@ -601,7 +616,7 @@ def _resolve_endpoint(query: str, device_filter: str = "all", vrf_filter: str = 
 
 
 def _filtered_results(device_filter: str):
-    for result in collector.latest_results.values():
+    for result in collector.snapshot()[1].values():
         if _matches_filter(result.device.name, device_filter):
             yield result
 
@@ -637,8 +652,8 @@ def _is_ip(value: str) -> bool:
 @app.get("/", response_class=HTMLResponse)
 def index() -> str:
     rows = []
-    for device in devices:
-        result = collector.latest_results.get(device.name)
+    for device in collector.snapshot()[0]:
+        result = collector.snapshot()[1].get(device.name)
         status = "unknown"
         detail = "collection has not run yet"
         if result:
@@ -1052,7 +1067,7 @@ def mrtg_view() -> str:
 def mrtg_data() -> dict[str, object]:
     interfaces = []
     telemetry_rates = _mrtg_telemetry_rates()
-    for result in sorted(collector.latest_results.values(), key=lambda item: item.device.name):
+    for result in sorted(collector.snapshot()[1].values(), key=lambda item: item.device.name):
         for iface in result.interfaces:
             telemetry = telemetry_rates.get((result.device.name, str(iface["name"])))
             interfaces.append(
@@ -1073,7 +1088,7 @@ def mrtg_data() -> dict[str, object]:
 
 
 def _mrtg_telemetry_rates() -> dict[tuple[str, str], dict[str, float]]:
-    host_to_device = {device.host: device.name for device in devices}
+    host_to_device = {device.host: device.name for device in collector.snapshot()[0]}
     counters: dict[tuple[str, str, str], float] = {}
     now = time.time()
     try:

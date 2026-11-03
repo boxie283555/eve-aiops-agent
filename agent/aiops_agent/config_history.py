@@ -266,11 +266,12 @@ def detect_drift(device_id=None):
 
 def current_lab_devices(settings, requested=None):
     from .inventory import load_inventory
+    from .lifecycle import can_collect
     from .nautobot import NautobotClient
     if not settings.nautobot_url or not settings.nautobot_token:
         raise ValueError('Current Nautobot scope is required')
     current={r['id']:r for r in NautobotClient(settings.nautobot_url,settings.nautobot_token,15).devices()}
-    devices=[d for d in load_inventory() if d.id and d.site=='lab'
+    devices=[d for d in load_inventory() if d.id and d.site=='lab' and can_collect(d)
              and current.get(d.id,{}).get('site')=='lab' and current[d.id].get('host')==d.host
              and current[d.id].get('name')==d.name]
     if requested:

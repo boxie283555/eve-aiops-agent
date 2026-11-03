@@ -15,6 +15,7 @@ from pathlib import Path
 
 from .collector import Collector
 from .inventory import load_inventory
+from .lifecycle import can_collect
 from .nautobot import NautobotClient
 from .panos_policy import parse_config
 from .topology import atomic_json, fresh
@@ -34,7 +35,7 @@ def lab_firewalls(settings):
     if not settings.nautobot_url or not settings.nautobot_token:
         raise ValueError('Current Nautobot site validation is required')
     records={r['name']:r for r in NautobotClient(settings.nautobot_url,settings.nautobot_token,15).devices()}
-    return [d for d in load_inventory() if d.platform=='paloalto_panos' and d.site=='lab'
+    return [d for d in load_inventory() if d.platform=='paloalto_panos' and d.site=='lab' and can_collect(d)
             and records.get(d.name,{}).get('site')=='lab'
             and records[d.name].get('host')==d.host and records[d.name].get('id')==d.id]
 
