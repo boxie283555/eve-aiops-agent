@@ -15,6 +15,13 @@
       "includeVars": true
     },
     {
+      "title": "网络发现 ↗",
+      "type": "link",
+      "url": "http://192.168.20.169:8080/discovery?lang=zh",
+      "targetBlank": true,
+      "includeVars": false
+    },
+    {
       "title": "语言 / Language",
       "type": "dashboards",
       "tags": [

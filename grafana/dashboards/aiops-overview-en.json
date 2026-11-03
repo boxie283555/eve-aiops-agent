@@ -15,6 +15,13 @@
       "includeVars": true
     },
     {
+      "title": "Network discovery ↗",
+      "type": "link",
+      "url": "http://192.168.20.169:8080/discovery?lang=en",
+      "targetBlank": true,
+      "includeVars": false
+    },
+    {
       "title": "语言 / Language",
       "type": "dashboards",
       "tags": [
