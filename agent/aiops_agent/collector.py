@@ -49,6 +49,7 @@ from .parser import (
     parse_show_interface,
     parse_tcam_resources,
 )
+from .bgp_baseline import parse_eos_ipv4_all_vrfs
 from .settings import Settings
 from .snmp import SnmpSample, collect_snmp_sample, merge_interface_counters, merge_resources
 
@@ -279,7 +280,10 @@ class Collector:
             )
             if device.platform != "paloalto_panos":
                 connection.send_command("terminal length 0", expect_string=r"#|>")
-            command_set = COMMANDS_BY_PLATFORM.get(device.platform, COMMANDS_BY_PLATFORM["cisco_nxos"])
+            command_set = dict(COMMANDS_BY_PLATFORM.get(device.platform, COMMANDS_BY_PLATFORM["cisco_nxos"]))
+            if device.platform == "arista_eos" and device.site == "lab":
+                command_set["bgp_summary"] = "show bgp evpn summary"
+                command_set["bgp_ipv4_all_vrfs"] = "show ip bgp summary vrf all"
             for key, command in command_set.items():
                 # Read EOS/PAN-OS output until quiet: prompt-looking text in
                 # command output otherwise causes premature matches/timeouts.
@@ -366,6 +370,16 @@ class Collector:
             if device.platform == "paloalto_panos":
                 dataset_status["routes"] = dataset_status.get("routes", False) and "VIRTUAL ROUTER:" in outputs.get("routes", "")
 
+            bgp = parse_bgp_summary(outputs.get("bgp_summary", ""), structured_outputs.get("bgp_summary"))
+            if "bgp_ipv4_all_vrfs" in outputs:
+                ipv4, complete = parse_eos_ipv4_all_vrfs(outputs["bgp_ipv4_all_vrfs"])
+                dataset_status["bgp_ipv4_all_vrfs"] = complete
+                evpn, evpn_complete = parse_eos_ipv4_all_vrfs(outputs.get("bgp_summary", ""))
+                evpn = [replace(p, afi_safi="L2VPN EVPN") for p in evpn]
+                dataset_status["bgp_summary"] = complete and evpn_complete
+                dataset_status["bgp_baseline_complete"] = complete and evpn_complete
+                bgp = (evpn if evpn_complete else []) + (ipv4 if complete else [])
+
             dataset_status["interfaces"] = bool(interface_payload) and dataset_status.get("interface", False)
             if device.platform != "paloalto_panos":
                 dataset_status["interfaces"] = dataset_status["interfaces"] and dataset_status.get("running_config", False)
@@ -375,7 +389,7 @@ class Collector:
                 duration_seconds=time.monotonic() - started,
                 outputs=outputs,
                 structured_outputs=structured_outputs,
-                bgp=parse_bgp_summary(outputs.get("bgp_summary", ""), structured_outputs.get("bgp_summary")),
+                bgp=bgp,
                 ospf=parse_ospf_neighbors(outputs.get("ospf_neighbors", "")),
                 nve=parse_nve_peers(outputs.get("nve_peers", "")),
                 interfaces=interface_payload,

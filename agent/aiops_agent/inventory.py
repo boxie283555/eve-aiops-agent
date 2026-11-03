@@ -48,6 +48,7 @@ class Device:
     exclusion_reason: str = ""
     exclusion_owner: str = ""
     exclusion_until: str | None = None
+    bgp_baseline: dict | None = None
 
 
 def device_classification(device: Device) -> tuple[str, str]:
@@ -118,6 +119,7 @@ def load_inventory(path: str = "/app/inventory/devices.yml", *, allow_fallback=T
                 exclusion_reason=str(merged.get("exclusion_reason") or ""),
                 exclusion_owner=str(merged.get("exclusion_owner") or ""),
                 exclusion_until=merged.get("exclusion_until") or None,
+                bgp_baseline=merged.get("bgp_baseline"),
                 role=str(merged.get("role", "unknown")),
                 site=str(merged.get("site", "unknown")),
                 host=str(merged["host"]),

@@ -7,8 +7,9 @@ from datetime import datetime, timezone
 from .collector import COMMANDS_BY_PLATFORM
 from .model import interface_name
 from .lifecycle import policy
+from .bgp_baseline import evaluate as evaluate_bgp_baseline
 
-VERSION = "1.0"
+VERSION = "1.1"
 WEIGHTS = {"collection": 40, "interfaces": 20, "cpu": 10, "memory": 10,
            "bgp": 5, "ospf": 3, "overlay": 2, "power": 5, "module": 5}
 GOOD_HARDWARE = {"ok", "up", "online", "active", "normal", "operational", "good"}
@@ -86,7 +87,10 @@ def device_health(device, result, snapshot, now, ttl):
                             [{"percent": value}] if score is not None else []))
     for key, attr, dataset in [("bgp", "bgp", "bgp_summary"), ("ospf", "ospf", "ospf_neighbors"),
                                ("overlay", "nve", "nve_peers")]:
-        if dataset not in commands:
+        baseline_check = evaluate_bgp_baseline(device, result, usable) if key == "bgp" else None
+        if baseline_check is not None:
+            checks.append(check(key, **baseline_check))
+        elif dataset not in commands:
             checks.append(check(key, reason="not_collected_for_platform", excluded=True))
         elif not datasets.get(dataset):
             checks.append(check(key, reason="dataset_failed"))
@@ -153,7 +157,7 @@ def network_health(devices, results, snapshot, site="all", now=None, ttl=600):
             "method": "Equal-device mean of weighted verified health points. Missing evidence earns no points; this is not an SLA.",
             "limits": ["Current observations, not sustained incident or packet-delivery proof",
                        "No latency/loss, bandwidth saturation, error-counter deltas, threat-policy or application probes in v1",
-                       "An empty neighbor table is excluded, not proof that routing is configured correctly",
+                       "Approved BGP baselines detect missing peers; protocols without a baseline retain observation-only behavior",
                        "Collection failure is not proof of physical unreachability"]}
 
 
