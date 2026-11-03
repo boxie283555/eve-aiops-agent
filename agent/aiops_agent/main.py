@@ -31,6 +31,7 @@ from .metrics import NAUTOBOT_SYNC_SUCCESS, NAUTOBOT_SYNC_LAST_SUCCESS, NAUTOBOT
 from .panos_traffic import refresh_traffic, STORE as PA_TRAFFIC, INTERVAL as PA_TRAFFIC_INTERVAL, overlay_interfaces
 from .panos_evidence import attach_policy, refresh_policy, policy_status, verify_flow
 from .tools_view import TOOLS_PAGE
+from .discovery_api import router as discovery_router
 from .monitoring import router as monitoring_router
 from .parser import normalize_mac
 from .settings import load_settings
@@ -54,6 +55,7 @@ MRTG_TELEMETRY_CACHE: dict[tuple[str, str, str], tuple[float, float]] = {}
 app = FastAPI(title="EVE AIOps Agent", version="0.1.0")
 app.include_router(config_router(settings,lambda: apply_daily_schedule(scheduler,_config_backup_once)))
 app.include_router(firewall_router(settings))
+app.include_router(discovery_router(settings,collector))
 
 
 def _hour_minute(value: str) -> tuple[int, int]:
@@ -163,6 +165,8 @@ async def _compare_once() -> None:
 async def startup() -> None:
     from .firewall_execution import recover_interrupted
     await asyncio.to_thread(recover_interrupted)
+    from .discovery import recover as recover_discovery
+    await asyncio.to_thread(recover_discovery)
     settings.snapshots_path.mkdir(parents=True, exist_ok=True)
     settings.reports_path.mkdir(parents=True, exist_ok=True)
     scheduler.add_job(_inventory_refresh_once,'interval',seconds=inventory_refresh_interval(),
