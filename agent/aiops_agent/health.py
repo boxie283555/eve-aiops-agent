@@ -8,8 +8,9 @@ from .collector import COMMANDS_BY_PLATFORM
 from .model import interface_name
 from .lifecycle import policy
 from .bgp_baseline import evaluate as evaluate_bgp_baseline
+from .igp_baseline import evaluate_ospf
 
-VERSION = "1.1"
+VERSION = "1.2"
 WEIGHTS = {"collection": 40, "interfaces": 20, "cpu": 10, "memory": 10,
            "bgp": 5, "ospf": 3, "overlay": 2, "power": 5, "module": 5}
 GOOD_HARDWARE = {"ok", "up", "online", "active", "normal", "operational", "good"}
@@ -88,6 +89,8 @@ def device_health(device, result, snapshot, now, ttl):
     for key, attr, dataset in [("bgp", "bgp", "bgp_summary"), ("ospf", "ospf", "ospf_neighbors"),
                                ("overlay", "nve", "nve_peers")]:
         baseline_check = evaluate_bgp_baseline(device, result, usable) if key == "bgp" else None
+        if key == "ospf":
+            baseline_check = evaluate_ospf(device)
         if baseline_check is not None:
             checks.append(check(key, **baseline_check))
         elif dataset not in commands:

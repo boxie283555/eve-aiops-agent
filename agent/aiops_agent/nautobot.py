@@ -152,6 +152,7 @@ class NautobotClient:
                     "exclusion_owner": custom_fields.get('aiops_exclusion_owner') or '',
                     "exclusion_until": custom_fields.get('aiops_exclusion_until') or None,
                     "bgp_baseline": custom_fields.get("aiops_bgp_baseline"),
+                    "igp_baseline": custom_fields.get("aiops_igp_baseline"),
                     "role": self._related_name(role),
                     "site": self._related_name(site),
                     "host": primary_ip,
