@@ -53,6 +53,19 @@ from .parser import (
 from .bgp_baseline import parse_eos_ipv4_all_vrfs
 from .settings import Settings
 from .snmp import SnmpSample, collect_snmp_sample, merge_interface_counters, merge_resources
+from .credential_vault import CredentialVault
+
+
+def _resolve_secret(reference: str | None) -> str | None:
+    if not reference:
+        return None
+    value = os.getenv(reference)
+    if value:
+        return value
+    try:
+        return CredentialVault().get(reference)
+    except RuntimeError:
+        return None
 
 
 TEXTFSM_COMMAND_KEYS = {"version", "inventory", "power", "module", "bgp_summary"}
@@ -450,13 +463,14 @@ class Collector:
 
     def _device_credentials(self, device: Device) -> tuple[str | None, str | None, str | None]:
         """Use per-device Nautobot credential environment fields when present."""
-        username = os.getenv(device.username_env) if device.username_env else None
-        password = os.getenv(device.password_env) if device.password_env else None
-        secret = os.getenv(device.secret_env) if device.secret_env else None
+        username = _resolve_secret(device.username_env)
+        password = _resolve_secret(device.password_env)
+        secret = _resolve_secret(device.secret_env)
+        per_device_ref = lambda value: bool(value and value.startswith('AIOPS_DEVICE_'))
         return (
-            username or self.settings.device_username,
-            password or self.settings.device_password,
-            secret or self.settings.device_secret,
+            username if per_device_ref(device.username_env) else username or self.settings.device_username,
+            password if per_device_ref(device.password_env) else password or self.settings.device_password,
+            secret if per_device_ref(device.secret_env) else secret or self.settings.device_secret,
         )
 
     def _safe_command(self, runner: Callable[..., str], command: str) -> str:
@@ -473,13 +487,19 @@ class Collector:
         return None if isinstance(result, str) else result
 
     def _collect_snmp_sample(self, device: Device):
-        if not self.settings.snmp_enabled or not device.use_snmp or not self.settings.snmp_community:
+        if not self.settings.snmp_enabled or not device.use_snmp:
+            return SnmpSample()
+        if device.snmp_community_env and device.snmp_community_env != "AIOPS_SNMP_COMMUNITY":
+            community = _resolve_secret(device.snmp_community_env)
+        else:
+            community = _resolve_secret("AIOPS_SNMP_COMMUNITY") or self.settings.snmp_community
+        if not community:
             return SnmpSample()
         try:
             return collect_snmp_sample(
-                device.host,
-                self.settings.snmp_community,
-                port=self.settings.snmp_port,
+                device.snmp.host or device.host,
+                community,
+                port=device.snmp.port or self.settings.snmp_port,
                 timeout=self.settings.snmp_timeout_seconds,
                 retries=self.settings.snmp_retries,
             )

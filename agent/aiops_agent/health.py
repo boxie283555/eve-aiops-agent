@@ -17,6 +17,44 @@ GOOD_HARDWARE = {"ok", "up", "online", "active", "normal", "operational", "good"
 BAD_HARDWARE = {"fail", "failed", "down", "error", "fault", "not_ok", "offline", "power_loss"}
 
 
+def evaluate_vxlan_baseline(device, result, usable):
+    """Score NVE peers against an explicitly approved Nautobot baseline."""
+    baseline = getattr(device, "vxlan_baseline", None)
+    if baseline is None:
+        return None
+    try:
+        if (not isinstance(baseline, dict) or baseline.get("schema_version") != 1
+                or baseline.get("device_id") != device.id
+                or not (baseline.get("approved") is True or baseline.get("approval_status") == "approved")
+                or not baseline.get("revision") or baseline.get("dataset_complete") is not True):
+            return {"reason": "baseline_invalid"}
+        expected = baseline.get("neighbors")
+        if not isinstance(expected, list) or not expected or len(expected) > 10000:
+            return {"reason": "baseline_incomplete"}
+        keys = [(str(p.get("neighbor", p.get("peer_ip", p.get("peer")))),
+                 str(p.get("context", "overlay"))) for p in expected]
+        if any(k[0] == "None" for k in keys):
+            return {"reason": "baseline_invalid"}
+        if len(set(keys)) != len(keys):
+            return {"reason": "baseline_invalid"}
+    except (TypeError, KeyError, AttributeError):
+        return {"reason": "baseline_invalid"}
+    if not usable or not result.dataset_status.get("nve_peers"):
+        return {"reason": "baseline_evidence_missing"}
+    observed = {}
+    for peer in result.nve:
+        observed[(peer.neighbor, peer.context)] = peer
+    values, details = [], []
+    for peer, key in zip(expected, keys):
+        actual = observed.get(key)
+        healthy = actual is not None and actual.up
+        values.append(100 if healthy else 0)
+        if not healthy:
+            details.append({"neighbor": key[0], "context": key[1],
+                            "reason": "baseline_neighbor_missing" if actual is None else "neighbor_down"})
+    return {"values": values, "reason": "approved_vxlan_baseline", "details": details}
+
+
 def recent(stamp, now, ttl):
     try:
         age = (now - datetime.fromisoformat(stamp.replace("Z", "+00:00"))).total_seconds()
@@ -91,6 +129,8 @@ def device_health(device, result, snapshot, now, ttl):
         baseline_check = evaluate_bgp_baseline(device, result, usable) if key == "bgp" else None
         if key == "ospf":
             baseline_check = evaluate_ospf(device)
+        if key == "overlay":
+            baseline_check = evaluate_vxlan_baseline(device, result, usable)
         if baseline_check is not None:
             checks.append(check(key, **baseline_check))
         elif dataset not in commands:

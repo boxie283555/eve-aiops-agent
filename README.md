@@ -4,6 +4,12 @@ This project deploys a lightweight monitoring agent for EVE and network lab envi
 
 It provides:
 
+- Network health scoring with evidence coverage and optional BGP, IGP, and VXLAN peer baselines.
+- Nautobot-backed device inventory, lifecycle controls, and per-device collection settings.
+- A lab-scoped discovery wizard for onboarding, identity checks, topology evidence, and baseline review.
+- Per-device SSH/Telnet and SNMPv2c settings, including `.xlsx` import with an encrypted Agent credential vault.
+- Business-flow registration and visual, evidence-timestamped path impact reports with offline fault scenarios.
+- Configuration backups, structured drift review, firewall policy/NAT analysis, and path tracing.
 - Device configuration snapshots.
 - Interface state, traffic, errors, and discards.
 - BGP, OSPF, VXLAN, underlay, and overlay state checks.
@@ -85,6 +91,10 @@ vi config/project.yml
 ```
 
 The install script reads `config/project.yml`, optionally installs a route, provisions Grafana, and starts the Docker services.
+
+For full installation, Nautobot preparation, secure per-device credential import, and feature usage, see [Installation and usage](docs/installation-and-usage.md).
+
+The lab-only device onboarding workflow and Excel columns are documented in [Network discovery](docs/network-discovery.md). Business flow registration, impact reports, and API endpoints are covered in [Business flow impact analysis](docs/business-impact-analysis.md).
 
 ## Default URLs
 

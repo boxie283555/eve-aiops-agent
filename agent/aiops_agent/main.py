@@ -19,6 +19,7 @@ from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from .collector import Collector
 from .config_api import router as config_router
 from .firewall_api import router as firewall_router
+from .business_flows import router as business_router
 from .config_management import tracked_backup, get_schedule, apply_daily_schedule, restore_token
 from . import config_watch
 from .inventory import load_inventory, inventory_status
@@ -55,6 +56,7 @@ MRTG_TELEMETRY_CACHE: dict[tuple[str, str, str], tuple[float, float]] = {}
 app = FastAPI(title="EVE AIOps Agent", version="0.1.0")
 app.include_router(config_router(settings,lambda: apply_daily_schedule(scheduler,_config_backup_once)))
 app.include_router(firewall_router(settings))
+app.include_router(business_router())
 app.include_router(discovery_router(settings,collector))
 
 

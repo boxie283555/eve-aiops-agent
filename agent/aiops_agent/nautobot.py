@@ -153,6 +153,7 @@ class NautobotClient:
                     "exclusion_until": custom_fields.get('aiops_exclusion_until') or None,
                     "bgp_baseline": custom_fields.get("aiops_bgp_baseline"),
                     "igp_baseline": custom_fields.get("aiops_igp_baseline"),
+                    "vxlan_baseline": custom_fields.get("aiops_vxlan_baseline"),
                     "role": self._related_name(role),
                     "site": self._related_name(site),
                     "host": primary_ip,
@@ -241,6 +242,32 @@ class NautobotClient:
         try:
             with urllib.request.urlopen(request, timeout=self.timeout) as response:
                 return json.load(response)
+        except urllib.error.HTTPError as exc:
+            # Keep actionable field validation errors, without echoing the
+            # submitted payload or credentials.
+            raw = exc.read(8192).decode("utf-8", "replace").strip()
+            try:
+                body = json.loads(raw) if raw else None
+            except ValueError:
+                body = None
+            details = []
+            if isinstance(body, dict):
+                for field, issue in body.items():
+                    if isinstance(issue, list):
+                        message = ", ".join(str(item) for item in issue[:3])
+                    elif isinstance(issue, dict):
+                        message = ", ".join(f"{key}: {value}" for key, value in list(issue.items())[:3])
+                    else:
+                        message = str(issue)
+                    details.append(f"{field}: {message[:180]}")
+            detail = "; ".join(details)
+            if not detail and body is not None:
+                detail = json.dumps(body, ensure_ascii=False)
+            if not detail:
+                detail = raw
+            detail = " ".join(detail.split())[:700]
+            suffix = f": {detail}" if detail else ""
+            raise NautobotError(f"Nautobot HTTP {exc.code}{suffix}") from exc
         except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
             raise NautobotError(f"Nautobot request failed: {exc}") from exc
 

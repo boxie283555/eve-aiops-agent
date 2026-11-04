@@ -26,6 +26,7 @@ from .igp_baseline import applicability_from_evidence, validate as validate_igp
 from .panos_evidence import PanosAPI
 from .topology import load_snapshot, fresh
 from .routing import command_ok
+from .credential_vault import CredentialVault
 
 MUTATIONS = threading.Lock()
 PROBE_SLOT = threading.Lock()
@@ -144,17 +145,50 @@ class Discovery:
         def rows(path):return c._get_all(path+'?limit=100')
         locations=[r for r in rows('dcim/locations/') if r['name']=='lab']
         types=rows('dcim/device-types/');platforms=rows('dcim/platforms/');roles=rows('extras/roles/')
+        managed={'management_ip','connection_port','aiops_monitoring_enabled','aiops_health_excluded',
+                 'aiops_exclusion_owner','aiops_exclusion_reason','aiops_exclusion_until',
+                 'aiops_bgp_baseline','aiops_igp_baseline','aiops_vxlan_baseline','use_ssh',
+                 'username_env','password_env','secret_env','snmp_community_env'}
+        registration_fields=[]
+        for field in rows('extras/custom-fields/'):
+            content_types=field.get('content_types') or []
+            if 'dcim.device' not in content_types or field.get('key') in managed:
+                continue
+            if re.search(r'password|secret|token|key',field.get('key',''),re.I):
+                continue
+            field_type=(field.get('type') or {}).get('value')
+            if field_type not in {'text','longtext','integer','decimal','boolean','date','select','multi-select'}:
+                continue
+            registration_fields.append({'key':field['key'],'label':field.get('label') or field['key'],
+                                        'type':field_type,'required':bool(field.get('required')),
+                                        'default':field.get('default'),'choices':field.get('choices') or []})
         return {'scope':'lab','profiles':self.profiles(inv),
                 'devices':[{'id':d['id'],'name':d['name'],'host':d['host'],'port':d['port'],'transport':'ssh' if d.get('use_ssh',True) else 'telnet','platform':d['platform']} for d in inv if d['site']=='lab'],
                 'locations':[{'id':r['id'],'name':r['name']} for r in locations],
                 'types':[{'id':r['id'],'name':r.get('model') or r.get('display'),'manufacturer':c._related_name(r.get('manufacturer'))} for r in types],
                 'platforms':[{'id':r['id'],'name':r['name'],'driver':r.get('network_driver')} for r in platforms if r.get('network_driver') in SUPPORTED],
                 'roles':[{'id':r['id'],'name':r['name']} for r in roles if 'dcim.device' in r.get('content_types',[])],
+                'registration_fields':registration_fields,
                 'nautobot_url':self.settings.nautobot_url}
 
-    def plan(self,targets,device_ids,actor,transport='ssh'):
+    def plan(self,targets,device_ids,actor,transport='ssh',imports=None):
         if transport not in ('ssh','telnet'):raise ValueError('Choose SSH or Telnet')
         inv=self.inventory();endpoints=expand(targets,23 if transport=='telnet' else 22)
+        imported={}
+        for item in imports or []:
+            host=str(item.get('management_ip') or '').strip()
+            try: ip=ipaddress.ip_address(host);host=str(ip)
+            except ValueError: raise ValueError('Spreadsheet contains an invalid management_ip') from None
+            if ip.version!=4 or ip.is_loopback or ip.is_multicast or ip.is_unspecified or ip.is_link_local:
+                raise ValueError('Spreadsheet contains an invalid management endpoint')
+            protocol=item.get('transport') or 'ssh'
+            if protocol not in ('ssh','telnet'):raise ValueError('Spreadsheet contains an invalid transport')
+            port=int(item.get('port') or (23 if item.get('transport')=='telnet' else 22))
+            if not 1<=port<=65535:raise ValueError('Spreadsheet contains an invalid port')
+            key=(host,port)
+            if key in imported:raise ValueError('Spreadsheet contains duplicate management_ip and port')
+            imported[key]=item
+            if key not in endpoints:endpoints.append(key)
         for ident in device_ids:
             d=next((d for d in inv if d['id']==ident and d['site']=='lab'),None)
             if not d:raise ValueError('Selected device is not in current lab inventory')
@@ -163,9 +197,17 @@ class Discovery:
         job={'id':uuid.uuid4().hex,'created':time.time(),'status':'planned','actor':actor,'candidates':[]}
         for host,port in endpoints:
             status,d=classify(host,port,inv)
-            job['candidates'].append({'id':uuid.uuid4().hex,'host':host,'port':port,'inventory_status':status,
+            candidate={'id':uuid.uuid4().hex,'host':host,'port':port,'inventory_status':status,
                 'device_id':d['id'] if d else None,'name':d['name'] if d else 'new-'+host.replace('.','-'),
-                'platform':d['platform'] if d else None,'transport':('ssh' if d.get('use_ssh',True) else 'telnet') if d else transport})
+                'platform':d['platform'] if d else None,'transport':('ssh' if d.get('use_ssh',True) else 'telnet') if d else transport}
+            source=imported.get((host,port))
+            if source and status=='unregistered':
+                name=str(source.get('name') or candidate['name']).strip()
+                if re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,63}',name):candidate['name']=name
+                candidate['transport']=source.get('transport',candidate['transport'])
+                candidate['registration_data']={k:source.get(k) for k in ('serial','asset_tag','comments') if source.get(k)}
+                candidate['registration_data']['custom_fields']={k:source[k] for k in ('use_snmp','snmp_community_env','snmp_host','snmp_port') if source.get(k) not in (None,'')}
+            job['candidates'].append(candidate)
         save(job);audit(job['id'],actor,'plan',{'targets':len(endpoints)})
         return job
 
@@ -235,18 +277,80 @@ class Discovery:
         try:
             job=get(job_id)
             if job['status']=='running':raise ValueError('Wait for the discovery job')
-            selected=self.selected(job,[e['id'] for e in entries]);names={e['id']:e['name'].strip() for e in entries}
+            selected=self.selected(job,[e['id'] for e in entries]);entry_by_id={e['id']:e for e in entries};names={e['id']:e['name'].strip() for e in entries}
             inv=self.inventory();opts=self.options()
-            p=next((p for p in opts['profiles'] if p['id']==profile_id and p['available']),None)
+            per_device=profile_id=='__per_device__'
+            if per_device:
+                selected_platform=next((r for r in opts['platforms'] if r['id']==platform),None)
+                if not selected_platform:raise ValueError('Choose a supported platform')
+                p={'id':'__per_device__','platform':selected_platform['driver'],'refs':{},'available':True}
+            else:p=next((p for p in opts['profiles'] if p['id']==profile_id and p['available']),None)
             if not p:raise ValueError('Configured credential profile unavailable')
             if location not in {r['id'] for r in opts['locations']} or role not in {r['id'] for r in opts['roles']} or device_type not in {r['id'] for r in opts['types']}:
                 raise ValueError('Choose existing lab Location, role and device type')
             if not any(r['id']==platform and r['driver']==p['platform'] for r in opts['platforms']):raise ValueError('Platform and credential profile must match')
             c=self.client();statuses=c._get_all('extras/statuses/?limit=100')
             maintenance=next(r['id'] for r in statuses if r['name']=='Maintenance' and 'dcim.device' in r['content_types'])
-            fields={r['key'] for r in c._get_all('extras/custom-fields/?limit=100')}
+            field_rows=c._get_all('extras/custom-fields/?limit=100');fields={r['key'] for r in field_rows}
+            device_fields={f['key']:f for f in field_rows if 'dcim.device' in (f.get('content_types') or [])}
             required={'management_ip','connection_port','aiops_monitoring_enabled','use_ssh','username_env','password_env','secret_env'}
             if not required<=fields:raise ValueError('Provision Agent connection and lifecycle custom fields first')
+            managed=required|{'aiops_health_excluded','aiops_exclusion_owner','aiops_exclusion_reason','aiops_exclusion_until','snmp_community_env',
+                              'aiops_bgp_baseline','aiops_igp_baseline','aiops_vxlan_baseline'}
+            editable={key:field for key,field in device_fields.items() if key not in managed and not re.search(r'password|secret|token|key',key,re.I)}
+            custom_by_id={}
+            credential_refs_by_id={}
+            vault_values={}
+            for entry in entries:
+                supplied=entry.get('custom_fields') or {}
+                if not isinstance(supplied,dict):raise ValueError('Custom field values must be an object')
+                custom={}
+                for key,value in supplied.items():
+                    field=editable.get(key)
+                    if field is None:raise ValueError(f'Custom field {key} is unavailable for device registration')
+                    if value is None or value=='':continue
+                    kind=(field.get('type') or {}).get('value')
+                    if kind in {'text','longtext','date','select'}:value=str(value)
+                    elif kind=='integer':
+                        if isinstance(value,bool):raise ValueError(f'Custom field {key} must be an integer')
+                        try:value=int(value)
+                        except (TypeError,ValueError):raise ValueError(f'Custom field {key} must be an integer') from None
+                    elif kind=='decimal':
+                        try:value=float(value)
+                        except (TypeError,ValueError):raise ValueError(f'Custom field {key} must be a number') from None
+                    elif kind=='boolean':
+                        if not isinstance(value,bool):raise ValueError(f'Custom field {key} must be true or false')
+                    elif kind=='multi-select':
+                        if not isinstance(value,list):raise ValueError(f'Custom field {key} must be a list')
+                        value=[str(item) for item in value]
+                    custom[key]=value
+                for key,field in editable.items():
+                    if field.get('required') and key not in custom and field.get('default') is None:
+                        raise ValueError(f'Required custom field {key} is missing')
+                custom_by_id[entry['id']]=custom
+                supplied_credentials=entry.get('credentials') or {}
+                if per_device and (not supplied_credentials.get('username') or not supplied_credentials.get('password')):
+                    raise ValueError('Each imported device must include its own username and password')
+                refs=dict(p['refs'])
+                token=None
+                if supplied_credentials.get('username') or supplied_credentials.get('password'):
+                    if not supplied_credentials.get('username') or not supplied_credentials.get('password'):
+                        raise ValueError('Username and password must both be provided for a device')
+                    token=uuid.uuid4().hex.upper()
+                    refs.update(username_env=f'AIOPS_DEVICE_{token}_USERNAME',password_env=f'AIOPS_DEVICE_{token}_PASSWORD')
+                    vault_values[refs['username_env']]=supplied_credentials['username']
+                    vault_values[refs['password_env']]=supplied_credentials['password']
+                if supplied_credentials.get('enable_secret'):
+                    token=token or uuid.uuid4().hex.upper()
+                    refs['secret_env']=f'AIOPS_DEVICE_{token}_SECRET'
+                    vault_values[refs['secret_env']]=supplied_credentials['enable_secret']
+                if supplied_credentials.get('snmp_community'):
+                    token=token or uuid.uuid4().hex.upper()
+                    refs['snmp_community_env']=f'AIOPS_DEVICE_{token}_SNMP_COMMUNITY'
+                    vault_values[refs['snmp_community_env']]=supplied_credentials['snmp_community']
+                if str(custom.get('use_snmp','')).lower() in {'true','1','yes'} and not refs.get('snmp_community_env'):
+                    raise ValueError('SNMP is enabled but no community is configured for this device')
+                credential_refs_by_id[entry['id']]=refs
             existing_names={d['name'].lower() for d in inv};proposed=set()
             for row in selected:
                 state,_=classify(row['host'],row['port'],inv)
@@ -257,13 +361,26 @@ class Discovery:
             # Nautobot bulk create is atomic; one request avoids partial registration.
             from types import SimpleNamespace
             for r in selected:cli_driver(SimpleNamespace(platform=p['platform'],use_ssh=r.get('transport','ssh')=='ssh'))
-            payload=[{'name':names[r['id']],'location':location,'platform':platform,'role':role,'device_type':device_type,
-                      'status':maintenance,'custom_fields':{'management_ip':r['host'],'connection_port':r['port'],
-                         'aiops_monitoring_enabled':False,'use_ssh':r.get('transport','ssh')=='ssh',**p['refs']}} for r in selected]
+            payload=[]
+            for row in selected:
+                entry=entry_by_id[row['id']]
+                item={'name':names[row['id']],'location':location,'platform':platform,'role':role,'device_type':device_type,
+                      'status':maintenance,'custom_fields':{'management_ip':row['host'],'connection_port':str(row['port']),
+                         'aiops_monitoring_enabled':False,'use_ssh':row.get('transport','ssh')=='ssh',**credential_refs_by_id[row['id']],**custom_by_id[row['id']]}}
+                for key in ('serial','asset_tag','comments'):
+                    if entry.get(key):item[key]=entry[key].strip()
+                payload.append(item)
             audit(job_id,actor,'register_requested',{'candidates':[r['id'] for r in selected]})
-            created=c._request('POST','dcim/devices/',payload)
+            try:vault=CredentialVault() if vault_values else None
+            except RuntimeError as exc:raise ValueError(str(exc)) from None
+            if vault:vault.set_many(vault_values)
+            try:created=c._request('POST','dcim/devices/',payload)
+            except Exception:
+                if vault:vault.delete_many(list(vault_values))
+                raise
             byname={d['name']:d for d in created}
             for r in selected:
+                r.pop('registration_error',None)
                 r.update(device_id=byname[names[r['id']]]['id'],name=names[r['id']],inventory_status='known',platform=p['platform'],registered_by_job=True)
             save(job);audit(job_id,actor,'registered',{'devices':[r['device_id'] for r in selected]})
             return job
@@ -276,6 +393,7 @@ class Discovery:
                 job=get(job_id);selected=self.selected(job,ids)
                 for row in selected:
                     if not row.get('device_id'):raise ValueError('Register candidates in lab before probing')
+                    row.pop('registration_error',None)
                     row['probe']={'status':'queued'}
                 job['status']='running';job['probe_actor']=actor;save(job);audit(job_id,actor,'probe_started',{'candidates':ids})
             threading.Thread(target=self._run,args=(job,selected),daemon=True).start()

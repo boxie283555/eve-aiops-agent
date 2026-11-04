@@ -54,6 +54,28 @@ Nautobot 必须已配置 lab Location、设备类型、角色和受支持平台�
 
 发现、定时 CLI 指标采集、CLI 配置读取和 EOS 恢复连接共用协议映射。当前内置 Telnet 驱动支持 Arista EOS 与 PAN-OS；NX-OS 使用 SSH，不会静默回退到其他厂商驱动。PA 的身份发现、配置及策略 API 仍走 HTTPS；Nautobot 自身的 NAPALM 连接不由此字段切换。
 
+## 设备凭据与 SNMP
+
+Nautobot 保存设备级配置和凭据引用，Agent 容器保存秘密本身。不要把 SSH 密码、enable secret 或 SNMP community 写入 Nautobot 普通自定义字段。
+
+| Nautobot 设备字段 | 内容 | Agent 用途 |
+| --- | --- | --- |
+| `username_env` | 用户名环境变量名 | SSH/Telnet 登录用户名 |
+| `password_env` | 登录密码环境变量名 | SSH/Telnet 登录密码 |
+| `secret_env` | enable secret 环境变量名 | 特权模式 |
+| `use_snmp` | `true` / `false` | 是否对此设备采集 SNMP |
+| `snmp_community_env` | community 环境变量名 | 读取设备对应的 SNMPv2c community |
+| `snmp_host` | 可选的 SNMP 目标地址 | 默认使用 Nautobot 管理地址 |
+| `snmp_port` | 可选的 UDP 端口 | 默认使用 Agent SNMP 端口，通常为 161 |
+
+Agent 侧需设置 `AIOPS_SNMP_ENABLED=true` 作为总开关，并在容器环境或 Docker secret 中配置字段引用到的变量，例如 `LAB_EOS_SSH_PASSWORD` 与 `LAB_EOS_SNMP_COMMUNITY`。若 `snmp_community_env` 未填写，则沿用全局 `AIOPS_SNMP_COMMUNITY`。当前 SNMP 实现支持 v2c community；SNMPv3 用户名、认证协议和隐私协议尚未实现。
+
+使用 `scripts/nautobot/provision_snmp_fields.py` 创建/核对 SNMP 设备自定义字段。该脚本只维护字段定义，不填充设备或秘密值。Agent 每隔一个 inventory refresh 周期读取 Nautobot 更新；设备还需启用采集并处于允许采集的生命周期状态。
+
+登记新设备时，选择已配置的凭据 profile，Agent 会将其中的 `username_env`、`password_env`、`secret_env` 引用写入设备；界面和 Excel 都不接收密码值。登记表会展示 Nautobot 已定义的可登记自定义字段，包括 SNMP 开关、community 环境变量名、目标地址和端口。SNMP 字段尚未在 Nautobot 初始化时，先运行上述 provisioning 脚本。
+
+审核清单支持 Excel `.xlsx` 导入，模板可从向导下载。表头为 `management_ip`、`name`、`port`、`transport`、`serial`、`asset_tag`、`comments`、`username`、`password`、`enable_secret`、`use_snmp`、`snmp_community`、`snmp_host`、`snmp_port`。每个任务最多 256 行；导入只生成候选清单，须逐项审核并显式登记到 `lab`，之后才能探测。每行可以有自己的登录和 SNMP 凭据；凭据经受保护的入口传入 Agent 加密凭据库，Nautobot 只保存 Agent 生成的环境变量引用。不要通过普通 `http://` 页面上传含秘密的表格；从 SSH 本地转发的页面上传。Agent 使用 `AIOPS_CREDENTIAL_VAULT_KEY` 解密凭据库，密钥须备份；丢失密钥后无法解密已有秘密。
+
 不会自动启用设备上的 Telnet 服务。Telnet 以明文传输凭据，适用于可信管理网或已有受保护隧道。未改变既有设备的协议、端口或凭据。
 
 SSH/Telnet 更新验证：101 项相关测试通过，涵盖登记字段、默认与自定义端口、协议改变后证据失效、采集与配置连接选择。浏览器模拟登记验证通过；Netmiko 对本地模拟 EOS Telnet 服务完成真实登录和命令读取。此次没有开启或修改任何设备的 Telnet 服务，实机 Telnet 兼容性尚需用已启用该服务的 lab 设备验证。
